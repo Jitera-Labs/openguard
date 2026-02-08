@@ -1,0 +1,16 @@
+# Enforce a max token cap for GPT models when missing or too high
+
+guards:
+  - match:
+      _and:
+        - model:
+            _ilike: "%gpt%"
+        - _or:
+            - max_tokens:
+                _is_null: true
+            - max_tokens:
+                _gt: 2000
+    apply:
+      - type: max_tokens
+        config:
+          max_tokens: 2000

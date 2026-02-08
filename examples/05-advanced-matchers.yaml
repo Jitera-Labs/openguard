@@ -1,0 +1,20 @@
+# Use advanced matchers (regex, list matching) before applying a guard
+
+guards:
+  - match:
+      _and:
+        - user:
+            _eq: "tenant-acme"
+        - messages:
+            _some:
+              role:
+                _eq: "user"
+              content:
+                _iregex: "password|api key|secret"
+    apply:
+      - type: content_filter
+        config:
+          blocked_words:
+            - "password"
+            - "api key"
+            - "secret"

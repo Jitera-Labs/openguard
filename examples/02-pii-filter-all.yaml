@@ -1,0 +1,7 @@
+# PII filtering applied to all requests
+
+guards:
+  - match: {}
+    apply:
+      - type: pii_filter
+        config: {}

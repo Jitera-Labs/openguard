@@ -1,0 +1,13 @@
+# Basic content filter for a model family
+
+guards:
+  - match:
+      model:
+        _ilike: "%openrouter%"
+    apply:
+      - type: content_filter
+        config:
+          blocked_words:
+            - "internal_project"
+            - "secret"
+            - "password"

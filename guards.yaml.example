@@ -1,0 +1,22 @@
+guards:
+  # Block specific content for OpenRouter models
+  - match:
+      model:
+        _ilike: "%openrouter%"
+    apply:
+      - type: content_filter
+        config:
+          blocked_words:
+            - "example_blocked_word"
+      - type: max_tokens
+        config:
+          max_tokens: 4000
+
+  # PII filtering for Kimi models
+  - match:
+      model:
+        _ilike: "%kimi%"
+    apply:
+      - type: pii_filter
+        config:
+          enabled: true

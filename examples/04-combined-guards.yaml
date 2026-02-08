@@ -1,0 +1,24 @@
+# Combine multiple guards per model family
+
+guards:
+  - match:
+      model:
+        _ilike: "%kimi%"
+    apply:
+      - type: pii_filter
+        config: {}
+      - type: max_tokens
+        config:
+          max_tokens: 1024
+  - match:
+      model:
+        _ilike: "%openai%"
+    apply:
+      - type: content_filter
+        config:
+          blocked_words:
+            - "confidential"
+            - "do not share"
+      - type: max_tokens
+        config:
+          max_tokens: 1500
