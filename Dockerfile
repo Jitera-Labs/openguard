@@ -2,14 +2,17 @@ FROM ghcr.io/av/tools
 
 WORKDIR /app
 
-# Ensure uv is available
-RUN python -m pip install --no-cache-dir -U uv
+# uv is already available in the base image
 
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY guards.yaml.example ./guards.yaml
 
-RUN uv pip install --system -e .
+RUN uv venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH=/opt/venv/bin:$PATH
+
+RUN uv pip install -e .
 
 EXPOSE 8000
 
