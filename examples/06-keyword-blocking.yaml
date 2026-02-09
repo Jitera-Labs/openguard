@@ -1,0 +1,21 @@
+# Keyword blocking for specific sensitive terms
+guards:
+  - match:
+      model:
+        _ilike: "%"  # Apply to all models
+    apply:
+      - type: keyword_filter
+        config:
+          # List of keywords to detect
+          keywords:
+            - "project X"
+            - "internal data"
+
+          # Action can be: block (stop request), sanitize (replace with [REDACTED]), log (only audit)
+          action: "block"
+
+          # Match mode: any (trigger if any keyword found), all (trigger only if all found)
+          match_mode: "any"
+
+          # Whether keyword matching is case sensitive
+          case_sensitive: false

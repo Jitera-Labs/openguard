@@ -19,7 +19,7 @@ class TestKeywordFilter:
 
         with pytest.raises(GuardBlockedError) as excinfo:
             keyword_filter.apply(payload, config)
-        
+
         assert "found keyword 'forbidden'" in str(excinfo.value)
 
     def test_block_match_all_avoid_partial_match(self):
@@ -55,7 +55,7 @@ class TestKeywordFilter:
 
         with pytest.raises(GuardBlockedError) as excinfo:
             keyword_filter.apply(payload, config)
-            
+
         assert "found all required keywords" in str(excinfo.value)
 
     def test_sanitization(self):
@@ -72,11 +72,11 @@ class TestKeywordFilter:
         }
 
         result_payload, logs = keyword_filter.apply(payload, config)
-        
+
         # Check logs
         assert len(logs) > 0
         assert "Sanitized keywords" in logs[0]
-        
+
         # Check replacement
         content = result_payload["messages"][0]["content"]
         assert "This has [REDACTED] in it." == content
@@ -96,11 +96,11 @@ class TestKeywordFilter:
         }
 
         result_payload, logs = keyword_filter.apply(payload, config)
-        
+
         # Should populate logs
         assert len(logs) > 0
         assert "Keyword filter triggered" in logs[0]
-        
+
         # Payload should be unchanged
         assert result_payload == payload
 
