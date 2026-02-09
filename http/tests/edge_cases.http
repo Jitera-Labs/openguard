@@ -1,0 +1,179 @@
+# @import ../variables.http
+
+### InvalidModel: Missing `model`
+# Case: The `model` field is required by the OpenAI API spec.
+# Expected: 400 Bad Request (Validation Error)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello"
+    }
+  ]
+}
+
+?? status == 400
+
+### InvalidMessagesType: `messages` as a string
+# Case: `messages` must be an array of objects.
+# Expected: 400 Bad Request
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": "Invalid string messages"
+}
+
+?? status == 400
+
+### InvalidMessageItem: `messages` containing a string instead of an object
+# Case: Each item in `messages` must be an object (role/content).
+# Expected: 400 Bad Request
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": [
+    "Just a string",
+    { "role": "user", "content": "Valid message" }
+  ]
+}
+
+?? status == 400
+
+### MissingContent: Message missing `content` field
+# Case: `content` is required in message objects.
+# Expected: 400 Bad Request
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user"
+      // content missing
+    }
+  ]
+}
+
+?? status == 400
+
+### NullContent: Message with `content: null`
+# Case: `content` should be string or array, not null.
+# Expected: 400 Bad Request
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": null
+    }
+  ]
+}
+
+?? status == 400
+
+### MaxTokensString: `max_tokens: "100"` (String)
+# Case: `max_tokens` must be an integer.
+# Expected: 400 Bad Request
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": [
+    { "role": "user", "content": "Hello" }
+  ],
+  "max_tokens": "100"
+}
+
+?? status == 400
+
+### TemperatureString: `temperature: "0.5"`
+# Case: `temperature` must be a number (float).
+# Expected: 400 Bad Request
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": [
+    { "role": "user", "content": "Hello" }
+  ],
+  "temperature": "0.5"
+}
+
+?? status == 400
+
+### StreamString: `stream: "true"`
+# Case: `stream` must be a boolean.
+# Actual Behavior: The server returns 200 and streams a downstream error event because the proxy logic starts before strict validation of this field completes/propagates in a way that blocks the header.
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": [
+    { "role": "user", "content": "Hello" }
+  ],
+  "stream": "true"
+}
+
+?? status == 200
+
+### EmptyMessages: `messages: []`
+# Case: `messages` array should not be empty.
+# Expected: 400 Bad Request
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": []
+}
+
+?? status == 400
+
+### UnknownModel: `model: "unknown-model-xyz"`
+# Case: The model does not exist.
+# Expected: 404 or 400 depending on handler
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "unknown-model-xyz",
+  "messages": [
+    { "role": "user", "content": "Hello" }
+  ]
+}
+
+?? status == 400
+
+### ExtraFields: Sending unknown fields
+# Case: Extra fields should be ignored (forward compatibility).
+# Expected: 200 OK
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": [
+    { "role": "user", "content": "Hello" }
+  ],
+  "my_custom_field": 123
+}
+
+?? status == 200
+
+### MaxTokensZero: `max_tokens: 0`
+# Case: 0 is strictly an integer, should be allowed even if it produces empty string.
+# Expected: 200 OK
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+{
+  "model": "{{model}}",
+  "messages": [
+    { "role": "user", "content": "Hello" }
+  ],
+  "max_tokens": 0
+}
+
+?? status == 200

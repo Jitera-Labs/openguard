@@ -10,6 +10,7 @@ This module creates the FastAPI application that handles:
 
 import json
 import logging
+import httpx
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request, HTTPException, Depends
@@ -158,6 +159,49 @@ async def chat_completions(
         return JSONResponse(
             status_code=403,
             content={"error": {"message": str(e), "type": "guard_block", "code": 403}}
+        )
+    except httpx.HTTPStatusError as e:
+        error_body = await e.response.aread()
+        logger.error(f"Downstream error {e.response.status_code}: {error_body.decode('utf-8')}")
+
+        try:
+            content = json.loads(error_body)
+        except json.JSONDecodeError:
+            content = {
+                "error": {
+                    "message": error_body.decode('utf-8'),
+                    "type": "downstream_error",
+                    "code": e.response.status_code
+                }
+            }
+
+        return JSONResponse(
+            status_code=e.response.status_code,
+            content=content
+        )
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error: {e}")
+        return JSONResponse(
+            status_code=502,
+            content={
+                "error": {
+                    "message": f"Failed to connect to downstream API: {str(e)}",
+                    "type": "connection_error",
+                    "code": 502
+                }
+            }
+        )
+    except httpx.TimeoutException as e:
+        logger.error(f"Timeout error: {e}")
+        return JSONResponse(
+            status_code=504,
+            content={
+                "error": {
+                    "message": "Request to downstream API timed out",
+                    "type": "timeout_error",
+                    "code": 504
+                }
+            }
         )
     except HTTPException:
         raise

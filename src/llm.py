@@ -107,26 +107,16 @@ class LLM:
             result = response.json()
             yield json.dumps(result)
 
-          except httpx.HTTPStatusError as e:
-            # Forward downstream error
-            error_body = await e.response.aread()
-            logger.error(f"Downstream error {e.response.status_code}: {error_body.decode('utf-8')}")
+          except httpx.HTTPStatusError:
+             raise
 
-            try:
-              error_json = json.loads(error_body)
-              yield json.dumps(error_json)
-            except Exception:
-              # Construct error response if body isn't JSON
-              error_response = {
-                "error": {
-                  "message": f"Downstream API error: {e.response.status_code}",
-                  "type": "downstream_error",
-                  "code": e.response.status_code
-                }
-              }
-              yield json.dumps(error_response)
+          except Exception:
+             # Let other exceptions bubble up to outer handler
+             raise
 
     except httpx.ConnectError as e:
+      if not self.stream:
+        raise
       logger.error(f"Connection error: {e}")
       error_response = {
         "error": {
@@ -135,13 +125,12 @@ class LLM:
           "code": 502
         }
       }
-      if self.stream:
-        yield f"data: {json.dumps(error_response)}\n\n"
-        yield "data: [DONE]\n\n"
-      else:
-        yield json.dumps(error_response)
+      yield f"data: {json.dumps(error_response)}\n\n"
+      yield "data: [DONE]\n\n"
 
     except httpx.TimeoutException as e:
+      if not self.stream:
+        raise
       logger.error(f"Timeout error: {e}")
       error_response = {
         "error": {
@@ -150,13 +139,15 @@ class LLM:
           "code": 504
         }
       }
-      if self.stream:
-        yield f"data: {json.dumps(error_response)}\n\n"
-        yield "data: [DONE]\n\n"
-      else:
-        yield json.dumps(error_response)
+      yield f"data: {json.dumps(error_response)}\n\n"
+      yield "data: [DONE]\n\n"
+
+    except httpx.HTTPStatusError:
+      raise
 
     except Exception as e:
+      if not self.stream:
+        raise
       logger.error(f"Unexpected error: {e}")
       error_response = {
         "error": {
@@ -165,11 +156,8 @@ class LLM:
           "code": 500
         }
       }
-      if self.stream:
-        yield f"data: {json.dumps(error_response)}\n\n"
-        yield "data: [DONE]\n\n"
-      else:
-        yield json.dumps(error_response)
+      yield f"data: {json.dumps(error_response)}\n\n"
+      yield "data: [DONE]\n\n"
 
   async def serve(self):
     """
