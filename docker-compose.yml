@@ -4,10 +4,14 @@ services:
     image: openguard-dev
     ports:
       - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       OPENGUARD_HOST: "0.0.0.0"
       OPENGUARD_PORT: "8000"
       OPENGUARD_CONFIG: "/app/guards.yaml"
+      OPENGUARD_OPENAI_URL_1: "${OPENGUARD_OPENAI_URL_1:-}"
+      OPENGUARD_OPENAI_KEY_1: "${OPENGUARD_OPENAI_KEY_1:-}"
     volumes:
       - .:/app
     command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app"]
