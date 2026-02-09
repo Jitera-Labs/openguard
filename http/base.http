@@ -1,0 +1,7 @@
+# @import ./variables.http
+
+### Models
+
+GET {{url}}/v1/models
+
+###

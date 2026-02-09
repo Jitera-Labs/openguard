@@ -13,6 +13,14 @@ An OpenAI-compatible guardrail proxy that applies security and privacy controls 
 
 Full documentation coming soon.
 
+### Local Ollama
+
+Start against a local Ollama backend via Harbor:
+
+```bash
+make dev-ollama
+```
+
 ## Configuration
 
 Copy `guards.yaml.example` to `guards.yaml` and customize for your needs.
