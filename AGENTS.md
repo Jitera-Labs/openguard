@@ -35,3 +35,20 @@ Above behaviors are MANDATORY, non-negotiable, and must be followed at all times
 ## Package Management
 
 You always use package management tools for any dependencies. For Python, you use `uv` to manage dependencies and virtual environments. You never modify package files directly without using the package manager.
+
+## Integration Tests with Httpyac
+
+We use `httpyac` (CLI) to run integration tests against the running service.
+Tests are located in the `./http/tests/` directory.
+
+To run the tests:
+1. Ensure the service is running (e.g. `make dev` or `python -m src.main`)
+2. Run httpyac:
+   ```bash
+   httpyac http/tests/*.http --all
+   ```
+
+Test files should import variables from `../variables.http` if needed.
+Use `??` assertions to verify response status and body content.
+
+

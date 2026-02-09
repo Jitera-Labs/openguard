@@ -1,2 +1,10 @@
-@url = http://localhost:8000
-@token = {{access_token}}
+@apiKey = sk-boost
+@host = http://localhost:8000
+@model = llama3.2:1b
+
+{{
+  exports.defaultHeaders = {
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json'
+  }
+}}

@@ -1,0 +1,14 @@
+# @import ../variables.http
+
+### Health Check
+GET {{url}}/health
+?? status == 200
+?? body.status == ok
+
+### Root Info
+GET {{url}}/
+?? status == 200
+?? body.name == OpenGuard
+?? body.endpoints.health == /health
+?? body.endpoints.models == /v1/models
+?? body.endpoints.chat == /v1/chat/completions
