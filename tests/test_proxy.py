@@ -10,9 +10,10 @@ from src import mapper, llm
 @pytest.mark.asyncio
 async def test_list_downstream_no_backend():
   """Test that list_downstream handles missing backends gracefully."""
-  models = await mapper.list_downstream()
+  models, backends = await mapper.list_downstream()
   # Should return empty list or models if any backends configured
   assert isinstance(models, list)
+  assert isinstance(backends, dict)
 
 
 @pytest.mark.asyncio

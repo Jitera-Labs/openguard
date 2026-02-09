@@ -4,7 +4,7 @@ import importlib
 
 from src.selection import match_filter
 from src import log
-from src.guards import GuardRule
+from src.guards import GuardRule, GuardBlockedError
 
 logger = log.setup_logger(__name__)
 
@@ -52,6 +52,8 @@ def apply_guards(payload: dict, guards: List[GuardRule]) -> Tuple[dict, List[str
 
                 logger.debug(f"Applied guard action '{action_type}' with {len(action_logs)} audit log(s)")
 
+            except GuardBlockedError:
+                raise
             except ModuleNotFoundError:
                 logger.error(f"Guard type '{action_type}' not found")
             except AttributeError:

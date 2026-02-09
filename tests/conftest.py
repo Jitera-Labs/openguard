@@ -19,44 +19,44 @@ def guards_yaml(tmp_path):
     """Create temporary guards.yaml for testing."""
     content = textwrap.dedent(
         """
-        guards:
-            - match:
-                    model:
-                        _ilike: "%test%"
-                apply:
-                    - type: content_filter
-                        config:
-                            blocked_words:
-                                - "badword"
-                                - "offensive"
+guards:
+  - match:
+      model:
+        _ilike: "%test%"
+    apply:
+      - type: content_filter
+        config:
+          blocked_words:
+            - "badword"
+            - "offensive"
 
-            - match:
-                    model:
-                        _ilike: "%secure%"
-                apply:
-                    - type: pii_filter
-                        config:
-                            enabled: true
+  - match:
+      model:
+        _ilike: "%secure%"
+    apply:
+      - type: pii_filter
+        config:
+          enabled: true
 
-            - match:
-                    model:
-                        _ilike: "%limited%"
-                apply:
-                    - type: max_tokens
-                        config:
-                            max_tokens: 100
+  - match:
+      model:
+        _ilike: "%limited%"
+    apply:
+      - type: max_tokens
+        config:
+          max_tokens: 100
 
-            - match:
-                    model:
-                        _ilike: "%protected%"
-                apply:
-                    - type: content_filter
-                        config:
-                            blocked_words:
-                                - "spam"
-                    - type: max_tokens
-                        config:
-                            max_tokens: 500
+  - match:
+      model:
+        _ilike: "%protected%"
+    apply:
+      - type: content_filter
+        config:
+          blocked_words:
+            - "spam"
+      - type: max_tokens
+        config:
+          max_tokens: 500
         """
     ).lstrip()
     path = tmp_path / "guards.yaml"
@@ -82,8 +82,20 @@ def test_env(guards_yaml):
     os.environ.update(old_env)
 
 
-@pytest.fixture
-def test_client(test_env):
+@pytest.fixture(scope="function")
+def mock_httpx(mock_downstream_models, mock_non_streaming_response, mock_streaming_response, monkeypatch):
+    """Mock httpx for all requests - must be set up before test_client."""
+    captured, _ = _build_httpx_mock(
+        mock_downstream_models,
+        mock_non_streaming_response,
+        mock_streaming_response,
+        monkeypatch,
+    )
+    return captured
+
+
+@pytest.fixture(scope="function")
+def test_client(test_env, mock_httpx):
     """Create FastAPI test client with test config."""
     import importlib
     from src import config as config_module
@@ -92,6 +104,7 @@ def test_client(test_env):
 
     importlib.reload(config_module)
     guards_module._guards_cache = None
+    importlib.reload(guards_module)
     importlib.reload(main_module)
 
     return TestClient(main_module.app)
@@ -228,39 +241,21 @@ def _build_httpx_mock(
 
 
 @pytest.fixture
-def setup_mock_downstream(mock_downstream_models, mock_non_streaming_response, monkeypatch):
+def setup_mock_downstream(mock_httpx):
     """Mock downstream model listing and non-streaming completions."""
-    captured, _ = _build_httpx_mock(
-        mock_downstream_models,
-        mock_non_streaming_response,
-        [],
-        monkeypatch,
-    )
-    return captured
+    return mock_httpx
 
 
 @pytest.fixture
-def setup_mock_non_streaming(mock_downstream_models, mock_non_streaming_response, monkeypatch):
+def setup_mock_non_streaming(mock_httpx):
     """Mock non-streaming chat completion calls."""
-    captured, _ = _build_httpx_mock(
-        mock_downstream_models,
-        mock_non_streaming_response,
-        [],
-        monkeypatch,
-    )
-    return captured
+    return mock_httpx
 
 
 @pytest.fixture
-def setup_mock_streaming(mock_downstream_models, mock_streaming_response, monkeypatch):
+def setup_mock_streaming(mock_httpx):
     """Mock streaming chat completion calls."""
-    captured, _ = _build_httpx_mock(
-        mock_downstream_models,
-        {"object": "unused"},
-        mock_streaming_response,
-        monkeypatch,
-    )
-    return captured
+    return mock_httpx
 
 
 @pytest.fixture(autouse=True)
@@ -275,8 +270,5 @@ def clear_cache():
         mapper_module.list_downstream.cache.clear()
     except Exception:
         pass
-
-    if hasattr(mapper_module.list_downstream, "_model_to_backend"):
-        delattr(mapper_module.list_downstream, "_model_to_backend")
 
     yield

@@ -1,6 +1,6 @@
 from asyncache import cached
 from cachetools import TTLCache
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import httpx
 
 from src import config
@@ -10,10 +10,10 @@ logger = log.setup_logger(__name__)
 
 
 @cached(TTLCache(1024, 60))
-async def list_downstream() -> List[dict]:
+async def list_downstream() -> Tuple[List[dict], Dict[str, dict]]:
   """
   Fetch models from all downstream APIs with 60-second caching.
-  Returns combined list of models from all backends.
+  Returns tuple of (models_list, model_to_backend_mapping).
   """
   logger.debug("Listing downstream models")
 
@@ -57,10 +57,7 @@ async def list_downstream() -> List[dict]:
     except Exception as e:
       logger.error(f"Failed to fetch models from {endpoint}: {e}")
 
-  # Store mapping for use by build_model_map
-  list_downstream._model_to_backend = model_to_backend
-
-  return all_models
+  return all_models, model_to_backend
 
 
 async def build_model_map() -> Dict[str, dict]:
@@ -68,11 +65,8 @@ async def build_model_map() -> Dict[str, dict]:
   Build a mapping of model IDs to their backend configuration.
   Returns: {model_id: {url: str, headers: dict}}
   """
-  models = await list_downstream()
+  models, model_to_backend = await list_downstream()
   model_map = {}
-
-  # Access the cached mapping from list_downstream
-  model_to_backend = getattr(list_downstream, '_model_to_backend', {})
 
   for model in models:
     model_id = model.get("id")
@@ -120,10 +114,21 @@ async def resolve_request_config(payload: dict) -> dict:
 
   model_map = await build_model_map()
 
-  if model not in model_map:
+  # Case-insensitive model lookup
+  model_lower = model.lower()
+  backend_config = None
+  actual_model_key = None
+
+  for key in model_map:
+    if key.lower() == model_lower:
+      backend_config = model_map[key]
+      actual_model_key = key
+      break
+
+  if not backend_config:
     raise ValueError(f"Unknown model: '{model}'")
 
-  backend_config = model_map[model]
+  backend_config = model_map[actual_model_key]
   stream = payload.get("stream", False)
 
   resolved_config = {

@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src import config, mapper, llm, log as log_module
-from src.guards import get_guards
+from src.guards import get_guards, GuardBlockedError
 from src.guard_engine import apply_guards, log_audit
 from src.middleware.request_id import RequestIDMiddleware
 from src.middleware.request_state import RequestStateMiddleware
@@ -96,7 +96,7 @@ async def health():
 async def list_models(authorized: bool = Depends(verify_auth)):
     """List all available models from downstream APIs"""
     try:
-        models = await mapper.list_downstream()
+        models, _ = await mapper.list_downstream()
         return {"object": "list", "data": models}
     except Exception as e:
         logger.error(f"Error listing models: {e}")
@@ -154,6 +154,11 @@ async def chat_completions(
             else:
                 raise HTTPException(status_code=500, detail="Empty response from downstream")
 
+    except GuardBlockedError as e:
+        return JSONResponse(
+            status_code=403,
+            content={"error": {"message": str(e), "type": "guard_block", "code": 403}}
+        )
     except HTTPException:
         raise
     except json.JSONDecodeError as e:

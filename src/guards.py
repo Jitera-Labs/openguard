@@ -10,6 +10,11 @@ from src import log
 logger = log.setup_logger(__name__)
 
 
+class GuardBlockedError(Exception):
+    """Exception raised when a guard blocks a request."""
+    pass
+
+
 class GuardAction(BaseModel):
     """A single guard action to apply."""
     type: str
