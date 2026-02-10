@@ -276,6 +276,7 @@ def test_invalid_model(test_client, setup_mock_downstream, monkeypatch):
     # Force multiple URLs to disable fallback logic
     monkeypatch.setenv("OPENGUARD_OPENAI_URL_SECONDARY", "http://secondary.test")
     import importlib
+
     from src import config
     importlib.reload(config)
 

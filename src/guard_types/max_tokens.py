@@ -1,6 +1,7 @@
 """Max tokens guard - enforces token limits on requests."""
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
+
 if TYPE_CHECKING:
     from src.chat import Chat
     from src.llm import LLM

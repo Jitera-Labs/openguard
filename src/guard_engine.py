@@ -5,8 +5,8 @@ from typing import List, Tuple
 
 from src import log
 from src.chat import Chat
-from src.llm import LLM
 from src.guards import GuardBlockedError, GuardRule
+from src.llm import LLM
 from src.selection import match_filter
 
 logger = log.setup_logger(__name__)

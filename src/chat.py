@@ -1,10 +1,7 @@
 from typing import Optional
 
+from . import format, llm, log, selection
 from .chat_node import ChatNode
-from . import llm
-from . import log
-from . import selection
-from . import format
 
 logger = log.setup_logger(__name__)
 

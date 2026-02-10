@@ -1,13 +1,11 @@
+from typing import TYPE_CHECKING, Dict, Optional
+
+import httpx
 from asyncache import cached
 from cachetools import TTLCache
 from fastapi import HTTPException
 
-import httpx
-
-from typing import Dict, Optional, TYPE_CHECKING
-
-from . import config
-from . import log
+from . import config, log
 
 if TYPE_CHECKING:
   from . import llm

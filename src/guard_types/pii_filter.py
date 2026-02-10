@@ -1,8 +1,7 @@
 """PII filtering guard - detects and replaces personally identifiable information."""
 
-import copy
 import re
-from typing import List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from src.chat import Chat

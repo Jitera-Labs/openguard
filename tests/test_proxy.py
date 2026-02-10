@@ -28,9 +28,11 @@ async def test_resolve_request_config_missing_model():
 @pytest.mark.asyncio
 async def test_resolve_request_config_unknown_model(monkeypatch):
     """Test that resolve_request_config raises HTTPException for unknown model."""
-    from fastapi import HTTPException
-    from src import config
     import importlib
+
+    from fastapi import HTTPException
+
+    from src import config
 
     # Ensure multiple URLs are configured so fallback logic doesn't trigger
     monkeypatch.setenv("OPENGUARD_OPENAI_URL_PRIMARY", "http://url1")
@@ -87,8 +89,9 @@ async def test_llm_registry():
 @pytest.mark.asyncio
 async def test_llm_connection_error(monkeypatch):
     """Test that LLM handles connection errors gracefully."""
+    from unittest.mock import AsyncMock, MagicMock
+
     import httpx
-    from unittest.mock import MagicMock, AsyncMock
 
     # Mock httpx to raise ConnectError
     mock_client = MagicMock()

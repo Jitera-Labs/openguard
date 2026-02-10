@@ -1,8 +1,7 @@
 """Keyword filter guard implementation."""
 
-import copy
 import re
-from typing import Any, List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List
 
 from src.guards import GuardBlockedError
 

@@ -1,6 +1,6 @@
 import random
-
 from typing import List, Optional
+
 from . import log
 
 logger = log.setup_logger(__name__)

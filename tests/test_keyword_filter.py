@@ -1,8 +1,9 @@
 import pytest
 
+from src.chat import Chat
 from src.guard_types import keyword_filter
 from src.guards import GuardBlockedError
-from src.chat import Chat
+
 
 class MockLLM:
     pass

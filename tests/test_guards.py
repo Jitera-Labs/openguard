@@ -8,10 +8,10 @@ import pytest
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.chat import Chat
 from src.guard_engine import apply_guards
 from src.guard_types import content_filter, max_tokens, pii_filter
 from src.guards import GuardAction, GuardRule
-from src.chat import Chat
 
 
 class MockLLM:

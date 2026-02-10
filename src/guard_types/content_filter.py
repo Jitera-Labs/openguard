@@ -1,7 +1,7 @@
 """Content filtering guard - blocks specific words/phrases."""
 
 import re
-from typing import List, TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, List
 
 if TYPE_CHECKING:
     from src.chat import Chat
