@@ -1,19 +1,21 @@
-FROM ghcr.io/av/tools
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
 
-# uv is already available in the base image
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
 
+# Copy project metadata
 COPY pyproject.toml README.md ./
+
+# Install dependencies (using system python in the container)
+RUN uv pip install --system --no-cache .
+
+# Copy application code
 COPY src ./src
 COPY guards.yaml.example ./guards.yaml
 
-RUN uv venv /opt/venv
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH=/opt/venv/bin:$PATH
-
-RUN uv pip install -e .
-
 EXPOSE 8000
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app"]
+# Production command: no reload
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -9,7 +9,7 @@ dependencies = [
     "httpx==0.27.0",
     "cachetools==5.5.2",
     "asyncache==0.3.1",
-    "pydantic==2.10.0",
+    "pydantic>=2.11.0",
     "pyyaml==6.0.2",
 ]
 
@@ -17,6 +17,8 @@ dependencies = [
 dev = [
     "pytest==8.3.0",
     "pytest-asyncio==0.24.0",
+    "ruff>=0.5.0",
+    "mypy>=1.10.0",
 ]
 
 [project.scripts]
@@ -28,3 +30,31 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E: pycodestyle, F: pyflakes, I: isort
+select = ["E", "F", "I"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true
+check_untyped_defs = false
+warn_return_any = false
+warn_unused_ignores = false
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "src.dotty"
+disable_error_code = ["arg-type", "assignment"]
+
+[dependency-groups]
+dev = [
+    "types-cachetools>=6.2.0.20251022",
+    "types-pyyaml>=6.0.12.20250915",
+]

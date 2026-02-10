@@ -22,3 +22,14 @@ restart:
 
 logs:
 	docker compose logs -f
+
+lint:
+	uv run ruff check .
+	uv run ruff format --check .
+
+format:
+	uv run ruff check --fix .
+	uv run ruff format .
+
+check: lint
+	uv run mypy src

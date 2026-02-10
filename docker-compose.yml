@@ -14,4 +14,5 @@ services:
       OPENGUARD_OPENAI_KEY_1: "${OPENGUARD_OPENAI_KEY_1:-}"
     volumes:
       - .:/app
+    # Override command to enable hot-reloading for development
     command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app"]
