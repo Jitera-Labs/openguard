@@ -25,7 +25,7 @@ async def list_downstream() -> Tuple[List[dict], Dict[str, dict]]:
         config.OPENGUARD_OPENAI_KEYS.value,
     ):
         try:
-            endpoint = f"{url}/v1/models"
+            endpoint = f"{url}/models"
             headers = {}
 
             if key:

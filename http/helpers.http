@@ -1,0 +1,231 @@
+{{
+  exports.prompts = {
+    paris: 'What is the capital of France? Answer with a single word.',
+  }
+
+  class Expect {
+    constructor(value, isNot = false) {
+      this.value = value;
+      this.isNot = isNot;
+    }
+
+    get not() {
+      return new Expect(this.value, true);
+    }
+
+    _assert(condition, message) {
+      if (this.isNot ? condition : !condition) {
+        const sourceLine = (new Error()).stack.split('\n')[3].trim();
+        throw new Error(`Expectation failed: ${message} at ${sourceLine}`);
+      }
+    }
+
+    toBe(expected, message) {
+      const matches = this.value === expected;
+      const defaultMessage = `Expected ${this.isNot ? 'not ' : ''}${expected}, got ${this.value}`;
+      this._assert(matches, message || defaultMessage);
+    }
+
+    toBeDefined(message) {
+      const isDefined = this.value !== undefined && this.value !== null;
+      const defaultMessage = `Expected value to ${this.isNot ? 'not ' : ''}be defined, got ${this.value}`;
+      this._assert(isDefined, message || defaultMessage);
+    }
+
+    toBeTruthy(message) {
+      const isTruthy = Boolean(this.value);
+      const defaultMessage = `Expected value to ${this.isNot ? 'not ' : ''}be truthy, got ${this.value}`;
+      this._assert(isTruthy, message || defaultMessage);
+    }
+
+    toBeFalsy(message) {
+      const isFalsy = !Boolean(this.value);
+      const defaultMessage = `Expected value to ${this.isNot ? 'not ' : ''}be falsy, got ${this.value}`;
+      this._assert(isFalsy, message || defaultMessage);
+    }
+
+    toBeUndefined(message) {
+      const isUndefined = this.value === undefined;
+      const defaultMessage = `Expected value to ${this.isNot ? 'not ' : ''}be undefined, got ${this.value}`;
+      this._assert(isUndefined, message || defaultMessage);
+    }
+
+    toBeNull(message) {
+      const isNull = this.value === null;
+      const defaultMessage = `Expected value to ${this.isNot ? 'not ' : ''}be null, got ${this.value}`;
+      this._assert(isNull, message || defaultMessage);
+    }
+
+    toEqual(expected, message) {
+      const matches = JSON.stringify(this.value) === JSON.stringify(expected);
+      const defaultMessage = `Expected ${this.isNot ? 'not ' : ''}${JSON.stringify(expected)}, got ${JSON.stringify(this.value)}`;
+      this._assert(matches, message || defaultMessage);
+    }
+
+    toHaveLength(expectedLength, message) {
+      const length = Array.isArray(this.value) ? this.value.length : Object.keys(this.value).length;
+      const matches = length === expectedLength;
+      const defaultMessage = `Expected length to be ${this.isNot ? 'not ' : ''}${expectedLength}, got ${length}`;
+      this._assert(matches, message || defaultMessage);
+    }
+
+    toStartWith(prefix, message) {
+      const startsWith = typeof this.value === 'string' && this.value.startsWith(prefix);
+      const defaultMessage = `Expected string to ${this.isNot ? 'not ' : ''}start with "${prefix}", got "${this.value}"`;
+      this._assert(startsWith, message || defaultMessage);
+    }
+
+    toInclude(substring, message) {
+      const includes = (typeof this.value === 'string' || Array.isArray(this.value)) && this.value.includes(substring);
+      const defaultMessage = `Expected string to ${this.isNot ? 'not ' : ''}include "${substring}", got "${this.value}"`;
+      this._assert(includes, message || defaultMessage);
+    }
+
+    toContain(item, message) {
+      const contains = (typeof this.value === 'string' || Array.isArray(this.value)) && this.value.includes(item);
+      const defaultMessage = `Expected ${typeof this.value === 'string' ? 'string' : 'array'} to ${this.isNot ? 'not ' : ''}contain "${item}", got "${this.value}"`;
+      this._assert(contains, message || defaultMessage);
+    }
+
+    toBeLessThan(max, message) {
+      const isLessThan = this.value < max;
+      const defaultMessage = `Expected value to be less than ${max}, got ${this.value}`;
+      this._assert(isLessThan, message || defaultMessage);
+    }
+
+    toBeGreaterThan(min, message) {
+      const isGreaterThan = this.value > min;
+      const defaultMessage = `Expected value to be greater than ${min}, got ${this.value}`;
+      this._assert(isGreaterThan, message || defaultMessage);
+    }
+
+    toBeGreaterThanOrEqual(min, message) {
+      const isGreaterThanOrEqual = this.value >= min;
+      const defaultMessage = `Expected value to be greater than or equal to ${min}, got ${this.value}`;
+      this._assert(isGreaterThanOrEqual, message || defaultMessage);
+    }
+  }
+
+  exports.expect = (value) => {
+    return new Expect(value);
+  }
+
+  exports.sleep = (ms) => {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  exports.chatCompletion = async (config) => {
+    const vars = $httpyac.context.variables;
+
+    const {
+      host = vars.host,
+      headers = vars.defaultHeaders,
+      model = vars.model,
+      messages = [],
+      payload = {},
+      signal = null
+    } = config;
+    const body = {
+      model: model,
+      messages: messages,
+      ...payload
+    };
+
+    const response = await fetch(`${host}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'X-Request-ID': httpRegion.id.split('/').pop(),
+        ...headers,
+      },
+      body: JSON.stringify(body),
+      signal: signal
+    });
+
+    return response;
+  }
+
+  exports.sseEvents = async function* sseEvents(response) {
+    if (!response || !response.body) throw new Error('Invalid Response: missing body');
+
+    // Bytes -> text as an async iterable (uses TextDecoderStream if available)
+    const textIterable = typeof TextDecoderStream === 'function'
+      ? response.body.pipeThrough(new TextDecoderStream())
+      : (async function* () {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          try {
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              if (value) yield decoder.decode(value, { stream: true });
+            }
+            const tail = decoder.decode();
+            if (tail) yield tail;
+          } finally {
+            reader.releaseLock();
+          }
+        })();
+
+    // Helpers
+    const nextSep = s => {
+      const a = s.indexOf('\n\n');
+      const b = s.indexOf('\r\n\r\n');
+      return a === -1 ? b : (b === -1 ? a : Math.min(a, b));
+    };
+    const parse = block => {
+      let event = 'message', id, data = '';
+      for (const line of block.split(/\r?\n/)) {
+        if (!line || line.startsWith(':')) continue;
+        const i = line.indexOf(':');
+        const field = i === -1 ? line : line.slice(0, i);
+        let val = i === -1 ? '' : line.slice(i + 1);
+        if (val.startsWith(' ')) val = val.slice(1);
+        if (field === 'event') event = val;
+        else if (field === 'id') id = val;
+        else if (field === 'data') data += (data ? '\n' : '') + val;
+      }
+      return { event, data, id };
+    };
+
+    // Read, split into SSE blocks, parse, and yield
+    let buffer = '';
+    for await (const chunk of textIterable) {
+      buffer += chunk;
+      let end;
+      while ((end = nextSep(buffer)) !== -1) {
+        const block = buffer.slice(0, end);
+        buffer = buffer.slice(end + (buffer[end] === '\r' ? 4 : 2));
+        const evt = parse(block);
+        if (evt.data === '[DONE]') return;
+        yield evt;
+      }
+    }
+    // Flush any trailing block without a final blank line
+    const tail = buffer.trim();
+    if (tail) {
+      const evt = parse(tail);
+      if (evt.data !== '[DONE]') yield evt;
+    }
+  }
+
+  exports.sseCompletion = async function* sseCompletion(response) {
+    for await (const { event, data, id } of exports.sseEvents(response)) {
+      yield JSON.parse(data);
+    }
+  }
+
+  exports.asyncTest = async (name, testFunc) => {
+    try {
+      await testFunc();
+      console.log(`Test "${name}": PASSED`);
+    } catch (error) {
+      console.error(`Test "${name}": FAILED - ${error}`);
+      throw error;
+    }
+  }
+
+  exports.textContent = (response) => {
+    const body = response.parsedBody;
+    return body?.choices?.[0]?.message?.content || '';
+  }
+}}

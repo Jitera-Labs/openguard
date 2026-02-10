@@ -141,7 +141,7 @@ OPENGUARD_CONFIG = Config[str](
 OPENGUARD_OPENAI_URLS = Config[str](
     name="OPENGUARD_OPENAI_URL_*",
     type=str,
-    default="http://localhost:11434",
+    default="http://localhost:11434/v1",
     description=(
         "Downstream OpenAI-compatible API URLs. "
         "Use wildcard naming like OPENGUARD_OPENAI_URL_OLLAMA."

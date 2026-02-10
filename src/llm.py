@@ -21,7 +21,7 @@ class LLM:
         Initialize LLM proxy.
 
         Args:
-          url: Backend URL (without /v1/chat/completions path)
+          url: Base URL (e.g. http://localhost:11434/v1)
           headers: Auth headers for backend
           payload: Request payload (guards already applied)
           stream: Whether to stream the response
@@ -37,7 +37,7 @@ class LLM:
         Proxy the request to downstream API.
         Handles both streaming and non-streaming responses.
         """
-        endpoint = f"{self.url}/v1/chat/completions"
+        endpoint = f"{self.url}/chat/completions"
 
         logger.debug(f"Proxying request to {endpoint}")
         logger.debug(f"Stream: {self.stream}")

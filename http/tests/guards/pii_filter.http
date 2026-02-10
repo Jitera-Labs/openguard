@@ -1,0 +1,27 @@
+# @import ../../variables.http
+
+### Email
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant. Users email is user@example.com"
+    },
+    {
+      "role": "user",
+      "content": "What is my email."
+    }
+  ]
+}
+
+?? status == 200
+{{
+test('Model did not receive PII data', () => {
+  expect(response.parsedBody).not.toInclude('example.com');
+  expect(response.parsedBody).not.toInclude('user@example.com');
+})
+}}

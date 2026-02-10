@@ -1,7 +1,6 @@
 # @import ./variables.http
 
-### Models
+### Get Models
 
-GET {{url}}/v1/models
-
-###
+GET {{host}}/v1/models
+...defaultHeaders
