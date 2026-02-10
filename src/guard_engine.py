@@ -1,10 +1,11 @@
 """Guard application engine - applies guards to requests based on matching rules."""
-from typing import Dict, List, Tuple, Any
-import importlib
 
-from src.selection import match_filter
+import importlib
+from typing import List, Tuple
+
 from src import log
-from src.guards import GuardRule, GuardBlockedError
+from src.guards import GuardBlockedError, GuardRule
+from src.selection import match_filter
 
 logger = log.setup_logger(__name__)
 
@@ -43,14 +44,16 @@ def apply_guards(payload: dict, guards: List[GuardRule]) -> Tuple[dict, List[str
 
             try:
                 # Dynamically import the guard type module
-                module_name = f'src.guard_types.{action_type}'
+                module_name = f"src.guard_types.{action_type}"
                 guard_module = importlib.import_module(module_name)
 
                 # Call the apply function
                 current_payload, action_logs = guard_module.apply(current_payload, action_config)
                 audit_logs.extend(action_logs)
 
-                logger.debug(f"Applied guard action '{action_type}' with {len(action_logs)} audit log(s)")
+                logger.debug(
+                    f"Applied guard action '{action_type}' with {len(action_logs)} audit log(s)"
+                )
 
             except GuardBlockedError:
                 raise

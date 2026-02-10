@@ -1,39 +1,45 @@
 """Guard configuration loading and validation."""
-from typing import Any, Dict, List
-from pydantic import BaseModel, Field
-import yaml
-import os
 
-from src.config import OPENGUARD_CONFIG
+import os
+from typing import Any, Dict, List
+
+import yaml
+from pydantic import BaseModel, Field
+
 from src import log
+from src.config import OPENGUARD_CONFIG
 
 logger = log.setup_logger(__name__)
 
 
 class GuardBlockedError(Exception):
     """Exception raised when a guard blocks a request."""
+
     pass
 
 
 class GuardAction(BaseModel):
     """A single guard action to apply."""
+
     type: str
     config: Dict[str, Any] = Field(default_factory=dict)
 
 
 class GuardRule(BaseModel):
     """A guard rule with match criteria and actions."""
+
     match: Dict[str, Any]
     apply: List[GuardAction]
 
 
 class GuardsConfig(BaseModel):
     """Top-level guards configuration."""
+
     guards: List[GuardRule] = Field(default_factory=list)
 
 
 # Module-level cache for loaded guards
-_guards_cache: List[GuardRule] = None
+_guards_cache: List[GuardRule] | None = None
 
 
 def load_guards_config(config_path: str) -> GuardsConfig:
@@ -55,7 +61,7 @@ def load_guards_config(config_path: str) -> GuardsConfig:
         raise FileNotFoundError(f"Guards configuration file not found: {config_path}")
 
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path, "r") as f:
             raw_config = yaml.safe_load(f)
 
         if raw_config is None:

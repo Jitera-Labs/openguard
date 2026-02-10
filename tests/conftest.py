@@ -4,7 +4,6 @@ Pytest fixtures and configuration for OpenGuard integration tests.
 Provides test client, mock downstream APIs, and test guards configuration.
 """
 
-import json
 import os
 import textwrap
 from unittest.mock import AsyncMock, MagicMock
@@ -83,7 +82,9 @@ def test_env(guards_yaml):
 
 
 @pytest.fixture(scope="function")
-def mock_httpx(mock_downstream_models, mock_non_streaming_response, mock_streaming_response, monkeypatch):
+def mock_httpx(
+    mock_downstream_models, mock_non_streaming_response, mock_streaming_response, monkeypatch
+):
     """Mock httpx for all requests - must be set up before test_client."""
     captured, _ = _build_httpx_mock(
         mock_downstream_models,
@@ -98,6 +99,7 @@ def mock_httpx(mock_downstream_models, mock_non_streaming_response, mock_streami
 def test_client(test_env, mock_httpx):
     """Create FastAPI test client with test config."""
     import importlib
+
     from src import config as config_module
     from src import guards as guards_module
     from src import main as main_module
@@ -151,11 +153,11 @@ def mock_downstream_models():
 def mock_streaming_response():
     """Mock streaming chat completion response."""
     chunks = [
-        'data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1234567890,"model":"test-model","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}\n\n',
-        'data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1234567890,"model":"test-model","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
-        'data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1234567890,"model":"test-model","choices":[{"index":0,"delta":{"content":" world"},"finish_reason":null}]}\n\n',
-        'data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1234567890,"model":"test-model","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n',
-        'data: [DONE]\n\n',
+        'data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1234567890,"model":"test-model","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}\n\n',  # noqa: E501
+        'data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1234567890,"model":"test-model","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',  # noqa: E501
+        'data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1234567890,"model":"test-model","choices":[{"index":0,"delta":{"content":" world"},"finish_reason":null}]}\n\n',  # noqa: E501
+        'data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1234567890,"model":"test-model","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n',  # noqa: E501
+        "data: [DONE]\n\n",
     ]
     return [chunk.encode("utf-8") for chunk in chunks]
 

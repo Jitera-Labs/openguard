@@ -1,6 +1,7 @@
 """Content filtering guard - blocks specific words/phrases."""
-from typing import Dict, List, Tuple, Any
+
 import copy
+from typing import List, Tuple
 
 
 def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
@@ -14,7 +15,7 @@ def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
     Returns:
         Tuple of (modified_payload, audit_logs)
     """
-    blocked_words = config.get('blocked_words', [])
+    blocked_words = config.get("blocked_words", [])
     if not blocked_words:
         return payload, []
 
@@ -22,17 +23,16 @@ def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
     modified_payload = copy.deepcopy(payload)
     audit_logs = []
 
-    messages = modified_payload.get('messages', [])
+    messages = modified_payload.get("messages", [])
 
     for idx, message in enumerate(messages):
-        content = message.get('content')
+        content = message.get("content")
 
         if content is None:
             continue
 
         # Handle string content
         if isinstance(content, str):
-            original_content = content
             modified = False
 
             for word in blocked_words:
@@ -40,31 +40,36 @@ def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
                 if word.lower() in content.lower():
                     # Case-insensitive replace
                     import re
+
                     pattern = re.compile(re.escape(word), re.IGNORECASE)
-                    content = pattern.sub('[FILTERED]', content)
+                    content = pattern.sub("[FILTERED]", content)
                     modified = True
                     audit_logs.append(f"content_filter: Replaced '{word}' in message {idx}")
 
             if modified:
-                message['content'] = content
+                message["content"] = content
 
         # Handle array content (multimodal messages)
         elif isinstance(content, list):
             for part_idx, part in enumerate(content):
-                if isinstance(part, dict) and 'text' in part:
-                    original_text = part['text']
+                if isinstance(part, dict) and "text" in part:
+                    original_text = part["text"]
                     text = original_text
                     modified = False
 
                     for word in blocked_words:
                         if word.lower() in text.lower():
                             import re
+
                             pattern = re.compile(re.escape(word), re.IGNORECASE)
-                            text = pattern.sub('[FILTERED]', text)
+                            text = pattern.sub("[FILTERED]", text)
                             modified = True
-                            audit_logs.append(f"content_filter: Replaced '{word}' in message {idx}, part {part_idx}")
+                            audit_logs.append(
+                                f"content_filter: Replaced '{word}' "
+                                f"in message {idx}, part {part_idx}"
+                            )
 
                     if modified:
-                        part['text'] = text
+                        part["text"] = text
 
     return modified_payload, audit_logs

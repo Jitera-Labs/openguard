@@ -9,18 +9,16 @@ This module creates the FastAPI application that handles:
 """
 
 import json
-import logging
+
 import httpx
-from typing import AsyncGenerator
-
-from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
 
-from src import config, mapper, llm, log as log_module
-from src.guards import get_guards, GuardBlockedError
+from src import config, llm, mapper
+from src import log as log_module
 from src.guard_engine import apply_guards, log_audit
+from src.guards import GuardBlockedError, get_guards
 from src.middleware.request_id import RequestIDMiddleware
 from src.middleware.request_state import RequestStateMiddleware
 
@@ -28,11 +26,7 @@ from src.middleware.request_state import RequestStateMiddleware
 logger = log_module.setup_logger(__name__)
 
 # Create FastAPI app
-app = FastAPI(
-    title="OpenGuard",
-    description="OpenAI-compatible guardrail proxy",
-    version="0.1.0"
-)
+app = FastAPI(title="OpenGuard", description="OpenAI-compatible guardrail proxy", version="0.1.0")
 
 # Add middlewares in correct order
 app.add_middleware(RequestStateMiddleware)
@@ -79,11 +73,7 @@ async def root():
         "name": "OpenGuard",
         "version": "0.1.0",
         "description": "OpenAI-compatible guardrail proxy",
-        "endpoints": {
-            "health": "/health",
-            "models": "/v1/models",
-            "chat": "/v1/chat/completions"
-        }
+        "endpoints": {"health": "/health", "models": "/v1/models", "chat": "/v1/chat/completions"},
     }
 
 
@@ -105,10 +95,7 @@ async def list_models(authorized: bool = Depends(verify_auth)):
 
 
 @app.post("/v1/chat/completions")
-async def chat_completions(
-    request: Request,
-    authorized: bool = Depends(verify_auth)
-):
+async def chat_completions(request: Request, authorized: bool = Depends(verify_auth)):
     """Handle chat completion with guards applied"""
     try:
         # Parse request body
@@ -128,18 +115,15 @@ async def chat_completions(
 
         # Create LLM proxy instance
         llm_instance = llm.LLM(
-            url=proxy_config['url'],
-            headers=proxy_config['headers'],
-            payload=proxy_config['payload'],
-            stream=proxy_config['stream']
+            url=proxy_config["url"],
+            headers=proxy_config["headers"],
+            payload=proxy_config["payload"],
+            stream=proxy_config["stream"],
         )
 
         # Proxy request
-        if proxy_config['stream']:
-            return StreamingResponse(
-                llm_instance.serve(),
-                media_type="text/event-stream"
-            )
+        if proxy_config["stream"]:
+            return StreamingResponse(llm_instance.serve(), media_type="text/event-stream")
         else:
             # Non-streaming: collect response and return as JSON
             response_text = None
@@ -148,17 +132,14 @@ async def chat_completions(
                 break  # Only one chunk for non-streaming
 
             if response_text:
-                return JSONResponse(
-                    content=json.loads(response_text),
-                    status_code=200
-                )
+                return JSONResponse(content=json.loads(response_text), status_code=200)
             else:
                 raise HTTPException(status_code=500, detail="Empty response from downstream")
 
     except GuardBlockedError as e:
         return JSONResponse(
             status_code=403,
-            content={"error": {"message": str(e), "type": "guard_block", "code": 403}}
+            content={"error": {"message": str(e), "type": "guard_block", "code": 403}},
         )
     except httpx.HTTPStatusError as e:
         error_body = await e.response.aread()
@@ -169,16 +150,13 @@ async def chat_completions(
         except json.JSONDecodeError:
             content = {
                 "error": {
-                    "message": error_body.decode('utf-8'),
+                    "message": error_body.decode("utf-8"),
                     "type": "downstream_error",
-                    "code": e.response.status_code
+                    "code": e.response.status_code,
                 }
             }
 
-        return JSONResponse(
-            status_code=e.response.status_code,
-            content=content
-        )
+        return JSONResponse(status_code=e.response.status_code, content=content)
     except httpx.ConnectError as e:
         logger.error(f"Connection error: {e}")
         return JSONResponse(
@@ -187,9 +165,9 @@ async def chat_completions(
                 "error": {
                     "message": f"Failed to connect to downstream API: {str(e)}",
                     "type": "connection_error",
-                    "code": 502
+                    "code": 502,
                 }
-            }
+            },
         )
     except httpx.TimeoutException as e:
         logger.error(f"Timeout error: {e}")
@@ -199,9 +177,9 @@ async def chat_completions(
                 "error": {
                     "message": "Request to downstream API timed out",
                     "type": "timeout_error",
-                    "code": 504
+                    "code": 504,
                 }
-            }
+            },
         )
     except HTTPException:
         raise
@@ -228,13 +206,7 @@ def main():
     guards = get_guards()
     logger.info(f"Loaded {len(guards)} guard rules")
 
-    uvicorn.run(
-        "src.main:app",
-        host=host,
-        port=port,
-        log_level=log_level,
-        reload=False
-    )
+    uvicorn.run("src.main:app", host=host, port=port, log_level=log_level, reload=False)
 
 
 if __name__ == "__main__":

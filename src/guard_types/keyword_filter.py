@@ -1,8 +1,11 @@
 """Keyword filter guard implementation."""
-from typing import Dict, List, Tuple, Any, Optional
+
 import copy
 import re
+from typing import Any, List, Tuple
+
 from src.guards import GuardBlockedError
+
 
 def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
     """
@@ -81,7 +84,7 @@ def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
             first_kw = list(present_keywords)[0]
             raise GuardBlockedError(f"Request blocked: found keyword '{first_kw}'")
         else:
-             raise GuardBlockedError(f"Request blocked: {trigger_reason}")
+            raise GuardBlockedError(f"Request blocked: {trigger_reason}")
 
     elif action == "log":
         audit_logs.append(f"Keyword filter triggered: {trigger_reason}")
@@ -94,8 +97,11 @@ def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
             new_text = text_val
             for kw in keywords:
                 # If match_mode is 'any', we replace any found kw.
-                # If match_mode is 'all', we replace all kw (since we are triggered, all are present).
-                # Wait, if match_mode is 'all', should we replace ONLY if all are present? Yes, `triggered` check ensures that.
+                # If match_mode is 'all', we replace all kw
+                # (since we are triggered, all are present).
+                # Wait, if match_mode is 'all', should we replace
+                # ONLY if all are present?
+                # Yes, `triggered` check ensures that.
                 # But should we replace only the keywords in the list? Yes.
                 # Should we check if kw is in present_keywords?
                 # For 'all', yes they are all there.

@@ -10,9 +10,7 @@ Tests cover:
 """
 
 import json
-from unittest.mock import patch, AsyncMock, MagicMock
-
-import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 def test_health(test_client):
@@ -56,10 +54,8 @@ def test_chat_no_guard_unmatched_model(test_client, setup_mock_non_streaming):
     """Test chat completion with model that doesn't match any guards"""
     payload = {
         "model": "unmatched-model",
-        "messages": [
-            {"role": "user", "content": "Hello, how are you?"}
-        ],
-        "stream": False
+        "messages": [{"role": "user", "content": "Hello, how are you?"}],
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -82,7 +78,7 @@ def test_chat_with_content_filter(test_client, setup_mock_non_streaming):
         "messages": [
             {"role": "user", "content": "This message contains badword and offensive content"}
         ],
-        "stream": False
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -106,12 +102,9 @@ def test_chat_with_pii_filter(test_client, setup_mock_non_streaming):
     payload = {
         "model": "test-secure-model",
         "messages": [
-            {
-                "role": "user",
-                "content": "My email is test@example.com and phone is 555-123-4567"
-            }
+            {"role": "user", "content": "My email is test@example.com and phone is 555-123-4567"}
         ],
-        "stream": False
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -132,11 +125,9 @@ def test_chat_with_max_tokens(test_client, setup_mock_non_streaming):
     """Test chat completion with max_tokens guard applied"""
     payload = {
         "model": "test-limited-model",
-        "messages": [
-            {"role": "user", "content": "Tell me a long story"}
-        ],
+        "messages": [{"role": "user", "content": "Tell me a long story"}],
         "max_tokens": 1000,  # Should be reduced to 100
-        "stream": False
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -153,11 +144,9 @@ def test_chat_with_multiple_guards(test_client, setup_mock_non_streaming):
     """Test chat completion with multiple guards applied"""
     payload = {
         "model": "test-protected-model",
-        "messages": [
-            {"role": "user", "content": "This is spam content"}
-        ],
+        "messages": [{"role": "user", "content": "This is spam content"}],
         "max_tokens": 1000,
-        "stream": False
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -175,10 +164,8 @@ def test_streaming_chat_completion(test_client, setup_mock_streaming):
     """Test streaming chat completion"""
     payload = {
         "model": "test-model",
-        "messages": [
-            {"role": "user", "content": "Hello"}
-        ],
-        "stream": True
+        "messages": [{"role": "user", "content": "Hello"}],
+        "stream": True,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -192,15 +179,15 @@ def test_streaming_chat_completion(test_client, setup_mock_streaming):
     assert "[DONE]" in content
 
     # Parse chunks
-    lines = [line for line in content.split('\n') if line.strip()]
-    data_lines = [line for line in lines if line.startswith('data: ')]
+    lines = [line for line in content.split("\n") if line.strip()]
+    data_lines = [line for line in lines if line.startswith("data: ")]
 
     assert len(data_lines) > 0
 
     # Verify at least one chunk has content
     has_content = False
     for line in data_lines:
-        if line == 'data: [DONE]':
+        if line == "data: [DONE]":
             continue
         data = json.loads(line[6:])  # Skip "data: "
         if data.get("choices", [{}])[0].get("delta", {}).get("content"):
@@ -217,10 +204,8 @@ def test_non_streaming_chat_completion(test_client, setup_mock_non_streaming):
     """Test non-streaming chat completion"""
     payload = {
         "model": "test-model",
-        "messages": [
-            {"role": "user", "content": "Hello"}
-        ],
-        "stream": False
+        "messages": [{"role": "user", "content": "Hello"}],
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -243,10 +228,8 @@ def test_authentication_disabled(test_client, setup_mock_non_streaming):
     """Test that requests work without authentication when disabled"""
     payload = {
         "model": "test-model",
-        "messages": [
-            {"role": "user", "content": "Hello"}
-        ],
-        "stream": False
+        "messages": [{"role": "user", "content": "Hello"}],
+        "stream": False,
     }
 
     # Request without Authorization header
@@ -257,20 +240,19 @@ def test_authentication_disabled(test_client, setup_mock_non_streaming):
 def test_authentication_enabled(test_client, setup_mock_non_streaming, monkeypatch):
     """Test authentication when API key is configured"""
     # Enable authentication
-    import os
     monkeypatch.setenv("OPENGUARD_API_KEY", "test-key-123")
 
     # Need to reload config to pick up new env var
     import importlib
+
     from src import config
+
     importlib.reload(config)
 
     payload = {
         "model": "test-model",
-        "messages": [
-            {"role": "user", "content": "Hello"}
-        ],
-        "stream": False
+        "messages": [{"role": "user", "content": "Hello"}],
+        "stream": False,
     }
 
     # Request without Authorization header should fail
@@ -292,10 +274,8 @@ def test_invalid_model(test_client, setup_mock_downstream):
     """Test error handling for unknown model"""
     payload = {
         "model": "nonexistent-model",
-        "messages": [
-            {"role": "user", "content": "Hello"}
-        ],
-        "stream": False
+        "messages": [{"role": "user", "content": "Hello"}],
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -306,12 +286,7 @@ def test_invalid_model(test_client, setup_mock_downstream):
 
 def test_missing_model(test_client, setup_mock_downstream):
     """Test error handling for missing model field"""
-    payload = {
-        "messages": [
-            {"role": "user", "content": "Hello"}
-        ],
-        "stream": False
-    }
+    payload = {"messages": [{"role": "user", "content": "Hello"}], "stream": False}
 
     response = test_client.post("/v1/chat/completions", json=payload)
 
@@ -322,9 +297,7 @@ def test_missing_model(test_client, setup_mock_downstream):
 def test_invalid_json(test_client):
     """Test error handling for invalid JSON"""
     response = test_client.post(
-        "/v1/chat/completions",
-        data="not valid json",
-        headers={"Content-Type": "application/json"}
+        "/v1/chat/completions", data="not valid json", headers={"Content-Type": "application/json"}
     )
 
     assert response.status_code == 400
@@ -335,10 +308,8 @@ def test_content_filter_multiple_words(test_client, setup_mock_non_streaming):
     """Test content filter replaces multiple blocked words"""
     payload = {
         "model": "test-model",
-        "messages": [
-            {"role": "user", "content": "Please remove badword and offensive terms"}
-        ],
-        "stream": False
+        "messages": [{"role": "user", "content": "Please remove badword and offensive terms"}],
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -352,10 +323,10 @@ def test_pii_filter_multiple_types(test_client, setup_mock_non_streaming):
         "messages": [
             {
                 "role": "user",
-                "content": "Contact me at john@example.com or 555-123-4567. SSN: 123-45-6789"
+                "content": "Contact me at john@example.com or 555-123-4567. SSN: 123-45-6789",
             }
         ],
-        "stream": False
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -371,11 +342,11 @@ def test_multimodal_content_with_filter(test_client, setup_mock_non_streaming):
                 "role": "user",
                 "content": [
                     {"type": "text", "text": "This has badword in it"},
-                    {"type": "text", "text": "And more offensive content"}
-                ]
+                    {"type": "text", "text": "And more offensive content"},
+                ],
             }
         ],
-        "stream": False
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -386,10 +357,8 @@ def test_max_tokens_enforces_when_absent(test_client, setup_mock_non_streaming):
     """Test max_tokens guard adds limit when not present"""
     payload = {
         "model": "test-limited-model",
-        "messages": [
-            {"role": "user", "content": "Tell me a story"}
-        ],
-        "stream": False
+        "messages": [{"role": "user", "content": "Tell me a story"}],
+        "stream": False,
         # No max_tokens field
     }
 
@@ -401,10 +370,8 @@ def test_guard_with_case_insensitive_matching(test_client, setup_mock_non_stream
     """Test guards match models case-insensitively"""
     payload = {
         "model": "TEST-MODEL",  # Uppercase
-        "messages": [
-            {"role": "user", "content": "This has BADWORD"}
-        ],
-        "stream": False
+        "messages": [{"role": "user", "content": "This has BADWORD"}],
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
@@ -416,7 +383,7 @@ def test_downstream_timeout_handling(test_client, setup_mock_downstream):
     import httpx
 
     # Mock a timeout
-    with patch('httpx.AsyncClient') as mock_client:
+    with patch("httpx.AsyncClient") as mock_client:
         client_instance = MagicMock()
 
         async def mock_stream(*args, **kwargs):
@@ -434,24 +401,25 @@ def test_downstream_timeout_handling(test_client, setup_mock_downstream):
 
         payload = {
             "model": "test-model",
-            "messages": [
-                {"role": "user", "content": "Hello"}
-            ],
-            "stream": False
+            "messages": [{"role": "user", "content": "Hello"}],
+            "stream": False,
         }
 
         response = test_client.post("/v1/chat/completions", json=payload)
         assert response.status_code == 500
 
 
-def test_models_endpoint_requires_auth_when_enabled(test_client, setup_mock_downstream, monkeypatch):
+def test_models_endpoint_requires_auth_when_enabled(
+    test_client, setup_mock_downstream, monkeypatch
+):
     """Test that /v1/models endpoint requires authentication when enabled"""
-    import os
     monkeypatch.setenv("OPENGUARD_API_KEY", "test-key-123")
 
     # Reload config
     import importlib
+
     from src import config
+
     importlib.reload(config)
 
     # Request without auth should fail
@@ -472,9 +440,9 @@ def test_multiple_messages_with_guards(test_client, setup_mock_non_streaming):
             {"role": "system", "content": "You are helpful"},
             {"role": "user", "content": "First badword message"},
             {"role": "assistant", "content": "OK"},
-            {"role": "user", "content": "Second offensive message"}
+            {"role": "user", "content": "Second offensive message"},
         ],
-        "stream": False
+        "stream": False,
     }
 
     response = test_client.post("/v1/chat/completions", json=payload)
