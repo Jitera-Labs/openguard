@@ -66,7 +66,7 @@ def test_chat_no_guard_unmatched_model(test_client, setup_mock_non_streaming):
     assert len(data["choices"]) > 0
     assert "message" in data["choices"][0]
 
-    forwarded = setup_mock_non_streaming["post"][0]["json"]
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
     assert forwarded["model"] == "unmatched-model"
     assert forwarded["messages"][0]["content"] == "Hello, how are you?"
 
@@ -90,7 +90,7 @@ def test_chat_with_content_filter(test_client, setup_mock_non_streaming):
     assert data["object"] == "chat.completion"
     assert len(data["choices"]) > 0
 
-    forwarded = setup_mock_non_streaming["post"][0]["json"]
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
     content = forwarded["messages"][0]["content"]
     assert "badword" not in content.lower()
     assert "offensive" not in content.lower()
@@ -113,7 +113,7 @@ def test_chat_with_pii_filter(test_client, setup_mock_non_streaming):
     data = response.json()
     assert data["object"] == "chat.completion"
 
-    forwarded = setup_mock_non_streaming["post"][0]["json"]
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
     assert forwarded["messages"][0]["role"] == "system"
     assert "PII has been filtered" in forwarded["messages"][0]["content"]
     user_content = forwarded["messages"][1]["content"]
@@ -136,7 +136,7 @@ def test_chat_with_max_tokens(test_client, setup_mock_non_streaming):
     data = response.json()
     assert data["object"] == "chat.completion"
 
-    forwarded = setup_mock_non_streaming["post"][0]["json"]
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
     assert forwarded["max_tokens"] == 100
 
 
@@ -155,7 +155,7 @@ def test_chat_with_multiple_guards(test_client, setup_mock_non_streaming):
     data = response.json()
     assert data["object"] == "chat.completion"
 
-    forwarded = setup_mock_non_streaming["post"][0]["json"]
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
     assert forwarded["max_tokens"] == 500
     assert "[FILTERED]" in forwarded["messages"][0]["content"]
 
@@ -220,8 +220,9 @@ def test_non_streaming_chat_completion(test_client, setup_mock_non_streaming):
     assert "message" in data["choices"][0]
     assert data["choices"][0]["message"]["role"] == "assistant"
 
-    forwarded = setup_mock_non_streaming["post"][0]["json"]
-    assert forwarded["stream"] is False
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
+    # LLM serve forces streaming, so upstream request has stream=True
+    assert forwarded["stream"] is True
 
 
 def test_authentication_disabled(test_client, setup_mock_non_streaming):
@@ -270,8 +271,14 @@ def test_authentication_enabled(test_client, setup_mock_non_streaming, monkeypat
     assert response.status_code == 200
 
 
-def test_invalid_model(test_client, setup_mock_downstream):
+def test_invalid_model(test_client, setup_mock_downstream, monkeypatch):
     """Test error handling for unknown model"""
+    # Force multiple URLs to disable fallback logic
+    monkeypatch.setenv("OPENGUARD_OPENAI_URL_SECONDARY", "http://secondary.test")
+    import importlib
+    from src import config
+    importlib.reload(config)
+
     payload = {
         "model": "nonexistent-model",
         "messages": [{"role": "user", "content": "Hello"}],
@@ -280,7 +287,7 @@ def test_invalid_model(test_client, setup_mock_downstream):
 
     response = test_client.post("/v1/chat/completions", json=payload)
 
-    assert response.status_code == 400
+    assert response.status_code == 404
     assert "Unknown model" in response.json()["detail"]
 
 

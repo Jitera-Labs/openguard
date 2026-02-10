@@ -35,3 +35,11 @@ format:
 
 check: lint
 	uv run mypy src
+
+test: test-unit test-integration
+
+test-unit:
+	uv run pytest
+
+test-integration:
+	httpyac http/tests/*.http --all

@@ -1,36 +1,39 @@
 """Max tokens guard - enforces token limits on requests."""
 
-import copy
-from typing import List, Tuple
+from typing import List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.chat import Chat
+    from src.llm import LLM
 
 
-def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
+def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
     """
     Enforce maximum token limit.
 
     Args:
-        payload: Request payload
+        chat: Chat object
+        llm: LLM object
         config: Guard configuration with 'max_tokens' value
 
     Returns:
-        Tuple of (modified_payload, audit_logs)
+        List of audit logs
     """
     max_tokens_limit = config.get("max_tokens")
     if max_tokens_limit is None:
-        return payload, []
+        return []
 
-    # Create a deep copy to avoid modifying original
-    modified_payload = copy.deepcopy(payload)
     audit_logs = []
 
-    current_max = modified_payload.get("max_tokens")
+    # Check params in LLM
+    # params is a dict
+    current_max = llm.params.get("max_tokens")
 
     # Override if present and exceeds limit, or add if absent
     if current_max is None:
-        modified_payload["max_tokens"] = max_tokens_limit
+        llm.params["max_tokens"] = max_tokens_limit
         audit_logs.append(f"max_tokens: Enforced limit of {max_tokens_limit}")
     elif current_max > max_tokens_limit:
-        modified_payload["max_tokens"] = max_tokens_limit
+        llm.params["max_tokens"] = max_tokens_limit
         audit_logs.append(f"max_tokens: Enforced limit of {max_tokens_limit} (was {current_max})")
 
-    return modified_payload, audit_logs
+    return audit_logs

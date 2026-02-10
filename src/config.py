@@ -213,6 +213,33 @@ MODEL_FILTER = Config[ConfigDict](
     description="Filter to apply to downstream models list (Hasura-style filter).",
 )
 
+INTERMEDIATE_OUTPUT = Config[bool](
+    name="BOOST_INTERMEDIATE_OUTPUT",
+    type=bool,
+    default="false",
+    description="Stream intermediate reasoning steps to the client.",
+)
+
+EXTRA_LLM_PARAMS = Config[ConfigDict](
+    name="BOOST_EXTRA_LLM_PARAMS",
+    type=ConfigDict,
+    default="",
+    description="Extra parameters to inject into every LLM request.",
+)
+
+BOOST_PUBLIC_URL = Config[str](
+    name="BOOST_PUBLIC_URL",
+    type=str,
+    default="http://localhost:8000",
+    description="Public URL for Boost artifacts.",
+)
+
+STATUS_STYLE = Config[str](
+  name="STATUS_STYLE",
+  type=str,
+  default="md:codeblock",
+  description="Style for status messages (md:codeblock, md:h1, md:h2, md:h3, plain, none)"
+)
 
 if __name__ == "__main__":
     # Render documentation

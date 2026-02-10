@@ -4,30 +4,40 @@ import importlib
 from typing import List, Tuple
 
 from src import log
+from src.chat import Chat
+from src.llm import LLM
 from src.guards import GuardBlockedError, GuardRule
 from src.selection import match_filter
 
 logger = log.setup_logger(__name__)
 
 
-def apply_guards(payload: dict, guards: List[GuardRule]) -> Tuple[dict, List[str]]:
+def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[Chat, List[str]]:
     """
-    Apply guards to a payload in order.
+    Apply guards to a chat session in order.
 
     Args:
-        payload: Request payload to process
+        chat: Chat object to process
+        llm: LLM object containing parameters
         guards: List of guard rules to apply
 
     Returns:
-        Tuple of (modified_payload, audit_logs)
+        Tuple of (modified_chat, audit_logs)
     """
     audit_logs = []
-    current_payload = payload
+
+    # Construct context for matching
+    # This allows guards to match against model, params, messages, etc.
+    match_context = {
+        "model": llm.model,
+        "messages": chat.history(),
+        **llm.params
+    }
 
     for guard_idx, guard in enumerate(guards):
-        # Check if guard matches the payload
+        # Check if guard matches the context
         try:
-            matches = match_filter(current_payload, guard.match)
+            matches = match_filter(match_context, guard.match)
         except Exception as e:
             logger.error(f"Error matching guard {guard_idx}: {e}")
             matches = False
@@ -48,11 +58,14 @@ def apply_guards(payload: dict, guards: List[GuardRule]) -> Tuple[dict, List[str
                 guard_module = importlib.import_module(module_name)
 
                 # Call the apply function
-                current_payload, action_logs = guard_module.apply(current_payload, action_config)
-                audit_logs.extend(action_logs)
+                # Signature: apply(chat, llm, config) -> List[str]
+                action_logs = guard_module.apply(chat, llm, action_config)
+
+                if action_logs:
+                    audit_logs.extend(action_logs)
 
                 logger.debug(
-                    f"Applied guard action '{action_type}' with {len(action_logs)} audit log(s)"
+                    f"Applied guard action '{action_type}'"
                 )
 
             except GuardBlockedError:
@@ -64,7 +77,7 @@ def apply_guards(payload: dict, guards: List[GuardRule]) -> Tuple[dict, List[str
             except Exception as e:
                 logger.error(f"Error applying guard action '{action_type}': {e}")
 
-    return current_payload, audit_logs
+    return chat, audit_logs
 
 
 def log_audit(audit_logs: List[str]):

@@ -1,56 +1,54 @@
 """Content filtering guard - blocks specific words/phrases."""
 
-import copy
-from typing import List, Tuple
+import re
+from typing import List, TYPE_CHECKING, Dict
+
+if TYPE_CHECKING:
+    from src.chat import Chat
+    from src.llm import LLM
 
 
-def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
+def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
     """
     Filter blocked words from message content.
 
     Args:
-        payload: Request payload with messages
+        chat: Chat object to filter
+        llm: LLM object
         config: Guard configuration with 'blocked_words' list
 
     Returns:
-        Tuple of (modified_payload, audit_logs)
+        List of audit logs
     """
     blocked_words = config.get("blocked_words", [])
     if not blocked_words:
-        return payload, []
+        return []
 
-    # Create a deep copy to avoid modifying original
-    modified_payload = copy.deepcopy(payload)
     audit_logs = []
 
-    messages = modified_payload.get("messages", [])
-
-    for idx, message in enumerate(messages):
-        content = message.get("content")
+    # Iterate over all messages in the chat
+    # chat.plain() returns list of ChatNodes
+    for idx, node in enumerate(chat.plain()):
+        content = node.content
 
         if content is None:
             continue
 
-        # Handle string content
         if isinstance(content, str):
             modified = False
-
             for word in blocked_words:
                 # Case-insensitive search
                 if word.lower() in content.lower():
-                    # Case-insensitive replace
-                    import re
-
                     pattern = re.compile(re.escape(word), re.IGNORECASE)
                     content = pattern.sub("[FILTERED]", content)
                     modified = True
-                    audit_logs.append(f"content_filter: Replaced '{word}' in message {idx}")
+                    audit_logs.append(f"content_filter: Replaced '{word}' in message {idx} ({node.role})")
 
             if modified:
-                message["content"] = content
+                node.content = content
 
-        # Handle array content (multimodal messages)
         elif isinstance(content, list):
+            # Multimodal content
             for part_idx, part in enumerate(content):
                 if isinstance(part, dict) and "text" in part:
                     original_text = part["text"]
@@ -59,17 +57,15 @@ def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
 
                     for word in blocked_words:
                         if word.lower() in text.lower():
-                            import re
-
                             pattern = re.compile(re.escape(word), re.IGNORECASE)
                             text = pattern.sub("[FILTERED]", text)
                             modified = True
                             audit_logs.append(
                                 f"content_filter: Replaced '{word}' "
-                                f"in message {idx}, part {part_idx}"
+                                f"in message {idx}, part {part_idx} ({node.role})"
                             )
 
                     if modified:
                         part["text"] = text
 
-    return modified_payload, audit_logs
+    return audit_logs

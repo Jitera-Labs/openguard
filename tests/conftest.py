@@ -68,6 +68,11 @@ def test_env(guards_yaml):
     """Set up test environment variables with isolation."""
     old_env = os.environ.copy()
 
+    # Clear conflicting OpenGuard vars
+    for key in list(os.environ.keys()):
+        if key.startswith("OPENGUARD_"):
+            del os.environ[key]
+
     os.environ["OPENGUARD_CONFIG"] = guards_yaml
     os.environ["OPENGUARD_OPENAI_URL_TEST"] = "http://downstream.test"
     os.environ["OPENGUARD_OPENAI_KEY_TEST"] = ""
@@ -105,6 +110,8 @@ def test_client(test_env, mock_httpx):
     from src import main as main_module
 
     importlib.reload(config_module)
+    from src import mapper as mapper_module
+    importlib.reload(mapper_module)
     guards_module._guards_cache = None
     importlib.reload(guards_module)
     importlib.reload(main_module)
@@ -195,6 +202,7 @@ def _build_httpx_mock(
 
     async def mock_get(url, headers=None, **kwargs):
         response = MagicMock()
+        response.status_code = 200
         response.json.return_value = {"object": "list", "data": mock_downstream_models}
         response.raise_for_status = MagicMock()
         captured["get"].append({"url": url, "headers": headers})
@@ -202,6 +210,7 @@ def _build_httpx_mock(
 
     async def mock_post(url, headers=None, json=None, **kwargs):
         response = MagicMock()
+        response.status_code = 200
         response.json.return_value = non_streaming_response
         response.raise_for_status = MagicMock()
         captured["post"].append({"url": url, "headers": headers, "json": json})
@@ -213,6 +222,7 @@ def _build_httpx_mock(
 
     def mock_stream(method, url, headers=None, json=None, **kwargs):
         response = MagicMock()
+        response.status_code = 200
         response.raise_for_status = MagicMock()
         response.aiter_bytes = aiter_bytes
         captured["stream"].append({"method": method, "url": url, "headers": headers, "json": json})

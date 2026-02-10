@@ -1,143 +1,177 @@
-from typing import Dict, List, Tuple
-
-import httpx
 from asyncache import cached
 from cachetools import TTLCache
+from fastapi import HTTPException
 
-from src import config, log
+import httpx
+
+from typing import Dict, Optional, TYPE_CHECKING
+
+from . import config
+from . import log
+
+if TYPE_CHECKING:
+  from . import llm
 
 logger = log.setup_logger(__name__)
 
+MODEL_TO_BACKEND: Dict[str, str] = {}
+
+# TODO: Add mods (modules) support when adoption is complete
+# import mods
+
 
 @cached(TTLCache(1024, 60))
-async def list_downstream() -> Tuple[List[dict], Dict[str, dict]]:
-    """
-    Fetch models from all downstream APIs with 60-second caching.
-    Returns tuple of (models_list, model_to_backend_mapping).
-    """
-    logger.debug("Listing downstream models")
+async def list_downstream():
+  logger.debug("Listing downstream models")
 
-    all_models = []
-    model_to_backend = {}
+  all_models = []
 
-    for url, key in zip(
-        config.OPENGUARD_OPENAI_URLS.value,
-        config.OPENGUARD_OPENAI_KEYS.value,
-    ):
-        try:
-            endpoint = f"{url}/models"
-            headers = {}
+  # Using OpenGuard configuration
+  urls = config.OPENGUARD_OPENAI_URLS.value
+  keys = config.OPENGUARD_OPENAI_KEYS.value
 
-            if key:
-                headers["Authorization"] = f"Bearer {key}"
+  # Ensure keys matches urls length, pad with empty strings if not
+  if isinstance(urls, str): urls = [urls]
+  if isinstance(keys, str): keys = [keys]
 
-            headers["Content-Type"] = "application/json"
-
-            logger.debug(f"Fetching models from '{endpoint}'")
-
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(endpoint, headers=headers)
-                response.raise_for_status()
-                json_data = response.json()
-                models = json_data.get("data", [])
-
-                logger.debug(f"Found {len(models)} models at '{endpoint}'")
-                all_models.extend(models)
-
-                # Track which backend each model comes from
-                for model in models:
-                    model_id = model.get("id")
-                    if model_id:
-                        model_to_backend[model_id] = {"url": url, "key": key}
-
-        except httpx.TimeoutException:
-            logger.error(f"Timeout fetching models from {endpoint}")
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error fetching models from {endpoint}: {e.response.status_code}")
-        except Exception as e:
-            logger.error(f"Failed to fetch models from {endpoint}: {e}")
-
-    return all_models, model_to_backend
+  if len(keys) < len(urls):
+      keys.extend([""] * (len(urls) - len(keys)))
 
 
-async def build_model_map() -> Dict[str, dict]:
-    """
-    Build a mapping of model IDs to their backend configuration.
-    Returns: {model_id: {url: str, headers: dict}}
-    """
-    models, model_to_backend = await list_downstream()
-    model_map = {}
+  for url, key in zip(urls, keys):
+    try:
+      endpoint = f"{url}/models"
+      headers = {
+        "Content-Type": "application/json",
+      }
+      if key:
+         headers["Authorization"] = f"Bearer {key}"
 
-    for model in models:
-        model_id = model.get("id")
-        if not model_id:
-            continue
+      logger.debug(f"Fetching models from '{endpoint}'")
 
-        backend_info = model_to_backend.get(model_id)
-        if not backend_info:
-            continue
+      async with httpx.AsyncClient() as client:
+        response = await client.get(endpoint, headers=headers)
+        response.raise_for_status()
+        json = response.json()
+        models = json.get("data", [])
 
-        url = backend_info["url"]
-        key = backend_info["key"]
+        logger.debug(f"Found {len(models)} models at '{endpoint}'")
+        all_models.extend(models)
 
-        headers = {"Content-Type": "application/json"}
-        if key:
-            headers["Authorization"] = f"Bearer {key}"
+        for model in models:
+          MODEL_TO_BACKEND[model["id"]] = url
 
-        model_map[model_id] = {"url": url, "headers": headers}
+    except Exception as e:
+      logger.error(f"Failed to fetch models from {endpoint}: {e}")
 
-    logger.debug(f"Built model map with {len(model_map)} models")
-    return model_map
+  return all_models
 
 
-async def resolve_request_config(payload: dict) -> dict:
-    """
-    Resolve request configuration from payload.
+def get_proxy_model(module, model: dict) -> Dict:
+  return {
+    **model,
+    "id": f"{module.ID_PREFIX}-{model['id']}",
+    "name": f"{module.ID_PREFIX} {model['id']}",
+  }
 
-    Args:
-      payload: Request payload with 'model' field
 
-    Returns:
-      dict with:
-        - url: Backend URL
-        - headers: Auth headers for backend
-        - payload: Original payload (guards already applied)
-        - stream: Whether to stream the response
-    """
-    model = payload.get("model")
+def resolve_proxy_model(model_id: str) -> str:
+    # Logic disabled until mods are ported
+    # parts = model_id.split("-")
+    # if parts[0] in mods.registry:
+    #   return "-".join(parts[1:])
+    return model_id
 
-    if not model:
-        raise ValueError("Unable to proxy request without a model specifier")
 
-    model_map = await build_model_map()
+def resolve_proxy_module(model_id: str) -> Optional[str]:
+    # Logic disabled until mods are ported
+    # parts = model_id.split("-")
+    # if parts[0] in mods.registry:
+    #   return parts[0]
+    return None
 
-    # Case-insensitive model lookup
-    model_lower = model.lower()
-    backend_config = None
-    actual_model_key = None
 
-    for key in model_map:
-        if key.lower() == model_lower:
-            backend_config = model_map[key]
-            actual_model_key = key
-            break
+def resolve_request_config(body: Dict) -> Dict:
+  model = body.get("model")
+  messages = body.get("messages")
+  params = {k: v for k, v in body.items() if k not in ["model", "messages"]}
 
-    if not backend_config:
-        raise ValueError(f"Unknown model: '{model}'")
+  if not model:
+    raise ValueError("Unable to proxy request without a model specifier")
 
-    if actual_model_key is None:
-        raise ValueError(f"Model key not found for: '{model}'")
+  proxy_model = resolve_proxy_model(model)
+  proxy_module = resolve_proxy_module(model)
+  proxy_backend = MODEL_TO_BACKEND.get(proxy_model)
 
-    backend_config = model_map[actual_model_key]
-    stream = payload.get("stream", False)
+  logger.debug(
+    f"Resolved proxy model: {proxy_model}, proxy module: {proxy_module}, proxy backend: {proxy_backend}"
+  )
 
-    resolved_config = {
-        "url": backend_config["url"],
-        "headers": backend_config["headers"],
-        "payload": payload,
-        "stream": stream,
-    }
+  if not proxy_backend:
+    # If not found in cache, it might be that we haven't fetched models yet or it's invalid.
+    # For now, if we can't find backend, we might fail or default to first one.
+    # Current logic strictly requires backend map.
 
-    logger.debug(f"Resolved model '{model}' to backend '{backend_config['url']}'")
+    # Try to re-populate cache if empty or missing?
+    # list_downstream is cached.
 
-    return resolved_config
+    # Fallback: check if we can guess backend from config if only 1 exists
+    urls = config.OPENGUARD_OPENAI_URLS.value
+    if isinstance(urls, str): urls = [urls]
+
+    if len(urls) == 1:
+        proxy_backend = urls[0]
+    else:
+        # Check if we should raise HTTPException or ValueError based on contract
+        # Standard behavior here seems to ideally be 400/404
+        raise HTTPException(
+        status_code=404,
+        detail=f"Unknown model: '{model}'",
+        )
+
+  # Find key for backend
+  urls = config.OPENGUARD_OPENAI_URLS.value
+  keys = config.OPENGUARD_OPENAI_KEYS.value
+  if isinstance(urls, str): urls = [urls]
+  if isinstance(keys, str): keys = [keys]
+
+  proxy_key = ""
+  if proxy_backend in urls:
+      idx = urls.index(proxy_backend)
+      if idx < len(keys):
+          proxy_key = keys[idx]
+
+  proxy_config = {
+    "url": proxy_backend,
+    "headers":
+      {
+        "Content-Type": "application/json",
+      },
+    "model": proxy_model,
+    "params": params,
+    "messages": messages,
+    "module": proxy_module,
+  }
+
+  if proxy_key:
+      proxy_config["headers"]["Authorization"] = f"Bearer {proxy_key}"
+
+  return proxy_config
+
+def is_title_generation_task(llm: 'llm.LLM'):
+  # TODO: Better way to identify?
+  return llm.chat.has_substring("3-5 word title")
+
+DIRECT_TASK_PROMPTS = [
+    # Open WebUI prompts related to system tasks
+  'Generate a concise, 3-5 word title',
+  'Based on the chat history, determine whether a search is necessary',
+  'Generate 1-3 broad tags categorizing',
+  'You are an autocompletion system. Continue the text in `<text>` based on the **completion type**',
+  'determine the necessity of generating search queries',
+  # Custom for the test
+  '[{DIRECT}]'
+]
+
+def is_direct_task(llm: 'llm.LLM'):
+  return any(llm.chat.has_substring(prompt) for prompt in DIRECT_TASK_PROMPTS)

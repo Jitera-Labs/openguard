@@ -2,7 +2,11 @@
 
 import copy
 import re
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.chat import Chat
+    from src.llm import LLM
 
 # PII regex patterns
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
@@ -18,26 +22,23 @@ PII_PATTERNS = {
 }
 
 
-def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
+def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
     """
     Filter PII from message content.
 
     Args:
-        payload: Request payload with messages
+        chat: Chat object
+        llm: LLM object
         config: Guard configuration
 
     Returns:
-        Tuple of (modified_payload, audit_logs)
+        List of audit logs
     """
-    # Create a deep copy to avoid modifying original
-    modified_payload = copy.deepcopy(payload)
     audit_logs = []
     pii_found = False
 
-    messages = modified_payload.get("messages", [])
-
-    for idx, message in enumerate(messages):
-        content = message.get("content")
+    for idx, node in enumerate(chat.plain()):
+        content = node.content
 
         if content is None:
             continue
@@ -50,17 +51,22 @@ def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
                 matches = pattern.findall(modified_content)
                 if matches:
                     for match in matches:
-                        audit_logs.append(f"pii_filter: Found {pii_type} in message {idx}: {match}")
+                        audit_logs.append(f"pii_filter: Found {pii_type} in message {idx} ({node.role}): {match}")
                         pii_found = True
                     modified_content = pattern.sub(replacement, modified_content)
 
-            message["content"] = modified_content
+            if modified_content != content:
+                node.content = modified_content
 
         # Handle array content (multimodal messages)
         elif isinstance(content, list):
+            # content for list is mutable?
+            # Usually chat node content stores the list object.
+
             for part_idx, part in enumerate(content):
                 if isinstance(part, dict) and "text" in part:
                     modified_text = part["text"]
+                    part_modified = False
 
                     for pii_type, (pattern, replacement) in PII_PATTERNS.items():
                         matches = pattern.findall(modified_text)
@@ -68,22 +74,20 @@ def apply(payload: dict, config: dict) -> Tuple[dict, List[str]]:
                             for match in matches:
                                 audit_logs.append(
                                     f"pii_filter: Found {pii_type} "
-                                    f"in message {idx}, part {part_idx}: {match}"
+                                    f"in message {idx} ({node.role}), part {part_idx}: {match}"
                                 )
                                 pii_found = True
                             modified_text = pattern.sub(replacement, modified_text)
+                            part_modified = True
 
-                    part["text"] = modified_text
+                    if part_modified:
+                        part["text"] = modified_text
 
     # If any PII was found, inject a system message at the start
     if pii_found:
-        system_message = {
-            "role": "system",
-            "content": (
-                "Note: PII has been filtered from the following conversation. "
-                "Protected items appear as <protected:type>."
-            ),
-        }
-        modified_payload["messages"].insert(0, system_message)
+        chat.system(
+            "Note: PII has been filtered from the following conversation. "
+            "Protected items appear as <protected:type>."
+        )
 
-    return modified_payload, audit_logs
+    return audit_logs
