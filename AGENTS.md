@@ -48,7 +48,6 @@ To run the tests:
    httpyac http/tests/*.http --all
    ```
 
-Test files should import variables from `../variables.http` if needed.
-Use `??` assertions to verify response status and body content.
-
-
+- Tests must import the `variables.http` file for shared variables and setup.
+- Tests must use `helpers.http` functions and helpers for assertions and test structure.
+- Prefer writing JS assertions for the tests.

@@ -1,6 +1,7 @@
 # @import ../../variables.http
+# @import ../../helpers.http
 
-### Email
+### 1. Email Redaction
 POST {{host}}/v1/chat/completions
 ...defaultHeaders
 
@@ -8,20 +9,212 @@ POST {{host}}/v1/chat/completions
   "model": "{{model}}",
   "messages": [
     {
-      "role": "system",
-      "content": "You are a helpful assistant. Users email is user@example.com"
-    },
-    {
       "role": "user",
-      "content": "What is my email."
+      "content": "My personal email is test.user@example.co.uk. Please repeat it back to me."
     }
   ]
 }
 
 ?? status == 200
 {{
-test('Model did not receive PII data', () => {
-  expect(response.parsedBody).not.toInclude('example.com');
-  expect(response.parsedBody).not.toInclude('user@example.com');
-})
+  test('Email should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('test.user@example.co.uk', "Original email was leaked");
+    expect(content).toInclude('<protected:email>', "Redaction marker <protected:email> not found");
+  });
+}}
+
+### 2. Phone Redaction (Format: Dashes)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Call this number: 555-012-3456. Repeat the number."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Phone (dashes) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('555-012-3456', "Original phone number was leaked");
+    expect(content).toInclude('<protected:phone>', "Redaction marker <protected:phone> not found");
+  });
+}}
+
+### 3. Phone Redaction (Format: Dots)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Alternative contact: 555.012.3456. Repeat the number."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Phone (dots) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('555.012.3456', "Original phone number was leaked");
+    expect(content).toInclude('<protected:phone>', "Redaction marker <protected:phone> not found");
+  });
+}}
+
+### 4. SSN Redaction
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "My SSN is 123-45-6789. Please confirm explicitly what you received."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('SSN should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('123-45-6789', "Original SSN was leaked");
+    expect(content).toInclude('<protected:ssn>', "Redaction marker <protected:ssn> not found");
+  });
+}}
+
+### 5. Credit Card Redaction (Format: Dashes)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Card details: 4532-1234-5678-9012. Repeat the card number."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Credit card (dashes) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('4532-1234-5678-9012', "Original credit card was leaked");
+    expect(content).toInclude('<protected:creditcard>', "Redaction marker <protected:creditcard> not found");
+  });
+}}
+
+### 6. Credit Card Redaction (Format: Spaces)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Card details: 4532 1234 5678 9012. Repeat the card number."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Credit card (spaces) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('4532 1234 5678 9012', "Original credit card was leaked");
+    expect(content).toInclude('<protected:creditcard>', "Redaction marker <protected:creditcard> not found");
+  });
+}}
+
+### 7. Mixed PII Types
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Here is my info: email is mixed@example.com, phone is 987-654-3210. Repeat all."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Mixed PII should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('mixed@example.com', "Original email was leaked");
+    expect(content).not.toInclude('987-654-3210', "Original phone was leaked");
+    expect(content).toInclude('<protected:email>', "Email marker not found");
+    expect(content).toInclude('<protected:phone>', "Phone marker not found");
+  });
+}}
+
+### 8. Multiple Occurrences of Same PII Type
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Contact alice@example.com or bob@example.org for support."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Multiple emails should all be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('alice@example.com', "First email leaked");
+    expect(content).not.toInclude('bob@example.org', "Second email leaked");
+
+    // Check count of markers using regex match
+    const matches = content.match(/<protected:email>/g);
+    expect(matches && matches.length >= 2).toBeTruthy("Should find at least 2 email protection markers");
+  });
+}}
+
+### 9. Multimodal Content (Array)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "My backup email is backup@example.org."
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Email in structured content should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('backup@example.org', "Original email in structured content was leaked");
+    expect(content).toInclude('<protected:email>', "Redaction marker not found in structured content response");
+  });
 }}
