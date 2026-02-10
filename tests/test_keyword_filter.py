@@ -87,9 +87,7 @@ class TestKeywordFilter:
     def test_case_sensitivity_ignore(self):
         """Test that case_sensitive: true causes case mismatches to be ignored."""
         config = {"keywords": ["STRICT"], "action": "block", "case_sensitive": True}
-        messages = [
-            {"role": "user", "content": "this is strict lowercase, so it should pass."}
-        ]
+        messages = [{"role": "user", "content": "this is strict lowercase, so it should pass."}]
         chat = Chat.from_conversation(messages)
 
         # Should not raise exception because case mismatch

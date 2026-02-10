@@ -235,10 +235,10 @@ BOOST_PUBLIC_URL = Config[str](
 )
 
 STATUS_STYLE = Config[str](
-  name="STATUS_STYLE",
-  type=str,
-  default="md:codeblock",
-  description="Style for status messages (md:codeblock, md:h1, md:h2, md:h3, plain, none)"
+    name="STATUS_STYLE",
+    type=str,
+    default="md:codeblock",
+    description="Style for status messages (md:codeblock, md:h1, md:h2, md:h3, plain, none)",
 )
 
 if __name__ == "__main__":

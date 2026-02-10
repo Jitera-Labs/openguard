@@ -278,6 +278,7 @@ def test_invalid_model(test_client, setup_mock_downstream, monkeypatch):
     import importlib
 
     from src import config
+
     importlib.reload(config)
 
     payload = {

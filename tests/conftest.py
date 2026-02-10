@@ -111,6 +111,7 @@ def test_client(test_env, mock_httpx):
 
     importlib.reload(config_module)
     from src import mapper as mapper_module
+
     importlib.reload(mapper_module)
     guards_module._guards_cache = None
     importlib.reload(guards_module)

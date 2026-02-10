@@ -104,18 +104,18 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
         # Validate messages
         messages = payload.get("messages")
         if not isinstance(messages, list) or len(messages) == 0:
-             raise HTTPException(status_code=400, detail="'messages' must be a non-empty list")
+            raise HTTPException(status_code=400, detail="'messages' must be a non-empty list")
         for m in messages:
-             if not isinstance(m, dict) or "content" not in m or "role" not in m:
-                  raise HTTPException(status_code=400, detail="Invalid message format")
-             if m.get("content") is None:
-                  raise HTTPException(status_code=400, detail="Message content cannot be null")
+            if not isinstance(m, dict) or "content" not in m or "role" not in m:
+                raise HTTPException(status_code=400, detail="Invalid message format")
+            if m.get("content") is None:
+                raise HTTPException(status_code=400, detail="Message content cannot be null")
 
         # Validate types
         if "max_tokens" in payload and not isinstance(payload["max_tokens"], int):
-             raise HTTPException(status_code=400, detail="'max_tokens' must be integer")
+            raise HTTPException(status_code=400, detail="'max_tokens' must be integer")
         if "temperature" in payload and not isinstance(payload["temperature"], (int, float)):
-             raise HTTPException(status_code=400, detail="'temperature' must be number")
+            raise HTTPException(status_code=400, detail="'temperature' must be number")
 
         # Resolve backend
         try:
@@ -175,7 +175,7 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
 
                 try:
                     if len(line) > 6:
-                        data = json.loads(line[6:]) # Skip "data: "
+                        data = json.loads(line[6:])  # Skip "data: "
 
                         # Store metadata from last valid chunk
                         final_data = data
@@ -192,9 +192,11 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                             if "tool_calls" in delta:
                                 for tc in delta["tool_calls"]:
                                     idx = tc.get("index")
-                                    # Fallback: if no index (e.g. from some backends), append to list or treat as new
+                                    # Fallback: if no index (e.g. from some backends),
+                                    # append to list or treat as new
                                     # But standard OpenAI stream has index.
-                                    # If llm.py sends full objects without index, we can just append, but let's try to handle both.
+                                    # If llm.py sends full objects without index,
+                                    # we can just append, but let's try to handle both.
                                     if idx is None:
                                         tool_calls.append(tc)
                                     else:
@@ -204,17 +206,27 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                                             current = pending_tool_calls[idx]
                                             # Merge arguments
                                             if "function" in tc:
-                                                if "name" in tc["function"] and tc["function"]["name"]:
+                                                if (
+                                                    "name" in tc["function"]
+                                                    and tc["function"]["name"]
+                                                ):
                                                     if "function" not in current:
                                                         current["function"] = {}
-                                                    current["function"]["name"] = tc["function"]["name"]
+                                                    current["function"]["name"] = tc["function"][
+                                                        "name"
+                                                    ]
 
-                                                if "arguments" in tc["function"] and tc["function"]["arguments"]:
+                                                if (
+                                                    "arguments" in tc["function"]
+                                                    and tc["function"]["arguments"]
+                                                ):
                                                     if "function" not in current:
                                                         current["function"] = {"arguments": ""}
                                                     if "arguments" not in current["function"]:
                                                         current["function"]["arguments"] = ""
-                                                    current["function"]["arguments"] += tc["function"]["arguments"]
+                                                    current["function"]["arguments"] += tc[
+                                                        "function"
+                                                    ]["arguments"]
 
                                             # Merge other fields if present
                                             if "id" in tc and tc["id"]:
@@ -241,10 +253,7 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                 response_obj["object"] = "chat.completion"
 
                 # Reconstruct message
-                message = {
-                    "role": "assistant",
-                    "content": full_content if full_content else None
-                }
+                message = {"role": "assistant", "content": full_content if full_content else None}
 
                 if tool_calls:
                     message["tool_calls"] = tool_calls
@@ -256,8 +265,8 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                     if finish_reason:
                         response_obj["choices"][0]["finish_reason"] = finish_reason
                     elif tool_calls:
-                         # Default to tool_calls if not explicitly set but tools are present
-                         response_obj["choices"][0]["finish_reason"] = "tool_calls"
+                        # Default to tool_calls if not explicitly set but tools are present
+                        response_obj["choices"][0]["finish_reason"] = "tool_calls"
 
                     # Remove delta if present
                     if "delta" in response_obj["choices"][0]:

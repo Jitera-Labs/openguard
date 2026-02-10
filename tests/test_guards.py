@@ -46,7 +46,7 @@ def test_content_filter_case_insensitive():
     chat = Chat.from_conversation(messages)
 
     config = {"blocked_words": ["badword"]}
-    logs = content_filter.apply(chat, MockLLM(), config)
+    content_filter.apply(chat, MockLLM(), config)
 
     nodes = chat.plain()
     # All variations should be filtered
@@ -110,7 +110,7 @@ def test_pii_filter_phone():
     chat = Chat.from_conversation(messages)
 
     config = {}
-    logs = pii_filter.apply(chat, MockLLM(), config)
+    pii_filter.apply(chat, MockLLM(), config)
 
     nodes = chat.plain()
     assert "<protected:phone>" in nodes[1].content
@@ -123,7 +123,7 @@ def test_pii_filter_ssn():
     chat = Chat.from_conversation(messages)
 
     config = {}
-    logs = pii_filter.apply(chat, MockLLM(), config)
+    pii_filter.apply(chat, MockLLM(), config)
 
     nodes = chat.plain()
     assert "<protected:ssn>" in nodes[1].content
@@ -136,7 +136,7 @@ def test_pii_filter_creditcard():
     chat = Chat.from_conversation(messages)
 
     config = {}
-    logs = pii_filter.apply(chat, MockLLM(), config)
+    pii_filter.apply(chat, MockLLM(), config)
 
     nodes = chat.plain()
     assert "<protected:creditcard>" in nodes[1].content
@@ -151,7 +151,7 @@ def test_pii_filter_multimodal():
     chat = Chat.from_conversation(messages)
 
     config = {}
-    logs = pii_filter.apply(chat, MockLLM(), config)
+    pii_filter.apply(chat, MockLLM(), config)
 
     # System message is at index 0, original message at index 1
     nodes = chat.plain()

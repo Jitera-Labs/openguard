@@ -96,14 +96,16 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
             for kw in keywords:
                 # If match_mode is 'any', we replace any found kw.
                 # If match_mode is 'all', we replace all kw
-                if match_mode == "any" or (match_mode == "all" and set(keywords).issubset(present_keywords)):
+                all_found = match_mode == "all" and set(keywords).issubset(present_keywords)
+                if match_mode == "any" or all_found:
                     # Only replace if kw is in present_keywords?
-                    # logic: sanitization should probably remove ALL keywords if trigger condition is met?
+                    # logic: sanitization should probably remove ALL keywords
+                    # if trigger condition is met?
                     # Or only the ones found?
                     # If match_mode=all and we found all, we likely want to remove all.
                     if kw in present_keywords:
-                         pattern = re.compile(re.escape(kw), flags)
-                         new_text = pattern.sub(replacement, new_text)
+                        pattern = re.compile(re.escape(kw), flags)
+                        new_text = pattern.sub(replacement, new_text)
             return new_text
 
         for node in chat.plain():
@@ -113,9 +115,8 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
                 if new_content != content:
                     node.content = new_content
             elif isinstance(content, list):
-                 for part in content:
+                for part in content:
                     if isinstance(part, dict) and part.get("type") == "text":
-                         part["text"] = replace_in_text(part["text"])
+                        part["text"] = replace_in_text(part["text"])
 
     return audit_logs
-

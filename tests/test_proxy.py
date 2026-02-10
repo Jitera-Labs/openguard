@@ -102,7 +102,9 @@ async def test_llm_connection_error(monkeypatch):
         raise httpx.ConnectError("Connection failed")
 
     mock_client.post = AsyncMock(side_effect=side_effect)
-    mock_client.stream = MagicMock(side_effect=side_effect) # stream is sync/async context manager usually
+    mock_client.stream = MagicMock(
+        side_effect=side_effect
+    )  # stream is sync/async context manager usually
 
     # Mock stream context manager raising error on enter?
     # stream_chat_completion uses client.stream

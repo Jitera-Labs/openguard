@@ -50,7 +50,9 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
                 matches = pattern.findall(modified_content)
                 if matches:
                     for match in matches:
-                        audit_logs.append(f"pii_filter: Found {pii_type} in message {idx} ({node.role}): {match}")
+                        audit_logs.append(
+                            f"pii_filter: Found {pii_type} in message {idx} ({node.role}): {match}"
+                        )
                         pii_found = True
                     modified_content = pattern.sub(replacement, modified_content)
 

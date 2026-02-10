@@ -7,154 +7,152 @@ logger = log.setup_logger(__name__)
 
 
 class Chat:
-  tail: ChatNode
-  llm: Optional['llm.LLM']
+    tail: ChatNode
+    llm: Optional["llm.LLM"]
 
-  @staticmethod
-  def from_conversation(messages):
-    tail = ChatNode.from_conversation(messages)
-    return Chat(tail=tail)
+    @staticmethod
+    def from_conversation(messages):
+        tail = ChatNode.from_conversation(messages)
+        return Chat(tail=tail)
 
-  @staticmethod
-  def from_tail(chat: 'Chat'):
-    new_tail = ChatNode(role=chat.tail.role, content=chat.tail.content)
-    return Chat(tail=new_tail)
+    @staticmethod
+    def from_tail(chat: "Chat"):
+        new_tail = ChatNode(role=chat.tail.role, content=chat.tail.content)
+        return Chat(tail=new_tail)
 
-  def __init__(self, **kwargs):
-    self.tail = kwargs.get('tail')
-    self.llm = kwargs.get('llm')
-    self.chat_node_type = ChatNode
+    def __init__(self, **kwargs):
+        self.tail = kwargs.get("tail")
+        self.llm = kwargs.get("llm")
+        self.chat_node_type = ChatNode
 
-    self.Chat = Chat
-    self.ChatNode = self.chat_node_type
+        self.Chat = Chat
+        self.ChatNode = self.chat_node_type
 
-  def clone(self):
-    return Chat.from_conversation(self.history())
+    def clone(self):
+        return Chat.from_conversation(self.history())
 
-  def has_substring(self, substring):
-    return any(substring in msg.content for msg in self.plain())
+    def has_substring(self, substring):
+        return any(substring in msg.content for msg in self.plain())
 
-  def match(self, **kwargs):
-    return selection.match(self, **kwargs)
+    def match(self, **kwargs):
+        return selection.match(self, **kwargs)
 
-  def match_one(self, **kwargs):
-    candidates = self.match(**kwargs)
-    if not candidates:
-      return None
-    return candidates[0]
+    def match_one(self, **kwargs):
+        candidates = self.match(**kwargs)
+        if not candidates:
+            return None
+        return candidates[0]
 
-  def add_message(self, role, content):
-    logger.debug(f"Chat message: {role}: {content[:50]}")
+    def add_message(self, role, content):
+        logger.debug(f"Chat message: {role}: {content[:50]}")
 
-    child = self.__create_node(role=role, content=content)
-    if self.tail:
-        self.tail.add_child(child)
-    self.tail = child
+        child = self.__create_node(role=role, content=content)
+        if self.tail:
+            self.tail.add_child(child)
+        self.tail = child
 
-    return self.tail
+        return self.tail
 
-  def tool_call(self, tool_call):
-    self.add_message('assistant', '')
-    self.tail.tool_calls = [tool_call]
-    return self.tail
+    def tool_call(self, tool_call):
+        self.add_message("assistant", "")
+        self.tail.tool_calls = [tool_call]
+        return self.tail
 
-  def tool(self, id, content):
-    self.add_message('tool', content)
-    self.tail.tool_call_id = id
-    return self.tail
+    def tool(self, id, content):
+        self.add_message("tool", content)
+        self.tail.tool_call_id = id
+        return self.tail
 
-  def user(self, content):
-    return self.add_message('user', content)
+    def user(self, content):
+        return self.add_message("user", content)
 
-  def assistant(self, content):
-    return self.add_message('assistant', content)
+    def assistant(self, content):
+        return self.add_message("assistant", content)
 
-  def system(self, content):
-    self.tail.ancestor().add_parent(
-      self.__create_node(role="system", content=content)
-    )
-    return self.tail
+    def system(self, content):
+        self.tail.ancestor().add_parent(self.__create_node(role="system", content=content))
+        return self.tail
 
-  def insert(self, after: ChatNode, role, content):
-    new_node = self.__create_node(role=role, content=content)
-    after.insert_child(new_node)
+    def insert(self, after: ChatNode, role, content):
+        new_node = self.__create_node(role=role, content=content)
+        after.insert_child(new_node)
 
-    if self.tail == after:
-      self.tail = new_node
+        if self.tail == after:
+            self.tail = new_node
 
-    return self.tail
+        return self.tail
 
-  def plain(self):
-    if not self.tail:
-        return []
-    return self.tail.parents()
+    def plain(self):
+        if not self.tail:
+            return []
+        return self.tail.parents()
 
-  def history(self):
-    if not self.tail:
-        return []
-    return self.tail.history()
+    def history(self):
+        if not self.tail:
+            return []
+        return self.tail.history()
 
-  def root(self):
-    if not self.tail:
-        return None
-    return self.tail.ancestor()
+    def root(self):
+        if not self.tail:
+            return None
+        return self.tail.ancestor()
 
-  def text(self):
-    # __str__ already does exactly this
-    return f"{self}"
+    def text(self):
+        # __str__ already does exactly this
+        return f"{self}"
 
-  def __create_node(self, **kwargs):
-    NodeType = self.chat_node_type
-    return NodeType(**kwargs)
+    def __create_node(self, **kwargs):
+        NodeType = self.chat_node_type
+        return NodeType(**kwargs)
 
-  async def advance(self):
-    """
-    Advance the chat completion
+    async def advance(self):
+        """
+        Advance the chat completion
 
-    Will not be streamed back to the client
-    """
+        Will not be streamed back to the client
+        """
 
-    if not self.llm:
-      raise ValueError("Chat: unable to advance without an LLM")
+        if not self.llm:
+            raise ValueError("Chat: unable to advance without an LLM")
 
-    response = await self.llm.chat_completion(chat=self)
-    params = await self.llm.resolve_request_params()
-    self.assistant(self.llm.get_response_content(params, response))
-    return response
+        response = await self.llm.chat_completion(chat=self)
+        params = await self.llm.resolve_request_params()
+        self.assistant(self.llm.get_response_content(params, response))
+        return response
 
-  async def emit_advance(self, **kwargs):
-    """
-    Emit the next step in the chat completion
+    async def emit_advance(self, **kwargs):
+        """
+        Emit the next step in the chat completion
 
-    Will be streamed back to the client
-    """
+        Will be streamed back to the client
+        """
 
-    if not self.llm:
-      raise ValueError("Chat: unable to advance without an LLM")
+        if not self.llm:
+            raise ValueError("Chat: unable to advance without an LLM")
 
-    response = await self.llm.stream_chat_completion(chat=self, **kwargs)
-    self.assistant(response)
-    return response
+        response = await self.llm.stream_chat_completion(chat=self, **kwargs)
+        self.assistant(response)
+        return response
 
-  async def emit_status(self, status):
-    """
-    Emit a status message
+    async def emit_status(self, status):
+        """
+        Emit a status message
 
-    Will be streamed back to the client
-    """
+        Will be streamed back to the client
+        """
 
-    if not self.llm:
-      raise ValueError("Chat: unable to emit status without an LLM")
+        if not self.llm:
+            raise ValueError("Chat: unable to emit status without an LLM")
 
-    await self.llm.emit_status(status)
+        await self.llm.emit_status(status)
 
-  async def sanitise_artifacts(self):
-    tail = self.tail
+    async def sanitise_artifacts(self):
+        tail = self.tail
 
-    while tail:
-      tail_content = tail.content
-      tail.content = format.remove_html_code_blocks(tail_content)
-      tail = tail.parent
+        while tail:
+            tail_content = tail.content
+            tail.content = format.remove_html_code_blocks(tail_content)
+            tail = tail.parent
 
-  def __str__(self):
-    return '\n'.join([str(msg) for msg in self.plain()])
+    def __str__(self):
+        return "\n".join([str(msg) for msg in self.plain()])

@@ -28,11 +28,7 @@ def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[Chat, L
 
     # Construct context for matching
     # This allows guards to match against model, params, messages, etc.
-    match_context = {
-        "model": llm.model,
-        "messages": chat.history(),
-        **llm.params
-    }
+    match_context = {"model": llm.model, "messages": chat.history(), **llm.params}
 
     for guard_idx, guard in enumerate(guards):
         # Check if guard matches the context
@@ -64,9 +60,7 @@ def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[Chat, L
                 if action_logs:
                     audit_logs.extend(action_logs)
 
-                logger.debug(
-                    f"Applied guard action '{action_type}'"
-                )
+                logger.debug(f"Applied guard action '{action_type}'")
 
             except GuardBlockedError:
                 raise
