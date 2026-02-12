@@ -1,0 +1,216 @@
+# @import ../../variables.http
+# @import ../../helpers.http
+
+### 1. Keyword Block
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-block",
+  "messages": [
+    {
+      "role": "user",
+      "content": "This content contains forbidden keywords."
+    }
+  ]
+}
+
+?? status == 403
+{{
+  test('Keyword "forbidden" should block request', () => {
+    expect(response.parsedBody.error.message).toInclude("forbidden", "Blocked keyword should be reported");
+  });
+}}
+
+### 2. Keyword Block (2nd keyword)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-block",
+  "messages": [
+    {
+      "role": "user",
+      "content": "This content is banned."
+    }
+  ]
+}
+
+?? status == 403
+{{
+  test('Keyword "banned" should also block request', () => {
+    expect(response.parsedBody.error.message).toInclude("banned", "Blocked keyword should be reported");
+  });
+}}
+
+### 3. Keyword Sanitize
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-sanitize",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: This contains sensitive data that should be hidden."
+    }
+  ]
+}
+
+// The sanitized content is sent upstream, but the response is what we check.
+// Wait, keyword filter sanitizes REQUEST content.
+// The upstream LLM will see sanitized content.
+// So if I ask "Repeat: sensitive", it should reply "Repeat: [HIDDEN]"
+// Let's modify the test to ask for reflection.
+
+?? status == 200
+{{
+  // This test depends on the upstream LLM repeating the input.
+  // "sensitive" -> "[HIDDEN]"
+  // If the model is smart, it repeats "This contains [HIDDEN] data..."
+  // But we can only verify the upstream received sanitized input if the response reflects it.
+}}
+
+### 3a. Keyword Sanitize (Check response reflection)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-sanitize",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: sensitive"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Keyword "sensitive" should be sanitized to [HIDDEN] in upstream request', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('sensitive', "Original keyword leaked in response");
+  });
+}}
+
+
+### 4. Keyword Log (No block, no sanitize)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-log",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Reply with exactly one word: audit"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Keyword "audit" should only log and allow request', () => {
+    expect(response.parsedBody.choices[0].message.content).toBeDefined("Request should pass through for log action");
+  });
+}}
+
+### 5. Keyword Case Sensitive
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-case-sensitive",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: strictCase"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Different case "strictCase" should NOT block (case sensitive "StrictCase")', () => {
+    // Should pass
+  });
+}}
+
+### 5b. Keyword Case Sensitive (Trigger)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-case-sensitive",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: StrictCase"
+    }
+  ]
+}
+
+?? status == 403
+{{
+  test('Exact case "StrictCase" should block', () => {
+    expect(response.parsedBody.error.message).toInclude("StrictCase", "Blocked keyword should be reported");
+  });
+}}
+
+### 6. Keyword Match All
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-match-all",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: key1"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Only "key1" present (need "key1" AND "key2") - should pass', () => {
+    // Pass
+  });
+}}
+
+### 6b. Keyword Match All (Trigger)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-match-all",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: key1 key2"
+    }
+  ]
+}
+
+?? status == 403
+{{
+  test('Both "key1" and "key2" present - should block', () => {
+    expect(response.parsedBody.error.message).toInclude("all required keywords", "All-match block reason should be present");
+  });
+}}

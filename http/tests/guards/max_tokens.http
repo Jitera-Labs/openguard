@@ -1,0 +1,59 @@
+# @import ../../variables.http
+# @import ../../helpers.http
+
+### 1. Max Tokens Limit Enforcement
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "max-tokens",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Count from 1 to 100 with one number per token."
+    }
+  ],
+  "max_tokens": 500
+}
+
+?? status == 200
+{{
+  test('Response should be truncated due to max_tokens limit of 10', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content.length).toBeLessThan(120, "Response seems too long for max_tokens=10");
+
+    if (response.parsedBody.usage) {
+        expect(response.parsedBody.usage.completion_tokens).toBeLessThan(11, "Usage completion_tokens exceeds limit");
+    }
+  });
+}}
+
+### 2. Override Max Tokens (Guard is stricter)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "max-tokens",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat the word token fifty times."
+    }
+  ],
+  "max_tokens": 1000
+}
+
+?? status == 200
+{{
+  test('Even with max_tokens=1000 requested, guard forces 10', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content.length).toBeLessThan(120, "Response is too long, guard limit was ignored");
+    if (response.parsedBody.usage) {
+      expect(response.parsedBody.usage.completion_tokens).toBeLessThan(11, "Usage completion_tokens exceeds enforced limit");
+    }
+  });
+}}

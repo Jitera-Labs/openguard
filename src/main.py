@@ -285,6 +285,18 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
         error_body = await e.response.aread()
         logger.error(f"Downstream error {e.response.status_code}: {error_body.decode('utf-8')}")
 
+        if e.response.status_code == 404:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": {
+                        "message": "Model not found or invalid",
+                        "type": "invalid_request_error",
+                        "code": 400,
+                    }
+                },
+            )
+
         try:
             content = json.loads(error_body)
         except json.JSONDecodeError:
@@ -329,11 +341,6 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
     except (TypeError, KeyError, AttributeError) as e:
         logger.error(f"Invalid request format: {e}")
         raise HTTPException(status_code=400, detail="Invalid request format")
-    except httpx.HTTPStatusError as e:
-        logger.error(f"Upstream error: {e}")
-        if e.response.status_code == 404:
-            raise HTTPException(status_code=400, detail="Model not found or invalid")
-        raise HTTPException(status_code=e.response.status_code, detail="Upstream error")
     except Exception as e:
         logger.error(f"Error in chat completion: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")

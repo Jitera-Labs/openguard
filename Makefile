@@ -42,4 +42,4 @@ test-unit:
 	uv run pytest
 
 test-integration:
-	httpyac http/tests/*.http --all
+	httpyac http/tests/**/*.http --all

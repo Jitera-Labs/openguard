@@ -1,0 +1,106 @@
+# @import ../../variables.http
+# @import ../../helpers.http
+
+### 1. Blocked Word Replacement
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: This includes alphasecret token."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Blocked word "alphasecret" should be filtered', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('alphasecret', "Original word 'alphasecret' was not filtered");
+    expect(content).toInclude('[FILTERED]', "Replacement marker [FILTERED] not found");
+  });
+}}
+
+### 2. Multiple Blocked Words
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: This is alphasecret and betahidden."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Multiple blocked words ("alphasecret", "betahidden") should be filtered', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('alphasecret', "'alphasecret' was not filtered");
+    expect(content).not.toInclude('betahidden', "'betahidden' was not filtered");
+    // Should filter twice
+    const matches = content.match(/\[FILTERED\]/g);
+    expect(matches && matches.length >= 2).toBeTruthy("Should find at least 2 [FILTERED] markers");
+  });
+}}
+
+### 3. Case Insensitivity
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: This includes BETAHIDDEN token."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Case insensitive blocked word "BETAHIDDEN" should be filtered', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('BETAHIDDEN', "Uppercased blocked word was not filtered");
+    expect(content).toInclude('[FILTERED]', "Replacement marker not found");
+  });
+}}
+
+### 4. Multimodal Content Filtering
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Repeat exactly this text and nothing else: This includes gammaflag token."
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Blocked word in multimodal content should be filtered', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('gammaflag', "Word in structured content was not filtered");
+    expect(content).toInclude('[FILTERED]', "Replacement marker not found in structured content");
+  });
+}}
