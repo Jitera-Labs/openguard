@@ -12,7 +12,33 @@ An OpenAI-compatible guardrail proxy that applies security and privacy controls 
 
 ## Getting Started
 
-Full documentation coming soon.
+### Run from GHCR image
+
+Use the published container image as the default entrypoint:
+
+```bash
+cp guards.yaml.example guards.yaml
+
+docker run --rm -p 8000:8000 \
+  -v "$(pwd)/guards.yaml:/app/guards.yaml:ro" \
+  -e OPENGUARD_CONFIG=/app/guards.yaml \
+  -e OPENGUARD_OPENAI_URL_1=http://host.docker.internal:11434/v1 \
+  -e OPENGUARD_OPENAI_KEY_1= \
+  --add-host=host.docker.internal:host-gateway \
+  ghcr.io/everlier/openguard:main
+```
+
+If your GHCR package is private, authenticate first:
+
+```bash
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u <github-username> --password-stdin
+```
+
+Quick check:
+
+```bash
+curl http://localhost:8000/health
+```
 
 ### Local Ollama
 
@@ -20,6 +46,56 @@ Start against a local Ollama backend via Harbor:
 
 ```bash
 make dev-ollama
+```
+
+### Run via uvx
+
+Run directly from this repo (no manual venv setup):
+
+```bash
+uvx --from . openguard
+```
+
+Run on a different port if `8000` is already in use:
+
+```bash
+OPENGUARD_PORT=8010 uvx --from . openguard
+```
+
+Run from PyPI (once published):
+
+```bash
+uvx openguard
+```
+
+Run from GitHub source (optional):
+
+```bash
+uvx --from git+https://github.com/everlier/openguard.git openguard
+```
+
+## Publish to PyPI
+
+1. Create the `openguard` project on PyPI (once) at <https://pypi.org/manage/projects/>.
+2. Configure a trusted publisher for this repo:
+  - Owner: `everlier`
+  - Repository: `openguard`
+  - Workflow: `.github/workflows/pypi-publish.yaml`
+  - Environment: `pypi`
+3. Push a version tag (for example `v0.1.0`).
+4. The `Release` workflow builds with `uv build` and publishes with `uv publish`.
+
+Local dry run before release:
+
+```bash
+uv build
+uv publish --dry-run
+```
+
+Manual publish (optional, if you are not using trusted publishing):
+
+```bash
+uv publish --token <pypi-token>
 ```
 
 ## Configuration
