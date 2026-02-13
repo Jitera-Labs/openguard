@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Mapping, Optional
 
 import httpx
 from asyncache import cached
@@ -12,39 +12,31 @@ if TYPE_CHECKING:
 
 logger = log.setup_logger(__name__)
 
-MODEL_TO_BACKEND: Dict[str, str] = {}
+MODEL_TO_BACKEND: Dict[str, Dict[str, str]] = {"openai": {}, "anthropic": {}}
 
 # TODO: Add mods (modules) support when adoption is complete
 # import mods
 
 
 @cached(TTLCache(1024, 60))
-async def list_downstream():
-    logger.debug("Listing downstream models")
+async def list_downstream(provider: str = "openai"):
+    logger.debug(f"Listing downstream models for provider '{provider}'")
 
     all_models = []
 
-    # Using OpenGuard configuration
-    urls = config.OPENGUARD_OPENAI_URLS.value
-    keys = config.OPENGUARD_OPENAI_KEYS.value
-
-    # Ensure keys matches urls length, pad with empty strings if not
-    if isinstance(urls, str):
-        urls = [urls]
-    if isinstance(keys, str):
-        keys = [keys]
-
-    if len(keys) < len(urls):
-        keys.extend([""] * (len(urls) - len(keys)))
-
-    for url, key in zip(urls, keys):
+    for backend in get_provider_backends(provider):
+        url = backend["url"]
+        key = backend["key"]
         try:
-            endpoint = f"{url}/models"
+            endpoint = build_provider_endpoint(url, provider, "/models")
             headers = {
                 "Content-Type": "application/json",
             }
             if key:
-                headers["Authorization"] = f"Bearer {key}"
+                if provider == "anthropic":
+                    headers["x-api-key"] = key
+                else:
+                    headers["Authorization"] = f"Bearer {key}"
 
             logger.debug(f"Fetching models from '{endpoint}'")
 
@@ -58,12 +50,137 @@ async def list_downstream():
                 all_models.extend(models)
 
                 for model in models:
-                    MODEL_TO_BACKEND[model["id"]] = url
+                    model_id = model.get("id")
+                    if model_id:
+                        MODEL_TO_BACKEND.setdefault(provider, {})[model_id] = url
 
         except Exception as e:
             logger.error(f"Failed to fetch models from {endpoint}: {e}")
 
     return all_models
+
+
+def _as_list(value):
+    if isinstance(value, str):
+        return [value]
+    return list(value or [])
+
+
+def get_provider_backends(provider: str):
+    provider_normalized = provider.lower()
+    if provider_normalized == "anthropic":
+        urls = _as_list(config.OPENGUARD_ANTHROPIC_URLS.value)
+        keys = _as_list(config.OPENGUARD_ANTHROPIC_KEYS.value)
+    else:
+        urls = _as_list(config.OPENGUARD_OPENAI_URLS.value)
+        keys = _as_list(config.OPENGUARD_OPENAI_KEYS.value)
+
+    if len(keys) < len(urls):
+        keys.extend([""] * (len(urls) - len(keys)))
+
+    backends = []
+    for index, url in enumerate(urls):
+        if not url:
+            continue
+        backends.append({"provider": provider_normalized, "url": url, "key": keys[index]})
+
+    return backends
+
+
+def get_internal_api_keys():
+    api_key = config.OPENGUARD_API_KEY.value
+    api_keys_list = _as_list(config.OPENGUARD_API_KEYS.value)
+
+    keys = []
+    if api_key:
+        keys.append(api_key)
+    keys.extend(k for k in api_keys_list if k)
+    return keys
+
+
+def extract_api_key(headers: Optional[Mapping[str, str]]):
+    if not headers:
+        return ""
+
+    x_api_key = headers.get("x-api-key") or headers.get("X-API-Key")
+    if x_api_key:
+        return x_api_key
+
+    auth_header = headers.get("authorization") or headers.get("Authorization") or ""
+    if auth_header.startswith("Bearer "):
+        return auth_header[7:]
+
+    return ""
+
+
+def build_provider_endpoint(base_url: str, provider: str, path: str):
+    base = base_url.rstrip("/")
+    normalized_path = path if path.startswith("/") else f"/{path}"
+
+    if provider.lower() == "anthropic":
+        if normalized_path.startswith("/v1/"):
+            return f"{base}{normalized_path}"
+        if base.endswith("/v1"):
+            return f"{base}{normalized_path}"
+        return f"{base}/v1{normalized_path}"
+
+    return f"{base}{normalized_path}"
+
+
+def _resolve_backend_for_model(provider: str, model: Optional[str]):
+    if model:
+        cached = MODEL_TO_BACKEND.get(provider, {}).get(model)
+        if cached:
+            for backend in get_provider_backends(provider):
+                if backend["url"] == cached:
+                    return backend
+
+    backends = get_provider_backends(provider)
+    if len(backends) == 1:
+        return backends[0]
+
+    return None
+
+
+def resolve_provider_route(provider: str, endpoint_path: str, body: Optional[Dict], headers):
+    provider_normalized = provider.lower()
+    backends = get_provider_backends(provider_normalized)
+    if not backends:
+        raise ValueError(f"No downstream backends configured for provider '{provider_normalized}'")
+
+    incoming_key = extract_api_key(headers)
+    internal_keys = get_internal_api_keys()
+
+    if incoming_key and incoming_key in internal_keys:
+        internal_backend = _resolve_backend_for_model(provider_normalized, (body or {}).get("model"))
+        if internal_backend is None:
+            internal_backend = backends[0]
+
+        return {
+            **internal_backend,
+            "mode": "internal",
+            "endpoint": build_provider_endpoint(
+                internal_backend["url"], provider_normalized, endpoint_path
+            ),
+        }
+
+    if incoming_key:
+        for backend in backends:
+            if backend["key"] and backend["key"] == incoming_key:
+                return {
+                    **backend,
+                    "mode": "direct",
+                    "endpoint": build_provider_endpoint(
+                        backend["url"], provider_normalized, endpoint_path
+                    ),
+                }
+
+    backend = backends[0]
+    return {
+        **backend,
+        "mode": "endpoint",
+        "endpoint": build_provider_endpoint(backend["url"], provider_normalized, endpoint_path),
+    }
 
 
 def get_proxy_model(module, model: dict) -> Dict:
@@ -100,7 +217,7 @@ def resolve_request_config(body: Dict) -> Dict:
 
     proxy_model = resolve_proxy_model(model)
     proxy_module = resolve_proxy_module(model)
-    proxy_backend = MODEL_TO_BACKEND.get(proxy_model)
+    proxy_backend = MODEL_TO_BACKEND.get("openai", {}).get(proxy_model)
 
     logger.debug(
         f"Resolved proxy model: {proxy_model}, proxy module: {proxy_module}, "
@@ -116,9 +233,7 @@ def resolve_request_config(body: Dict) -> Dict:
         # list_downstream is cached.
 
         # Fallback: check if we can guess backend from config if only 1 exists
-        urls = config.OPENGUARD_OPENAI_URLS.value
-        if isinstance(urls, str):
-            urls = [urls]
+        urls = _as_list(config.OPENGUARD_OPENAI_URLS.value)
 
         if len(urls) == 1:
             proxy_backend = urls[0]
@@ -131,12 +246,8 @@ def resolve_request_config(body: Dict) -> Dict:
             )
 
     # Find key for backend
-    urls = config.OPENGUARD_OPENAI_URLS.value
-    keys = config.OPENGUARD_OPENAI_KEYS.value
-    if isinstance(urls, str):
-        urls = [urls]
-    if isinstance(keys, str):
-        keys = [keys]
+    urls = _as_list(config.OPENGUARD_OPENAI_URLS.value)
+    keys = _as_list(config.OPENGUARD_OPENAI_KEYS.value)
 
     proxy_key = ""
     if proxy_backend in urls:
