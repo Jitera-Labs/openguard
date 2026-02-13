@@ -30,6 +30,14 @@ def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[Chat, L
     # This allows guards to match against model, params, messages, etc.
     match_context = {"model": llm.model, "messages": chat.history(), **llm.params}
 
+    provider = getattr(llm, "provider", None)
+    if provider is not None:
+        match_context["provider"] = provider
+
+    raw_payload = getattr(llm, "raw_payload", None)
+    if raw_payload is not None:
+        match_context["raw_payload"] = raw_payload
+
     for guard_idx, guard in enumerate(guards):
         # Check if guard matches the context
         try:
@@ -69,6 +77,8 @@ def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[Chat, L
             except AttributeError:
                 logger.error(f"Guard type '{action_type}' does not have an 'apply' function")
             except Exception as e:
+                if e.__class__.__name__ == "GuardBlockedError":
+                    raise GuardBlockedError(str(e)) from e
                 logger.error(f"Error applying guard action '{action_type}': {e}")
 
     return chat, audit_logs
