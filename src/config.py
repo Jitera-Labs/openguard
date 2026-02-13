@@ -157,6 +157,26 @@ OPENGUARD_OPENAI_KEYS = Config[str](
     ),
 )
 
+OPENGUARD_ANTHROPIC_URLS = Config[str](
+    name="OPENGUARD_ANTHROPIC_URL_*",
+    type=str,
+    default="",
+    description=(
+        "Downstream Anthropic Chat API URLs. "
+        "Use wildcard naming like OPENGUARD_ANTHROPIC_URL_1."
+    ),
+)
+
+OPENGUARD_ANTHROPIC_KEYS = Config[str](
+    name="OPENGUARD_ANTHROPIC_KEY_*",
+    type=str,
+    default="",
+    description=(
+        "API keys for downstream Anthropic APIs. "
+        "Use wildcard naming like OPENGUARD_ANTHROPIC_KEY_1."
+    ),
+)
+
 OPENGUARD_API_KEY = Config[str](
     name="OPENGUARD_API_KEY",
     type=str,
