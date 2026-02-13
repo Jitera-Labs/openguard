@@ -20,3 +20,16 @@ guards:
       - type: pii_filter
         config:
           enabled: true
+
+  # LLM-driven input inspection for higher-risk prompts
+  - match:
+      model:
+        _ilike: "%gpt%"
+    apply:
+      - type: llm_input_inspection
+        config:
+          prompt: |
+            Block prompts that request credential theft, malware, or sensitive data exfiltration.
+          on_violation: block
+          on_error: allow
+          max_chars: 4000
