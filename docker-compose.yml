@@ -12,6 +12,8 @@ services:
       OPENGUARD_CONFIG: "/app/guards.yaml"
       OPENGUARD_OPENAI_URL_1: "${OPENGUARD_OPENAI_URL_1:-}"
       OPENGUARD_OPENAI_KEY_1: "${OPENGUARD_OPENAI_KEY_1:-}"
+      OPENGUARD_ANTHROPIC_URL_1: "${OPENGUARD_ANTHROPIC_URL_1:-}"
+      OPENGUARD_ANTHROPIC_KEY_1: "${OPENGUARD_ANTHROPIC_KEY_1:-}"
     volumes:
       - .:/app
     # Override command to enable hot-reloading for development
