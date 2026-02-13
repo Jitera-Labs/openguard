@@ -97,6 +97,156 @@ class LLM(AsyncEventEmitter):
 
         return content
 
+    def inspect_completion(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        model: Optional[str] = None,
+        response_format: Optional[dict] = None,
+    ):
+        provider = getattr(self, "provider", "openai")
+        if provider == "anthropic":
+            return self._inspect_completion_anthropic(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                model=model,
+                response_format=response_format,
+            )
+
+        return self._inspect_completion_openai(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            model=model,
+            response_format=response_format,
+        )
+
+    def _inspect_completion_openai(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        model: Optional[str] = None,
+        response_format: Optional[dict] = None,
+    ):
+        resolved_model = model or self.model
+        if not resolved_model:
+            raise RuntimeError("missing model for inspection completion")
+
+        params = dict(self.params or {})
+        params.pop("stream", None)
+        params.pop("stream_options", None)
+        params.pop("messages", None)
+
+        body = {
+            "model": resolved_model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            **params,
+            "stream": False,
+        }
+
+        if response_format is not None:
+            body["response_format"] = response_format
+
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(
+                self.chat_completion_endpoint,
+                headers=self.headers,
+                params=self.query_params,
+                json=body,
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+        return self._extract_inspection_text(payload)
+
+    def _inspect_completion_anthropic(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        model: Optional[str] = None,
+        response_format: Optional[dict] = None,
+    ):
+        resolved_model = model or self.model
+        if not resolved_model:
+            raise RuntimeError("missing model for inspection completion")
+
+        body = {
+            "model": resolved_model,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_prompt}],
+            "max_tokens": 256,
+        }
+
+        if response_format is not None:
+            body["response_format"] = response_format
+
+        endpoint = self._provider_endpoint("/messages")
+
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(
+                endpoint,
+                headers=self.headers,
+                params=self.query_params,
+                json=body,
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+        return self._extract_inspection_text(payload)
+
+    def _provider_endpoint(self, path: str):
+        base = (self.url or "").rstrip("/")
+        normalized = path if path.startswith("/") else f"/{path}"
+
+        if getattr(self, "provider", "openai") == "anthropic":
+            if normalized.startswith("/v1/"):
+                return f"{base}{normalized}"
+            if base.endswith("/v1"):
+                return f"{base}{normalized}"
+            return f"{base}/v1{normalized}"
+
+        return f"{base}{normalized}"
+
+    def _extract_inspection_text(self, payload: dict):
+        if not isinstance(payload, dict):
+            raise ValueError("invalid inspector response payload")
+
+        choices = payload.get("choices")
+        if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+            message = choices[0].get("message", {})
+            content = message.get("content")
+            return self._content_to_text(content)
+
+        content_blocks = payload.get("content")
+        if isinstance(content_blocks, list):
+            text_parts = []
+            for block in content_blocks:
+                if isinstance(block, dict) and isinstance(block.get("text"), str):
+                    text_parts.append(block["text"])
+            if text_parts:
+                return "\n".join(text_parts).strip()
+
+        raise ValueError("invalid inspector response: missing text content")
+
+    def _content_to_text(self, content):
+        if isinstance(content, str):
+            return content.strip()
+
+        if isinstance(content, list):
+            text_parts = []
+            for part in content:
+                if isinstance(part, dict) and isinstance(part.get("text"), str):
+                    text_parts.append(part["text"])
+            if text_parts:
+                return "\n".join(text_parts).strip()
+
+        raise ValueError("invalid inspector response: missing text content")
+
     def get_chunk_content(self, chunk):
         try:
             choices = chunk.get("choices", [])
