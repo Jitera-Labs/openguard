@@ -5,6 +5,7 @@ Provides test client, mock downstream APIs, and test guards configuration.
 """
 
 import os
+import json
 import textwrap
 from unittest.mock import AsyncMock, MagicMock
 
@@ -76,6 +77,8 @@ def test_env(guards_yaml):
     os.environ["OPENGUARD_CONFIG"] = guards_yaml
     os.environ["OPENGUARD_OPENAI_URL_TEST"] = "http://downstream.test"
     os.environ["OPENGUARD_OPENAI_KEY_TEST"] = ""
+    os.environ["OPENGUARD_ANTHROPIC_URL_TEST"] = "http://anthropic.test"
+    os.environ["OPENGUARD_ANTHROPIC_KEY_TEST"] = "anthropic-downstream-key"
     os.environ["OPENGUARD_API_KEY"] = ""
     os.environ["OPENGUARD_API_KEYS"] = ""
     os.environ["OPENGUARD_LOG_LEVEL"] = "DEBUG"
@@ -199,7 +202,7 @@ def _build_httpx_mock(
     streaming_chunks,
     monkeypatch,
 ):
-    captured = {"get": [], "post": [], "stream": []}
+    captured = {"get": [], "post": [], "stream": [], "request": []}
 
     async def mock_get(url, headers=None, **kwargs):
         response = MagicMock()
@@ -215,6 +218,39 @@ def _build_httpx_mock(
         response.json.return_value = non_streaming_response
         response.raise_for_status = MagicMock()
         captured["post"].append({"url": url, "headers": headers, "json": json})
+        return response
+
+    async def mock_request(method, url, headers=None, params=None, content=None, **kwargs):
+        captured["request"].append(
+            {
+                "method": method,
+                "url": url,
+                "headers": headers,
+                "params": params,
+                "content": content,
+            }
+        )
+
+        response = MagicMock()
+        response.status_code = 200
+
+        if method.upper() == "POST" and str(url).endswith("/v1/messages/count_tokens"):
+            payload = {"input_tokens": 12}
+        elif method.upper() == "POST" and str(url).endswith("/v1/messages"):
+            payload = {
+                "id": "msg_123",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-test-model",
+                "content": [{"type": "text", "text": "Hello from Anthropic"}],
+            }
+        elif method.upper() == "GET" and str(url).endswith("/v1/models"):
+            payload = {"object": "list", "data": mock_downstream_models}
+        else:
+            payload = non_streaming_response
+
+        response.content = json.dumps(payload).encode("utf-8")
+        response.headers = {"content-type": "application/json"}
         return response
 
     async def aiter_bytes():
@@ -237,6 +273,7 @@ def _build_httpx_mock(
     mock_client.get = AsyncMock(side_effect=mock_get)
     mock_client.post = AsyncMock(side_effect=mock_post)
     mock_client.stream = MagicMock(side_effect=mock_stream)
+    mock_client.request = AsyncMock(side_effect=mock_request)
 
     class MockAsyncClient:
         def __init__(self, *args, **kwargs):
