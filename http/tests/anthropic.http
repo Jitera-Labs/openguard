@@ -1,0 +1,127 @@
+# @import ../variables.http
+# @import ../helpers.http
+
+### 1. Anthropic Messages Happy Path
+POST {{host}}/v1/messages
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "max_tokens": 64,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Reply with exactly one word: hello"
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Anthropic /v1/messages should return message envelope', () => {
+    const body = response.parsedBody;
+    expect(body.type).toBe('message', 'Expected Anthropic message type');
+    expect(body.role).toBe('assistant', 'Expected assistant role in Anthropic response');
+    expect(Array.isArray(body.content)).toBeTruthy('Expected content blocks array');
+  });
+}}
+
+### 2. Anthropic Guard Mutation
+POST {{host}}/v1/messages
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "max_tokens": 96,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Repeat exactly this text and nothing else: alphasecret"
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Anthropic /v1/messages should apply content filter mutation', () => {
+    const body = response.parsedBody;
+    expect(body.type).toBe('message', 'Expected Anthropic message response');
+
+    const blocks = body.content || [];
+    const mergedText = blocks
+      .filter(block => block && block.type === 'text' && typeof block.text === 'string')
+      .map(block => block.text)
+      .join(' ')
+      .toLowerCase();
+
+    expect(mergedText).not.toInclude('alphasecret', 'Blocked token should not appear after guard mutation');
+  });
+}}
+
+### 3. Anthropic Guard Blocking Envelope
+POST {{host}}/v1/messages
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-block",
+  "max_tokens": 64,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "This request contains forbidden content."
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 403
+{{
+  test('Anthropic /v1/messages should return Anthropic error envelope on block', () => {
+    const body = response.parsedBody;
+    expect(body.type).toBe('error', 'Expected top-level Anthropic error envelope');
+    expect(body.error.type).toBe('invalid_request_error', 'Expected Anthropic invalid_request_error type');
+    expect(body.error.message).toInclude('forbidden', 'Expected blocked keyword in message');
+  });
+}}
+
+### 4. Anthropic Count Tokens Passthrough
+POST {{host}}/v1/messages/count_tokens
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Count these tokens"
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Anthropic /v1/messages/count_tokens should pass through', () => {
+    const body = response.parsedBody;
+    expect(body.input_tokens).toBeDefined('Expected input_tokens in count_tokens response');
+  });
+}}
