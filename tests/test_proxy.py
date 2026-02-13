@@ -145,3 +145,150 @@ async def test_llm_connection_error(monkeypatch):
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+def test_resolve_provider_route_internal_mode_precedence(monkeypatch):
+    """Internal OpenGuard key takes precedence and uses model routing first."""
+    import importlib
+
+    from src import config
+
+    monkeypatch.setenv("OPENGUARD_API_KEY", "internal-key")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_A", "http://anthropic-a.test")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_A", "anth-key-a")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_B", "http://anthropic-b.test")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_B", "anth-key-b")
+
+    importlib.reload(config)
+    importlib.reload(mapper)
+
+    mapper.MODEL_TO_BACKEND["anthropic"]["claude-special"] = "http://anthropic-b.test"
+
+    route = mapper.resolve_provider_route(
+        provider="anthropic",
+        endpoint_path="/messages",
+        body={"model": "claude-special"},
+        headers={"Authorization": "Bearer internal-key"},
+    )
+
+    assert route["mode"] == "internal"
+    assert route["url"] == "http://anthropic-b.test"
+    assert route["endpoint"] == "http://anthropic-b.test/v1/messages"
+
+
+def test_resolve_provider_route_direct_key_precedence(monkeypatch):
+    """Downstream provider key routes directly to matching backend."""
+    import importlib
+
+    from src import config
+
+    monkeypatch.setenv("OPENGUARD_API_KEY", "")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_A", "http://anthropic-a.test")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_A", "anth-key-a")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_B", "http://anthropic-b.test")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_B", "anth-key-b")
+
+    importlib.reload(config)
+    importlib.reload(mapper)
+
+    route = mapper.resolve_provider_route(
+        provider="anthropic",
+        endpoint_path="/messages",
+        body={"model": "anything"},
+        headers={"x-api-key": "anth-key-a"},
+    )
+
+    assert route["mode"] == "direct"
+    assert route["url"] == "http://anthropic-a.test"
+
+
+def test_resolve_provider_route_endpoint_fallback(monkeypatch):
+    """Unknown key falls back to endpoint-based provider routing."""
+    import importlib
+
+    from src import config
+
+    monkeypatch.setenv("OPENGUARD_API_KEY", "internal-only")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_A", "http://anthropic-a.test")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_A", "anth-key-a")
+
+    importlib.reload(config)
+    importlib.reload(mapper)
+
+    route = mapper.resolve_provider_route(
+        provider="anthropic",
+        endpoint_path="/messages",
+        body={"model": "anything"},
+        headers={"x-api-key": "unknown-key"},
+    )
+
+    assert route["mode"] == "endpoint"
+    assert route["endpoint"] == "http://anthropic-a.test/v1/messages"
+
+
+@pytest.mark.asyncio
+async def test_forward_provider_request_warms_cache_for_internal_model_routing(monkeypatch):
+    """Internal key + model should warm cache and route to mapped backend on first call."""
+    from src import main as main_module
+
+    class DummyRequest:
+        method = "POST"
+        headers = {"Authorization": "Bearer internal-key"}
+        query_params = {}
+
+    mapper.MODEL_TO_BACKEND["anthropic"].clear()
+
+    monkeypatch.setattr(
+        main_module.mapper,
+        "get_provider_backends",
+        lambda provider: [
+            {"provider": "anthropic", "url": "http://anthropic-a.test", "key": "anth-key-a"},
+            {"provider": "anthropic", "url": "http://anthropic-b.test", "key": "anth-key-b"},
+        ],
+    )
+    monkeypatch.setattr(main_module.mapper, "get_internal_api_keys", lambda: ["internal-key"])
+
+    warmed = {"called": False}
+
+    async def fake_list_downstream(provider="openai"):
+        warmed["called"] = True
+        mapper.MODEL_TO_BACKEND["anthropic"]["claude-special"] = "http://anthropic-b.test"
+        return []
+
+    monkeypatch.setattr(main_module.mapper, "list_downstream", fake_list_downstream)
+
+    captured = {"url": None}
+
+    class MockClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def request(self, method, url, headers=None, params=None, content=None):
+            captured["url"] = url
+            return type(
+                "MockResponse",
+                (),
+                {
+                    "content": b'{"ok":true}',
+                    "status_code": 200,
+                    "headers": {"content-type": "application/json", "x-test": "1"},
+                },
+            )()
+
+    monkeypatch.setattr(main_module.httpx, "AsyncClient", lambda timeout=None: MockClient())
+
+    payload = {"model": "claude-special", "messages": [{"role": "user", "content": "hi"}]}
+    response = await main_module._forward_provider_request(
+        request=DummyRequest(),
+        provider="anthropic",
+        endpoint_path="/messages",
+        body_bytes=b"{}",
+        payload=payload,
+    )
+
+    assert warmed["called"] is True
+    assert captured["url"] == "http://anthropic-b.test/v1/messages"
+    assert response.status_code == 200

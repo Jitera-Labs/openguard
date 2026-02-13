@@ -50,6 +50,131 @@ def test_list_models(test_client, setup_mock_downstream, mock_downstream_models)
     assert "unmatched-model" in model_ids
 
 
+def test_list_models_uses_anthropic_provider_when_anthropic_key(test_client, setup_mock_downstream):
+    """Test /v1/models routes to Anthropic model listing when Anthropic key is provided."""
+    response = test_client.get("/v1/models", headers={"x-api-key": "anthropic-downstream-key"})
+
+    assert response.status_code == 200
+    last_get = setup_mock_downstream["get"][-1]
+    assert last_get["url"] == "http://anthropic.test/v1/models"
+    assert last_get["headers"]["x-api-key"] == "anthropic-downstream-key"
+
+
+def test_anthropic_messages_passthrough(test_client, setup_mock_downstream):
+    """Test dedicated Anthropic /v1/messages endpoint forwards payload and auth."""
+    payload = {
+        "model": "claude-3-5-sonnet-20241022",
+        "max_tokens": 128,
+        "messages": [{"role": "user", "content": "Hello"}],
+        "metadata": {"custom": "value"},
+    }
+
+    response = test_client.post("/v1/messages", json=payload)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["type"] == "message"
+
+    forwarded = setup_mock_downstream["request"][-1]
+    assert forwarded["method"] == "POST"
+    assert forwarded["url"] == "http://anthropic.test/v1/messages"
+    assert json.loads(forwarded["content"].decode("utf-8"))["metadata"]["custom"] == "value"
+
+
+def test_anthropic_messages_guard_mutation_preserves_unknown_fields(
+    test_client, setup_mock_downstream
+):
+    """Anthropic /v1/messages applies guards while preserving unknown fields."""
+    payload = {
+        "model": "claude-test-model",
+        "max_tokens": 256,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Contains badword",
+                        "extra_block": {"keep": True},
+                    }
+                ],
+                "unknown_message_field": {"keep": "yes"},
+            }
+        ],
+        "metadata": {"custom": "value"},
+        "top_unknown": {"nested": [1, 2, 3]},
+    }
+
+    response = test_client.post("/v1/messages", json=payload)
+
+    assert response.status_code == 200
+    forwarded = setup_mock_downstream["request"][-1]
+    forwarded_payload = json.loads(forwarded["content"].decode("utf-8"))
+
+    text = forwarded_payload["messages"][0]["content"][0]["text"]
+    assert "badword" not in text.lower()
+    assert "[FILTERED]" in text
+
+    assert forwarded_payload["metadata"] == {"custom": "value"}
+    assert forwarded_payload["top_unknown"] == {"nested": [1, 2, 3]}
+    assert forwarded_payload["messages"][0]["unknown_message_field"] == {"keep": "yes"}
+    assert forwarded_payload["messages"][0]["content"][0]["extra_block"] == {"keep": True}
+
+
+def test_anthropic_messages_guard_block_returns_anthropic_error_envelope(
+    test_client, setup_mock_downstream, monkeypatch
+):
+    """Blocked Anthropic requests return provider-compatible error envelope."""
+    from src import main as main_module
+    from src.guards import GuardAction, GuardRule
+
+    monkeypatch.setattr(
+        main_module,
+        "get_guards",
+        lambda: [
+            GuardRule(
+                match={"model": {"_ilike": "%claude-block%"}},
+                apply=[
+                    GuardAction(
+                        type="keyword_filter",
+                        config={"keywords": ["forbidden"], "action": "block"},
+                    )
+                ],
+            )
+        ],
+    )
+
+    payload = {
+        "model": "claude-block-model",
+        "messages": [{"role": "user", "content": "This contains forbidden text"}],
+    }
+
+    response = test_client.post("/v1/messages", json=payload)
+
+    assert response.status_code == 403
+    body = response.json()
+    assert body["type"] == "error"
+    assert body["error"]["type"] == "invalid_request_error"
+    assert "Request blocked" in body["error"]["message"]
+    assert setup_mock_downstream["request"] == []
+
+
+def test_anthropic_count_tokens_passthrough(test_client, setup_mock_downstream):
+    """Test dedicated Anthropic /v1/messages/count_tokens endpoint forwarding."""
+    payload = {
+        "model": "claude-3-5-sonnet-20241022",
+        "messages": [{"role": "user", "content": "Count these tokens"}],
+    }
+
+    response = test_client.post("/v1/messages/count_tokens", json=payload)
+
+    assert response.status_code == 200
+    assert response.json()["input_tokens"] == 12
+
+    forwarded = setup_mock_downstream["request"][-1]
+    assert forwarded["url"] == "http://anthropic.test/v1/messages/count_tokens"
+
+
 def test_chat_no_guard_unmatched_model(test_client, setup_mock_non_streaming):
     """Test chat completion with model that doesn't match any guards"""
     payload = {
