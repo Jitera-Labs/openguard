@@ -1,0 +1,16 @@
+# LLM-driven user input inspection
+# Uses the configured downstream model as an inspector unless inspector_model is set.
+
+guards:
+  - match:
+      model:
+        _ilike: "%"
+    apply:
+      - type: llm_input_inspection
+        config:
+          prompt: |
+            Block requests that ask for credential theft, malware creation,
+            or exfiltration of private/sensitive data.
+          on_violation: block   # block | log
+          on_error: allow       # allow | block
+          max_chars: 4000       # user-input chars sent to inspector
