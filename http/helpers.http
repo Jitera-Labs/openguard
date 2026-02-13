@@ -214,6 +214,73 @@
     }
   }
 
+  exports.parseSseJsonPayloads = (rawBody) => {
+    return (rawBody || '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.startsWith('data:'))
+      .map(line => line.replace(/^data:\s*/, ''))
+      .filter(data => data && data !== '[DONE]')
+      .map(data => JSON.parse(data));
+  }
+
+  exports.unwrapJsonText = (rawText) => {
+    const trimmed = (rawText || '').trim();
+    const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    return (fenced ? fenced[1] : trimmed).trim();
+  }
+
+  exports.extractJSONObjectText = (rawText) => {
+    const normalized = exports.unwrapJsonText(rawText);
+
+    if (normalized.startsWith('{') && normalized.endsWith('}')) {
+      return normalized;
+    }
+
+    const start = normalized.indexOf('{');
+    if (start === -1) {
+      throw new Error('Expected JSON object payload but no object start token found');
+    }
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < normalized.length; i++) {
+      const ch = normalized[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (ch === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) {
+        continue;
+      }
+
+      if (ch === '{') {
+        depth += 1;
+      } else if (ch === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          return normalized.slice(start, i + 1);
+        }
+      }
+    }
+
+    throw new Error('Expected complete JSON object payload but object end token was not found');
+  }
+
   exports.asyncTest = async (name, testFunc) => {
     try {
       await testFunc();

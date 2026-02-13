@@ -121,6 +121,56 @@ def test_anthropic_messages_guard_mutation_preserves_unknown_fields(
     assert forwarded_payload["messages"][0]["content"][0]["extra_block"] == {"keep": True}
 
 
+def test_anthropic_messages_explicit_tool_choice_without_tool_use_returns_error(
+    test_client, setup_mock_downstream
+):
+    """Explicit Anthropic tool_choice requires downstream tool_use block or a proxy error."""
+    payload = {
+        "model": "claude-test-model",
+        "max_tokens": 128,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Call calculate_sum with a=2 and b=3.",
+                    }
+                ],
+            }
+        ],
+        "tools": [
+            {
+                "name": "calculate_sum",
+                "description": "Calculate the sum of two numbers",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "a": {"type": "number"},
+                        "b": {"type": "number"},
+                    },
+                    "required": ["a", "b"],
+                    "additionalProperties": False,
+                },
+            }
+        ],
+        "tool_choice": {"type": "tool", "name": "calculate_sum"},
+    }
+
+    response = test_client.post("/v1/messages", json=payload)
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["type"] == "error"
+    assert body["error"]["type"] == "invalid_request_error"
+    assert "tool_use" in body["error"]["message"]
+
+    forwarded = setup_mock_downstream["request"][-1]
+    forwarded_payload = json.loads(forwarded["content"].decode("utf-8"))
+    assert forwarded_payload["tools"][0]["name"] == "calculate_sum"
+    assert forwarded_payload["tool_choice"]["type"] == "tool"
+
+
 def test_anthropic_messages_guard_block_returns_anthropic_error_envelope(
     test_client, setup_mock_downstream, monkeypatch
 ):

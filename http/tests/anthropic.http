@@ -125,3 +125,344 @@ POST {{host}}/v1/messages/count_tokens
     expect(body.input_tokens).toBeDefined('Expected input_tokens in count_tokens response');
   });
 }}
+
+### 5. Anthropic Structured Outputs (non-stream)
+POST {{host}}/v1/messages
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "max_tokens": 128,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Return exactly one JSON object with exactly these keys: country and language. Use values for Paris, France. Output JSON only with no markdown fences and no extra keys."
+        }
+      ]
+    }
+  ],
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "CountryInfoSchema",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          }
+        },
+        "required": ["country", "language"],
+        "additionalProperties": false
+      }
+    }
+  }
+}
+
+{{
+  test('Anthropic /v1/messages structured outputs non-stream should return schema JSON or explicit capability error', () => {
+    const status = response.statusCode || response.status;
+    const body = response.parsedBody;
+
+    if (status === 200) {
+      expect(body.type).toBe('message', 'Expected Anthropic message envelope');
+      expect(Array.isArray(body.content)).toBeTruthy('Expected content blocks array');
+
+      const text = (body.content || [])
+        .filter(block => block && block.type === 'text' && typeof block.text === 'string')
+        .map(block => block.text)
+        .join('')
+        .trim();
+
+      expect(text.length > 0).toBeTruthy('Expected non-empty text payload for structured output');
+
+      const jsonText = extractJSONObjectText(text);
+      const parsed = JSON.parse(jsonText);
+      const isObject = parsed && typeof parsed === 'object' && !Array.isArray(parsed);
+      expect(isObject).toBeTruthy('Expected structured output payload to be a JSON object');
+      expect(typeof parsed.country).toBe('string', 'Expected structured output field country as string');
+      expect(parsed.country.trim().length > 0).toBeTruthy('Expected non-empty structured output field country');
+      expect(typeof parsed.language).toBe('string', 'Expected structured output field language as string');
+      expect(parsed.language.trim().length > 0).toBeTruthy('Expected non-empty structured output field language');
+
+      return;
+    }
+
+    if (status === 400 || status === 404 || status === 422) {
+      const hasAnthropicError = body && body.type === 'error' && body.error && typeof body.error.message === 'string';
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+
+      expect(hasAnthropicError || hasOpenAIError).toBeTruthy(
+        'Expected explicit error envelope for unsupported Anthropic structured outputs'
+      );
+      return;
+    }
+
+    throw new Error(`Unexpected status for Anthropic structured outputs non-stream: ${status}`);
+  });
+}}
+
+### 6. Anthropic Structured Outputs (stream)
+POST {{host}}/v1/messages
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "max_tokens": 128,
+  "stream": true,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Return exactly one JSON object with exactly these keys: country and language. Use values for Paris, France. Output JSON only with no markdown fences and no extra keys."
+        }
+      ]
+    }
+  ],
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "CountryInfoSchema",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          }
+        },
+        "required": ["country", "language"],
+        "additionalProperties": false
+      }
+    }
+  }
+}
+
+{{
+  test('Anthropic /v1/messages structured outputs stream should emit schema JSON deltas or explicit capability error', () => {
+    const status = response.statusCode || response.status;
+
+    if (status === 200) {
+      const payloads = parseSseJsonPayloads(response.body);
+
+      expect(payloads.length > 0).toBeTruthy('Expected non-empty Anthropic streaming payloads');
+
+      const text = payloads
+        .filter(evt => evt && evt.delta && evt.delta.type === 'text_delta' && typeof evt.delta.text === 'string')
+        .map(evt => evt.delta.text)
+        .join('')
+        .trim();
+
+      expect(text.length > 0).toBeTruthy('Expected streaming text deltas for structured output');
+
+      const jsonText = extractJSONObjectText(text);
+      const parsed = JSON.parse(jsonText);
+      const isObject = parsed && typeof parsed === 'object' && !Array.isArray(parsed);
+      expect(isObject).toBeTruthy('Expected structured streaming payload to be a JSON object');
+      expect(typeof parsed.country).toBe('string', 'Expected structured streaming field country as string');
+      expect(parsed.country.trim().length > 0).toBeTruthy('Expected non-empty structured streaming field country');
+      expect(typeof parsed.language).toBe('string', 'Expected structured streaming field language as string');
+      expect(parsed.language.trim().length > 0).toBeTruthy('Expected non-empty structured streaming field language');
+
+      return;
+    }
+
+    if (status === 400 || status === 404 || status === 422) {
+      const body = response.parsedBody;
+      const hasAnthropicError = body && body.type === 'error' && body.error && typeof body.error.message === 'string';
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+
+      expect(hasAnthropicError || hasOpenAIError).toBeTruthy(
+        'Expected explicit error envelope for unsupported Anthropic structured streaming outputs'
+      );
+      return;
+    }
+
+    throw new Error(`Unexpected status for Anthropic structured outputs stream: ${status}`);
+  });
+}}
+
+### 7. Anthropic Tool Calling (non-stream)
+POST {{host}}/v1/messages
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "max_tokens": 128,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Call calculate_sum with a=2 and b=3. Do not answer with plain text."
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "name": "calculate_sum",
+      "description": "Calculate the sum of two numbers",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "a": {
+            "type": "number"
+          },
+          "b": {
+            "type": "number"
+          }
+        },
+        "required": ["a", "b"],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "tool_choice": {
+    "type": "tool",
+    "name": "calculate_sum"
+  }
+}
+
+{{
+  test('Anthropic /v1/messages tool calling non-stream should return tool_use or explicit capability error', () => {
+    const status = response.statusCode || response.status;
+    const body = response.parsedBody;
+
+    if (status === 200) {
+      expect(body.type).toBe('message', 'Expected Anthropic message envelope');
+      expect(Array.isArray(body.content)).toBeTruthy('Expected content blocks array');
+
+      const toolUseBlock = (body.content || []).find(
+        block => block && block.type === 'tool_use' && block.name === 'calculate_sum'
+      );
+
+      expect(Boolean(toolUseBlock)).toBeTruthy('Expected calculate_sum tool_use block in Anthropic response');
+      expect(toolUseBlock && typeof toolUseBlock.input).toBe('object', 'Expected tool_use input object');
+      return;
+    }
+
+    if (status === 400 || status === 404 || status === 422) {
+      const hasAnthropicError = body && body.type === 'error' && body.error && typeof body.error.message === 'string';
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+
+      expect(hasAnthropicError || hasOpenAIError).toBeTruthy(
+        'Expected explicit error envelope for unsupported Anthropic tool calling'
+      );
+      return;
+    }
+
+    throw new Error(`Unexpected status for Anthropic tool calling non-stream: ${status}`);
+  });
+}}
+
+### 8. Anthropic Tool Calling (stream)
+POST {{host}}/v1/messages
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "max_tokens": 128,
+  "stream": true,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Call calculate_sum with a=2 and b=3. Do not answer with plain text."
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "name": "calculate_sum",
+      "description": "Calculate the sum of two numbers",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "a": {
+            "type": "number"
+          },
+          "b": {
+            "type": "number"
+          }
+        },
+        "required": ["a", "b"],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "tool_choice": {
+    "type": "tool",
+    "name": "calculate_sum"
+  }
+}
+
+{{
+  test('Anthropic /v1/messages tool calling stream should emit tool_use events or explicit capability error', () => {
+    const status = response.statusCode || response.status;
+
+    if (status === 200) {
+      const payloads = parseSseJsonPayloads(response.body);
+
+      expect(payloads.length > 0).toBeTruthy('Expected non-empty Anthropic streaming payloads');
+
+      const hasToolUseStart = payloads.some(evt =>
+        evt &&
+        evt.type === 'content_block_start' &&
+        evt.content_block &&
+        evt.content_block.type === 'tool_use' &&
+        evt.content_block.name === 'calculate_sum'
+      );
+
+      const hasToolInputDelta = payloads.some(evt =>
+        evt &&
+        evt.type === 'content_block_delta' &&
+        evt.delta &&
+        evt.delta.type === 'input_json_delta' &&
+        typeof evt.delta.partial_json === 'string'
+      );
+
+      const hasToolUseStopReason = payloads.some(evt =>
+        evt &&
+        evt.type === 'message_delta' &&
+        evt.delta &&
+        evt.delta.stop_reason === 'tool_use'
+      );
+
+      if (hasToolUseStart && (hasToolInputDelta || hasToolUseStopReason)) {
+        return;
+      }
+
+      throw new Error('Expected Anthropic streaming tool_use semantics (tool_use start plus input delta or tool_use stop reason)');
+    }
+
+    if (status === 400 || status === 404 || status === 422) {
+      const body = response.parsedBody;
+      const hasAnthropicError = body && body.type === 'error' && body.error && typeof body.error.message === 'string';
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+
+      expect(hasAnthropicError || hasOpenAIError).toBeTruthy(
+        'Expected explicit error envelope for unsupported Anthropic streaming tool calling'
+      );
+      return;
+    }
+
+    throw new Error(`Unexpected status for Anthropic tool calling stream: ${status}`);
+  });
+}}

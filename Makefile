@@ -5,6 +5,8 @@ dev-ollama:
 	@harbor ollama --version || true
 	OPENGUARD_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
 	OPENGUARD_OPENAI_KEY_1="sk-ollama" \
+	OPENGUARD_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
+	OPENGUARD_ANTHROPIC_KEY_1="sk-ollama" \
 	docker compose up --build
 
 start:
@@ -14,6 +16,8 @@ start-ollama:
 	@harbor ollama --version || true
 	OPENGUARD_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
 	OPENGUARD_OPENAI_KEY_1="sk-ollama" \
+	OPENGUARD_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
+	OPENGUARD_ANTHROPIC_KEY_1="sk-ollama" \
 	docker compose up --build -d
 
 stop:

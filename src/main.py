@@ -78,6 +78,35 @@ def _is_guard_blocked_error(error: Exception):
     return error.__class__.__name__ == "GuardBlockedError"
 
 
+def _requires_explicit_anthropic_tool_use(payload: dict | None):
+    if not isinstance(payload, dict):
+        return False
+
+    if payload.get("stream"):
+        return False
+
+    tools = payload.get("tools")
+    tool_choice = payload.get("tool_choice")
+
+    if not isinstance(tools, list) or len(tools) == 0:
+        return False
+
+    return isinstance(tool_choice, dict) and tool_choice.get("type") == "tool"
+
+
+def _anthropic_message_has_tool_use(response_payload: dict | None):
+    if not isinstance(response_payload, dict):
+        return False
+
+    content_blocks = response_payload.get("content")
+    if not isinstance(content_blocks, list):
+        return False
+
+    return any(
+        isinstance(block, dict) and block.get("type") == "tool_use" for block in content_blocks
+    )
+
+
 def _build_forward_headers(request: Request, provider: str, route_config: dict):
     headers = {
         key: value
@@ -149,6 +178,67 @@ async def _forward_provider_request(
                 params=query_params,
                 content=body_bytes if body_bytes else None,
             )
+
+            if (
+                provider == "anthropic"
+                and endpoint_path == "/messages/count_tokens"
+                and response.status_code == 404
+                and isinstance(payload, dict)
+            ):
+                fallback_payload = dict(payload)
+                fallback_payload.setdefault("max_tokens", 1)
+                fallback_payload["stream"] = False
+                fallback_body = json.dumps(fallback_payload).encode("utf-8")
+
+                fallback_route = mapper.resolve_provider_route(
+                    provider="anthropic",
+                    endpoint_path="/messages",
+                    body=fallback_payload,
+                    headers=request.headers,
+                )
+                fallback_headers = _build_forward_headers(request, "anthropic", fallback_route)
+
+                fallback_response = await client.request(
+                    method="POST",
+                    url=fallback_route["endpoint"],
+                    headers=fallback_headers,
+                    params=query_params,
+                    content=fallback_body,
+                )
+
+                if fallback_response.status_code < 400:
+                    try:
+                        fallback_json = fallback_response.json()
+                    except json.JSONDecodeError:
+                        fallback_json = {}
+
+                    usage = fallback_json.get("usage") if isinstance(fallback_json, dict) else None
+                    if isinstance(usage, dict) and usage.get("input_tokens") is not None:
+                        return JSONResponse(
+                            status_code=200,
+                            content={"input_tokens": usage["input_tokens"]},
+                        )
+
+            if (
+                provider == "anthropic"
+                and endpoint_path == "/messages"
+                and response.status_code < 400
+                and _requires_explicit_anthropic_tool_use(payload)
+            ):
+                try:
+                    downstream_payload = response.json()
+                except json.JSONDecodeError:
+                    downstream_payload = None
+
+                if not _anthropic_message_has_tool_use(downstream_payload):
+                    return _anthropic_error(
+                        422,
+                        (
+                            "Downstream model did not return tool_use for explicit tool_choice; "
+                            "tool calling may be unsupported by the selected model/backend."
+                        ),
+                        error_type="invalid_request_error",
+                    )
 
         content_type = response.headers.get("content-type", "application/json")
         response_headers = {
