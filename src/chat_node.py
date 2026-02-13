@@ -12,6 +12,7 @@ class ChatNode:
     role: str
     tool_call_id: Optional[str]
     tool_calls: Optional[List[dict]]
+    passthrough: dict
 
     parent: Optional["ChatNode"]
     children: List["ChatNode"]
@@ -26,10 +27,30 @@ class ChatNode:
             return None
 
         root_message = messages[0]
-        node = ChatNode(role=root_message["role"], content=root_message["content"])
+        node = ChatNode(
+            role=root_message.get("role", ""),
+            content=root_message.get("content", ""),
+            tool_call_id=root_message.get("tool_call_id"),
+            tool_calls=root_message.get("tool_calls", []),
+            passthrough={
+                k: v
+                for k, v in root_message.items()
+                if k not in ["role", "content", "tool_call_id", "tool_calls"]
+            },
+        )
 
         for message in messages[1:]:
-            child = ChatNode(role=message["role"], content=message["content"])
+            child = ChatNode(
+                role=message.get("role", ""),
+                content=message.get("content", ""),
+                tool_call_id=message.get("tool_call_id"),
+                tool_calls=message.get("tool_calls", []),
+                passthrough={
+                    k: v
+                    for k, v in message.items()
+                    if k not in ["role", "content", "tool_call_id", "tool_calls"]
+                },
+            )
             node.add_child(child)
             node = child
 
@@ -50,6 +71,7 @@ class ChatNode:
 
         self.tool_call_id = kwargs.get("tool_call_id", None)
         self.tool_calls = kwargs.get("tool_calls", [])
+        self.passthrough = kwargs.get("passthrough", {})
 
     def add_parent(self, new_parent: "ChatNode"):
         # Guard against None and self-reference
@@ -119,6 +141,7 @@ class ChatNode:
 
     def message(self):
         result = {
+            **self.passthrough,
             "role": self.role,
             "content": self.content,
         }
