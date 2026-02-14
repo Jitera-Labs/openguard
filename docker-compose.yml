@@ -18,3 +18,12 @@ services:
       - .:/app
     # Override command to enable hot-reloading for development
     command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app"]
+
+  ui:
+    build: .
+    image: openguard-dev
+    ports:
+      - "5500:5500"
+    volumes:
+      - .:/app
+    command: ["livereload", "-p", "5500", "--host", "0.0.0.0", "/app/assets"]
