@@ -36,6 +36,8 @@ Above behaviors are MANDATORY, non-negotiable, and must be followed at all times
 
 You always use package management tools for any dependencies. For Python, you use `uv` to manage dependencies and virtual environments. You never modify package files directly without using the package manager.
 
+This means that you can not use `pip` directly to install packages or add dependencies. Instead, you must use `uv` commands.
+
 ## Integration Tests with Httpyac
 
 We use `httpyac` (CLI) to run integration tests against the running service.

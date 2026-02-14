@@ -27,7 +27,7 @@ from src.middleware.request_state import RequestStateMiddleware
 logger = log_module.setup_logger(__name__)
 
 # Create FastAPI app
-app = FastAPI(title="OpenGuard", description="OpenAI-compatible guardrail proxy", version="0.1.0")
+app = FastAPI(title="OpenGuard", description="guarding proxy for AI", version="0.1.0")
 
 # Add middlewares in correct order
 app.add_middleware(RequestStateMiddleware)
@@ -377,7 +377,7 @@ async def root():
     return {
         "name": "OpenGuard",
         "version": "0.1.0",
-        "description": "OpenAI-compatible guardrail proxy",
+        "description": "guarding proxy for AI",
         "endpoints": {"health": "/health", "models": "/v1/models", "chat": "/v1/chat/completions"},
     }
 
@@ -680,22 +680,10 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
 
 
 def main():
-    """Entry point for CLI"""
-    import uvicorn
+    """
+    Entry point for the application script.
+    Delegates to the CLI application.
+    """
+    from src.cli import app
 
-    host = config.OPENGUARD_HOST.value
-    port = config.OPENGUARD_PORT.value
-    log_level = config.OPENGUARD_LOG_LEVEL.value.lower()
-
-    logger.info(f"Starting OpenGuard on {host}:{port}")
-    logger.info(f"Config file: {config.OPENGUARD_CONFIG.value}")
-
-    # Load guards at startup
-    guards = get_guards()
-    logger.info(f"Loaded {len(guards)} guard rules")
-
-    uvicorn.run("src.main:app", host=host, port=port, log_level=log_level, reload=False)
-
-
-if __name__ == "__main__":
-    main()
+    app()

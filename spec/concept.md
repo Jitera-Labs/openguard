@@ -1,6 +1,6 @@
 ## OpenGuard
 
-OpenGuard is an OpenAI-compatible guardrail proxy that allows to define custom guardrails for chat completion endpoints. It'll scan the payload and apply the defined guardrails to ensure that the responses adhere to specified rules and guidelines.
+OpenGuard is a guarding proxy for AI that allows to define custom guardrails for chat completion endpoints. It'll scan the payload and apply the defined guardrails to ensure that the responses adhere to specified rules and guidelines.
 
 OpenGuard is based on the Open Source codebase from: ./reference/boost,
 as it already contains all necessary components to implement the guardrail functionality.

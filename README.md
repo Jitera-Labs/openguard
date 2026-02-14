@@ -1,6 +1,6 @@
 # OpenGuard
 
-An OpenAI-compatible guardrail proxy that applies security and privacy controls to LLM requests.
+A guarding proxy for AI that applies security and privacy controls to LLM requests.
 
 ## Features
 
