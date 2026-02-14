@@ -29,7 +29,7 @@ Above behaviors are MANDATORY, non-negotiable, and must be followed at all times
 ## Work logging and Documentation
 
 - **DO NOT create work logs**: Do not generate files named `*.md`, or any similar session tracking documentation unless explicitly asked.
-- **No artifact leftovers**: Clean up any temporary files created during the session before finishing.
+- **Respect Workspace Hygiene**: Do not pollute the project root with temporary directories, test folders, or scratch files. Use the system's temporary directory for ephemeral work. The workspace state must remain clean and consistent with the repository structure.
 - **Single Source of Truth**: Only update existing documentation; do not create new implementation guides or summary files.
 
 ## Package Management
