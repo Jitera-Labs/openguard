@@ -19,7 +19,7 @@ COPY guards.yaml.example ./guards.yaml
 # Install the project itself
 RUN uv pip install --system --no-cache --no-deps -e .
 
-EXPOSE 8000
+EXPOSE 23294
 
 # Production command: no reload
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "23294"]
