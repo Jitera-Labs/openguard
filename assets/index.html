@@ -68,6 +68,10 @@
             padding: 0;
         }
 
+        html {
+            font-size: 24px;
+        }
+
         body {
             background-color: var(--bg);
             color: var(--fg);
@@ -76,6 +80,14 @@
             padding: 0;
             -webkit-font-smoothing: none;
             -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        .crt-stage {
+            position: relative;
+            isolation: isolate;
+            filter: url(#crt-filter);
+            transform: translateZ(0);
         }
 
         section {
@@ -92,7 +104,7 @@
 
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 912px;
             padding: 1rem;
             display: flex;
             flex-direction: column;
@@ -133,14 +145,13 @@
             padding: 1rem 1.5rem;
             border: 1px solid #333;
             background: #111;
-            border-radius: 4px;
             font-size: 0.85rem;
-            font-family: var(--font-mono); /* Explicitly use Geist Mono */
+            font-family: var(--font-mono);
             color: #fff;
             user-select: all;
             cursor: pointer;
             transition: border-color 0.2s;
-            -webkit-font-smoothing: antialiased; /* Better for standard mono */
+            -webkit-font-smoothing: antialiased;
             max-width: 100%;
             text-align: left;
             white-space: pre-wrap;
@@ -151,8 +162,6 @@
         code:hover {
             border-color: #555;
         }
-
-        /* --- BACKGROUND PIZZAZ --- */
 
         #bg-canvas {
             position: fixed;
@@ -170,17 +179,57 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(
+            background:
+            repeating-linear-gradient(
+                to right,
+                rgba(255, 0, 0, 0.03) 0,
+                rgba(255, 0, 0, 0.03) 1px,
+                rgba(0, 255, 255, 0.02) 1px,
+                rgba(0, 255, 255, 0.02) 2px,
+                rgba(0, 0, 255, 0.03) 2px,
+                rgba(0, 0, 255, 0.03) 3px
+            ),
+            linear-gradient(
                 to bottom,
                 rgba(255,255,255,0),
                 rgba(255,255,255,0) 50%,
                 rgba(0,0,0,0.2) 50%,
                 rgba(0,0,0,0.2)
             );
-            background-size: 100% 4px;
+            background-size: 3px 100%, 100% 4px;
             z-index: 999;
             pointer-events: none;
-            opacity: 0.6;
+            opacity: 0.5;
+        }
+
+        .crt-grille {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 997;
+            background: repeating-linear-gradient(
+                to right,
+                rgba(255,255,255,0.02) 0,
+                rgba(255,255,255,0.02) 1px,
+                rgba(0,0,0,0.02) 1px,
+                rgba(0,0,0,0.02) 2px
+            );
+            opacity: 0.35;
+        }
+
+        .crt-noise {
+            position: fixed;
+            inset: 0;
+            z-index: 996;
+            pointer-events: none;
+            opacity: 0.06;
+            mix-blend-mode: screen;
+            background-image:
+                radial-gradient(circle at 25% 35%, rgba(255,255,255,0.8) 0 1px, transparent 2px),
+                radial-gradient(circle at 80% 65%, rgba(255,255,255,0.8) 0 1px, transparent 2px),
+                radial-gradient(circle at 45% 20%, rgba(255,255,255,0.8) 0 1px, transparent 2px);
+            background-size: 180px 180px, 220px 220px, 160px 160px;
+            animation: static-shift 0.16s steps(2) infinite;
         }
 
         .vignette {
@@ -198,7 +247,6 @@
             pointer-events: none;
         }
 
-        /* Subtle CRT Flicker Animation */
         @keyframes flicker {
             0% { opacity: 0.97; }
             5% { opacity: 0.95; }
@@ -223,6 +271,14 @@
             100% { opacity: 0.94; }
         }
 
+        @keyframes static-shift {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-1px, 1px); }
+            50% { transform: translate(1px, -1px); }
+            75% { transform: translate(1px, 1px); }
+            100% { transform: translate(0, 0); }
+        }
+
         body::after {
             content: " ";
             display: block;
@@ -238,7 +294,6 @@
             animation: flicker 0.15s infinite;
         }
 
-        /* --- ARCHITECTURE DIAGRAM --- */
         #architecture {
             background: linear-gradient(to bottom, transparent, #0a0a0a 30%);
             display: flex;
@@ -259,7 +314,6 @@
             z-index: 20;
         }
 
-        /* Responsive Header for Flow Section */
         .flow-header {
             display: flex;
             justify-content: space-between;
@@ -275,8 +329,13 @@
 
             .flow-header {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: center;
                 gap: 1rem;
+                text-align: center;
+            }
+
+            .toggle-container {
+                margin: 0 auto;
             }
 
             #flow-wrapper {
@@ -299,7 +358,6 @@
             height: 300px;
             border: 1px solid #333;
             background: rgba(10, 10, 10, 0.6);
-            border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
@@ -329,7 +387,6 @@
 
         .scroll-indicator span {
             font-size: 0.8rem;
-            font-family: var(--font-mono);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
@@ -347,52 +404,75 @@
     </style>
 </head>
 <body>
-    <canvas id="bg-canvas"></canvas>
+    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+        <defs>
+            <filter id="crt-filter" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.002 0.02" numOctaves="1" seed="13" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.2" xChannelSelector="R" yChannelSelector="G" result="warped" />
+                <feGaussianBlur in="warped" stdDeviation="0.2" result="soft" />
+                <feMerge>
+                    <feMergeNode in="soft" />
+                    <feMergeNode in="warped" />
+                </feMerge>
+            </filter>
+        </defs>
+    </svg>
+
+    <div class="crt-stage">
+        <canvas id="bg-canvas"></canvas>
+
+        <section id="hero">
+            <div class="container">
+                <h1>OpenGuard</h1>
+                <p>A guarding proxy for AI that applies security and privacy controls to LLM requests.</p>
+            </div>
+            <div class="scroll-indicator">
+                <span>More</span>
+                <div class="arrow">↓</div>
+            </div>
+        </section>
+
+        <section id="architecture">
+            <div class="architecture-container">
+                <div class="flow-header">
+                    <h2 style="margin: 0;">The Flow</h2>
+
+                    <div class="toggle-container" onclick="toggleGuard()">
+                        <div class="toggle-label">OpenGuard</div>
+                        <div class="toggle-switch" id="guard-toggle">
+                            <div class="toggle-track"></div>
+                            <div class="toggle-thumb"></div>
+                        </div>
+                        <div class="status-label" id="guard-status">ENABLED</div>
+                    </div>
+                </div>
+
+                <div id="flow-wrapper">
+                    <canvas id="flow-canvas"></canvas>
+                    <div class="labels">
+                        <div class="label-item">LLM</div>
+                        <div class="label-item">Proxy</div>
+                        <div class="label-item">App</div>
+                        <div class="label-item">Env</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="run-command">
+            <div class="container">
+                <code onclick="navigator.clipboard.writeText(this.innerText)">docker run ghcr.io/everlier/openguard:main</code>
+                <code onclick="navigator.clipboard.writeText(this.innerText)">uvx openguard</code>
+            </div>
+        </section>
+    </div>
+
+    <div class="crt-noise"></div>
+    <div class="crt-grille"></div>
     <div class="scanlines"></div>
     <div class="vignette"></div>
 
-    <section id="hero">
-        <div class="container">
-            <h1>OpenGuard</h1>
-            <p>A guarding proxy for AI that applies security and privacy controls to LLM requests.</p>
-            <code onclick="navigator.clipboard.writeText(this.innerText)">docker run ghcr.io/everlier/openguard:main</code>
-        </div>
-        <div class="scroll-indicator">
-            <span>More</span>
-            <div class="arrow">↓</div>
-        </div>
-    </section>
-
-    <section id="architecture">
-        <div class="architecture-container">
-            <div class="flow-header">
-                <h2 style="margin: 0;">The Flow</h2>
-
-                <!-- Toggle Switch -->
-                <div class="toggle-container" onclick="toggleGuard()">
-                    <div class="toggle-label">OpenGuard</div>
-                    <div class="toggle-switch" id="guard-toggle">
-                        <div class="toggle-track"></div>
-                        <div class="toggle-thumb"></div>
-                    </div>
-                    <div class="status-label" id="guard-status">ENABLED</div>
-                </div>
-            </div>
-
-            <div id="flow-wrapper">
-                <canvas id="flow-canvas"></canvas>
-                <div class="labels">
-                    <div class="label-item">LLM</div>
-                    <div class="label-item">Proxy</div>
-                    <div class="label-item">App</div>
-                    <div class="label-item">Env</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <style>
-        /* New Toggle Styles */
         .toggle-container {
             display: flex;
             align-items: center;
@@ -402,7 +482,6 @@
             background: rgba(20, 20, 20, 0.8);
             padding: 10px 20px;
             border: 1px solid #333;
-            border-radius: 4px;
             transition: all 0.2s;
         }
 
@@ -430,7 +509,6 @@
             width: 100%;
             height: 100%;
             background: #333;
-            border-radius: 13px;
             transition: background 0.3s;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
         }
@@ -442,12 +520,10 @@
             width: 20px;
             height: 20px;
             background: #888;
-            border-radius: 50%;
             transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
-        /* Active State */
         .toggle-container.active .toggle-track {
             background: rgba(50, 255, 50, 0.2);
             border: 1px solid rgba(50, 255, 50, 0.5);
@@ -486,12 +562,10 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // Grid properties
         const gridSize = 40;
         let offset = 0;
         const speed = 0.5;
 
-        // Star/Paricle properties
         const stars = [];
         const numStars = 100;
 
@@ -509,17 +583,12 @@
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 1;
 
-            // Perspective Grid
-            // Imagine a floor plane moving towards us
-            const horizon = height * 0.3; // Horizon line height
+            const horizon = height * 0.3;
             const fov = 300;
 
-            // Clear
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(0, 0, width, height);
 
-            // Draw Stars (Background layer)
-            // Reduced star count and opacity on mobile
             const isMobile = width < 600;
             const starOpacity = isMobile ? 0.15 : 0.3;
 
@@ -530,7 +599,6 @@
                 ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Move stars slowly up
                 star.y -= star.speed;
                 if(star.y < 0) {
                     star.y = height;
@@ -539,75 +607,25 @@
             });
             ctx.globalAlpha = 1;
 
-            // Draw Floor Grid
             ctx.beginPath();
-
-            // Vertical lines (converging)
-            // We draw lines from the horizon to the bottom
-            // We need to calculate where the lines should be to look like a floor
 
             const centerX = width / 2;
 
-            // Draw a simple retro-wave style grid
             for (let x = -width; x < width * 2; x += gridSize) {
-                // To make them converge, we draw from (x, bottom) to (centerX, horizon)
-                // But let's do a strict perspective projection for "correctness"
-                // or a simple artistic one.
-
-                // Artistic "floor"
                 ctx.moveTo(x, height);
-                // Intersect with horizon at a vanishing point?
-                // Let's just make them parallel but slanted?
-                // No, perspective is better.
-
-                // Calculate x position at bottom based on angle
-                // Actually, let's keep it abstract: Just a 2D grid that rotates?
-                // No, user asked for "Moving grid".
-
-                // Simple perspective:
-                // Lines radiate from (centerX, horizon)
                 const spacing = 40;
-                // We generate points along the bottom edge
-                // And connect them to the vanishing point (centerX, horizon)
             }
-
-            // Let's do a "Digital Tunnel" or "Floor" effect simpler.
-            // Horizontal lines:
-            // y position increases exponentially as it gets closer
 
             offset = (offset + speed) % gridSize;
 
-            // Draw Horizontal Lines (Moving forward)
             for (let z = 0; z < height; z += gridSize) {
-                // Perspective transform?
-                // Visual approximation:
-                // Just moving lines down the screen, but spacing increases?
-                // Let's stick to a flat moving grid for "Schematic" look, matches Geist Pixel better.
-
-                // Flat Grid (Schematic) - easier to read text over
-                // Vertical
-                /*
-                for (let x = 0; x <= width; x += gridSize) {
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, height);
-                }
-                // Horizontal
-                const yOffset = offset;
-                for (let y = yOffset; y <= height; y += gridSize) {
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(width, y);
-                }
-                */
             }
-            // OK, switching to the designed "Perspective Floor"
 
             const vanishingPointY = height * 0.2;
             const vanishingPointX = width / 2;
 
-            // Draw Vertical Lines (Radiating)
-            // We space them out at the bottom
             const numLines = 40;
-            const bottomWidth = width * 4; // Extend beyond screen
+            const bottomWidth = width * 4;
 
             for(let i = 0; i <= numLines; i++) {
                 const xBottom = (i / numLines) * bottomWidth - (bottomWidth - width)/2;
@@ -615,21 +633,12 @@
                 ctx.lineTo(xBottom, height);
             }
 
-            // Draw Horizontal Lines (Approaching)
-            // Their spacing should increase as they go down
-            // z goes from far (0) to near (1)
-
-            // Animation offset
             const time = Date.now() / 1000;
             const gridSpeed = 0.4;
             const gridOffset = (time * gridSpeed) % 1;
 
             for(let i = 0; i < 20; i++) {
-                // Exponential spacing for perspective
-                // base position
-                let z = (i + gridOffset) / 20; // 0 to 1
-                // Perspective mapping: y = y_vanish + d / (1-z)? or just simple pow
-                // Simple power curve looks like perspective
+                let z = (i + gridOffset) / 20;
                 let y = vanishingPointY + (height - vanishingPointY) * Math.pow(z, 2);
 
                 if (y > height) continue;
@@ -639,19 +648,15 @@
                 ctx.lineTo(width, y);
             }
 
-            // Draw!
-            ctx.strokeStyle = 'rgba(50, 255, 50, 0.08)'; // Tech Green, very transparent
-            ctx.strokeStyle = 'rgba(237, 237, 237, 0.05)'; // Using variable fg color approx
+            ctx.strokeStyle = 'rgba(50, 255, 50, 0.08)';
+            ctx.strokeStyle = 'rgba(237, 237, 237, 0.05)';
             ctx.stroke();
 
-            // Add a "Gradient Mask" so the grid fades out at the top
             const gradient = ctx.createLinearGradient(0, vanishingPointY, 0, height);
-            gradient.addColorStop(0, 'rgba(10,10,10, 1)'); // Opaque black cover at top
-            gradient.addColorStop(0.2, 'rgba(10,10,10, 0)'); // Transparent
+            gradient.addColorStop(0, 'rgba(10,10,10, 1)');
+            gradient.addColorStop(0.2, 'rgba(10,10,10, 0)');
             gradient.addColorStop(1, 'rgba(10,10,10, 0)');
 
-            // Actually, better to just clip the drawing or clearRect?
-            // Let's just draw a big black box over the top area to hide the vanishing point mess
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(0, 0, width, vanishingPointY);
         }
@@ -663,7 +668,6 @@
 
         animate();
 
-        // --- GLOBAL STATE ---
         let isGuardEnabled = true;
 
         function toggleGuard() {
@@ -682,25 +686,30 @@
             }
         }
 
-        // Init toggle state
         document.querySelector('.toggle-container').classList.add('active');
 
-
-        // --- FLOW DIAGRAM ANIMATION ---
         function startFlowAnimation() {
             const flowCanvas = document.getElementById('flow-canvas');
             if (!flowCanvas) return;
             const flowCtx = flowCanvas.getContext('2d');
 
             let w, h;
-            // State
             let particles = [];
             let effects = [];
+            const eyeState = {
+                offsetX: 0,
+                offsetY: 0,
+                targetX: 0,
+                targetY: 0,
+                nextTargetAt: 0,
+                nextBlinkAt: 0,
+                blinkStart: -1,
+                blinkEnd: -1
+            };
 
-            // Time-based animation variables
             let lastTime = 0;
             let spawnTimer = 0;
-            let nextSpawnTime = 0.5; // Dynamic spawn interval
+            let nextSpawnTime = 0.5;
 
             function resizeFlow() {
                 const rect = flowCanvas.parentElement.getBoundingClientRect();
@@ -710,13 +719,11 @@
             window.addEventListener('resize', resizeFlow);
             resizeFlow();
 
-            // Utilities
             function drawBox(x, y, width, height, label, color) {
                 flowCtx.strokeStyle = color;
                 flowCtx.lineWidth = 2;
                 flowCtx.strokeRect(x - width/2, y - height/2, width, height);
 
-                // Label inside
                 flowCtx.fillStyle = color;
                 flowCtx.font = '12px "Geist Mono", monospace';
                 flowCtx.textAlign = 'center';
@@ -726,7 +733,6 @@
 
             function drawEye(x, y, radius, isOpen) {
                 if (!isOpen) {
-                    // Closed eye / Disabled
                     flowCtx.strokeStyle = '#333';
                     flowCtx.lineWidth = 1;
                     flowCtx.beginPath();
@@ -739,7 +745,6 @@
                 flowCtx.save();
                 flowCtx.translate(x, y);
 
-                // Outer
                 flowCtx.strokeStyle = '#fff';
                 flowCtx.lineWidth = 2;
                 flowCtx.beginPath();
@@ -748,20 +753,57 @@
                 flowCtx.quadraticCurveTo(0, radius*0.7, -radius, 0);
                 flowCtx.stroke();
 
-                // Pupil (Scanning)
                 const time = Date.now() / 1000;
-                const scanOffset = Math.sin(time * 3) * (radius * 0.3);
+
+                if (time >= eyeState.nextTargetAt) {
+                    eyeState.targetX = (Math.random() * 2 - 1) * (radius * 0.35);
+                    eyeState.targetY = (Math.random() * 2 - 1) * (radius * 0.18);
+                    eyeState.nextTargetAt = time + 0.15 + Math.random() * 0.85;
+                }
+
+                eyeState.offsetX += (eyeState.targetX - eyeState.offsetX) * 0.22;
+                eyeState.offsetY += (eyeState.targetY - eyeState.offsetY) * 0.22;
+
+                eyeState.offsetX += (Math.random() - 0.5) * radius * 0.01;
+                eyeState.offsetY += (Math.random() - 0.5) * radius * 0.006;
+
+                eyeState.offsetX = Math.max(-radius * 0.42, Math.min(radius * 0.42, eyeState.offsetX));
+                eyeState.offsetY = Math.max(-radius * 0.25, Math.min(radius * 0.25, eyeState.offsetY));
+
+                if (eyeState.nextBlinkAt === 0) {
+                    eyeState.nextBlinkAt = time + 1.2 + Math.random() * 1.8;
+                }
+
+                if (time >= eyeState.nextBlinkAt && time > eyeState.blinkEnd) {
+                    const blinkDuration = 0.11 + Math.random() * 0.08;
+                    eyeState.blinkStart = time;
+                    eyeState.blinkEnd = time + blinkDuration;
+                    eyeState.nextBlinkAt = eyeState.blinkEnd + 1.2 + Math.random() * 2.8;
+                }
+
+                let openness = 1;
+                if (time >= eyeState.blinkStart && time <= eyeState.blinkEnd) {
+                    const t = (time - eyeState.blinkStart) / (eyeState.blinkEnd - eyeState.blinkStart);
+                    if (t < 0.5) {
+                        openness = 1 - (t * 2 * 0.92);
+                    } else {
+                        openness = 0.08 + ((t - 0.5) * 2 * 0.92);
+                    }
+                }
 
                 flowCtx.fillStyle = '#fff';
                 flowCtx.beginPath();
-                flowCtx.arc(scanOffset, 0, radius * 0.25, 0, Math.PI * 2);
+                flowCtx.save();
+                flowCtx.translate(eyeState.offsetX, eyeState.offsetY);
+                flowCtx.scale(1, openness);
+                flowCtx.arc(0, 0, radius * 0.25, 0, Math.PI * 2);
                 flowCtx.fill();
 
-                // Glow
                 flowCtx.shadowBlur = 10;
                 flowCtx.shadowColor = '#fff';
                 flowCtx.fill();
                 flowCtx.shadowBlur = 0;
+                flowCtx.restore();
 
                 flowCtx.restore();
             }
@@ -774,54 +816,36 @@
                 flowCtx.clearRect(0, 0, w, h);
 
                 const cy = h / 2;
-                // Scale component size based on width
                 const cw = Math.max(40, Math.min(60, w * 0.08));
 
-                // Layout Positions equal spacing
                 const margin = w * 0.1;
                 const availableWidth = w - (margin * 2);
 
-                // 4 components X positions
                 const xLLM = margin;
                 const xGuard = margin + (availableWidth * 0.33);
                 const xHarness = margin + (availableWidth * 0.66);
                 const xEnv = w - margin;
 
-                // Requirement 1: Speed calculation (Env to LLM in 1.0s)
-                // Distance = xEnv - xLLM
-                // Speed = Distance / 1.0
                 const travelDist = xEnv - xLLM;
-                const refSpeed = travelDist / 1.0; // pixels per second
+                const refSpeed = travelDist / 1.0;
 
-                // Requirement 3: Multiple Downstream LLMs
-                // Define 3 LLM vertical positions
                 const llmSpacing = cw * 1.5;
                 const llmYs = [cy - llmSpacing, cy, cy + llmSpacing];
 
-                // 1. Draw Static Architecture
-
-                // Connection Lines
                 flowCtx.strokeStyle = '#333';
                 flowCtx.lineWidth = 2;
-                flowCtx.setLineDash([5, 5]); // Dotted line for Harness
+                flowCtx.setLineDash([5, 5]);
 
-                // Env -> Harness
                 flowCtx.beginPath();
                 flowCtx.moveTo(xEnv, cy);
                 flowCtx.lineTo(xHarness, cy);
                 flowCtx.stroke();
 
-                // Harness -> Guard -> LLMs
-                // Draw lines from Harness (via Guard logic visual, but structurally implies connection)
-                // Actually usually Harness -> Guard -> LLM
-                // Let's draw Harness -> Guard
                 flowCtx.beginPath();
                 flowCtx.moveTo(xHarness, cy);
                 flowCtx.lineTo(xGuard, cy);
                 flowCtx.stroke();
 
-                // Guard -> 3 LLMs
-                // Fan out lines from Guard to each LLM
                 llmYs.forEach(y => {
                     flowCtx.beginPath();
                     flowCtx.moveTo(xGuard, cy);
@@ -829,9 +853,8 @@
                     flowCtx.stroke();
                 });
 
-                flowCtx.setLineDash([]); // Reset
+                flowCtx.setLineDash([]);
 
-                // Helper labels
                 function drawBottomLabel(x, text) {
                     flowCtx.fillStyle = '#666';
                     flowCtx.font = '10px "Geist Mono", monospace';
@@ -845,95 +868,91 @@
                 drawBottomLabel(xHarness, 'APP');
                 drawBottomLabel(xEnv, 'ENV');
 
-                // Draw Components
-
-                // Environment (Right)
                 drawBox(xEnv, cy, cw, cw, 'ENV', '#888');
 
-                // Harness
                 drawBox(xHarness, cy, cw, cw, 'APP', '#888');
 
-                // 3 LLMs (Left)
-                // We'll label them 1, 2, 3
                 llmYs.forEach((y, i) => {
                      drawBox(xLLM, y, cw, cw, `LLM ${i+1}`, '#fff');
                 });
 
-                // Guard (Middle) - Eye
                 flowCtx.fillStyle = '#0a0a0a';
                 flowCtx.beginPath();
                 flowCtx.arc(xGuard, cy, cw/2, 0, Math.PI*2);
                 flowCtx.fill();
+
+                if (!isGuardEnabled) {
+                    flowCtx.strokeStyle = '#333';
+                    flowCtx.lineWidth = 2;
+                    flowCtx.setLineDash([5, 5]);
+                    flowCtx.beginPath();
+                    flowCtx.moveTo(xGuard - cw / 2, cy);
+                    flowCtx.lineTo(xGuard + cw / 2, cy);
+                    flowCtx.stroke();
+                    flowCtx.setLineDash([]);
+                }
+
                 drawEye(xGuard, cy, cw/2 - 5, isGuardEnabled);
 
-                // 2. Logic & Particles
+                if (!isGuardEnabled) {
+                    flowCtx.strokeStyle = '#333';
+                    flowCtx.lineWidth = 2;
+                    flowCtx.setLineDash([5, 5]);
+                    llmYs.forEach(y => {
+                        flowCtx.beginPath();
+                        flowCtx.moveTo(xGuard, cy);
+                        flowCtx.lineTo(xLLM, y);
+                        flowCtx.stroke();
+                    });
+                    flowCtx.setLineDash([]);
+                }
 
-                // Requirement 2: Irregular Intervals / Bursts
                 spawnTimer += dt;
 
                 if (spawnTimer > nextSpawnTime) {
                     spawnTimer = 0;
 
-                    // Determine next spawn time (Bursts)
-                    // 30% chance of burst (very fast spawn), else normal random
                     if (Math.random() < 0.3) {
-                        nextSpawnTime = 0.1; // Burst
+                        nextSpawnTime = 0.1;
                     } else {
-                         // Normal: 0.2s to 0.8s (Average 0.5s)
                         nextSpawnTime = 0.2 + Math.random() * 0.6;
                     }
 
-                    // Determine Payload
-                    // 35% poison/malicious, 65% clean
                     const isPoison = Math.random() < 0.35;
 
                     particles.push({
                         id: Math.random(),
                         x: xEnv,
                         y: cy,
-                        type: 'request', // request | response
+                        type: 'request',
                         payload: isPoison ? 'poison' : 'clean',
-                        color: isPoison ? '#f00' : '#4f4', // Red or Green
+                        color: isPoison ? '#f00' : '#4f4',
                         size: 6,
-                        vx: -refSpeed, // Requirement 1
+                        vx: -refSpeed,
                         vy: 0,
-                        targetLLMIndex: -1, // Not assigned yet
+                        targetLLMIndex: -1,
                         state: 'alive'
                     });
                 }
 
-                // Update Loop
                 particles.forEach(p => {
                     if (p.state === 'dead') return;
 
                     p.x += p.vx * dt;
                     p.y += p.vy * dt;
 
-                    // --- INTERACTION LOGIC ---
-
-                    // 1. Moving Left (Request: Env -> Harness -> Guard -> LLM)
                     if (p.vx < 0) {
 
-                        // Passing Guard Region?
-                        // We check if it crossed xGuard in this frame or is close
-                        // Since we have variable speed, precise crossing check:
-                        // prevX > xGuard && currX <= xGuard
-                        // But simple distance check works if speed isn't insane compared to dt
-
-                        // Check proximity to Guard for logic trigger
-                        // Only trigger once: use a flag or check range narrowly
                         if (Math.abs(p.x - xGuard) < 10 && p.targetLLMIndex === -1) {
+                            p.x = xGuard;
+                            p.y = cy;
 
-                            // Requirement 4: Block vs Clean
                             let blocked = false;
 
                             if (isGuardEnabled && p.payload === 'poison') {
-                                // 50/50 Block or Clean
                                 if (Math.random() < 0.5) {
-                                    // BLOCK
                                     p.state = 'dead';
                                     blocked = true;
-                                    // Effect
                                     effects.push({
                                         type: 'BLOCK',
                                         x: xGuard,
@@ -941,23 +960,17 @@
                                         life: 0.5
                                     });
                                 } else {
-                                    // CLEAN
                                     p.payload = 'clean';
-                                    p.color = '#4f4'; // Turn Green
-                                    // Effect? small glint
+                                    p.color = '#4f4';
                                 }
                             }
 
                             if (!blocked) {
-                                // Requirement 3: Route to specific LLM
-                                // Pick random LLM 0, 1, 2
                                 const targetIdx = Math.floor(Math.random() * 3);
                                 p.targetLLMIndex = targetIdx;
                                 const targetY = llmYs[targetIdx];
 
-                                // Calculate VY to reach targetY at xLLM
-                                // Time remaining = distance / speed
-                                const distRemaining = Math.abs(xLLM - p.x); // p.x is approx xGuard
+                                const distRemaining = Math.abs(xLLM - xGuard);
                                 const timeRemaining = distRemaining / Math.abs(p.vx);
 
                                 if (timeRemaining > 0) {
@@ -966,18 +979,12 @@
                             }
                         }
 
-                        // Reaching LLM?
                         if (p.x <= xLLM) {
-                            p.state = 'dead'; // Consumed request
-
-                            // Determine Response
-                            // If payload is poison (passed through disabled guard), interaction is bad
-                            // If payload is clean (was clean or filtered), interaction is good
+                            p.state = 'dead';
 
                             let isMalice = (p.payload === 'poison');
-                            let responseColor = isMalice ? '#b0f' : '#fff'; // Purple (Malice) or White (Normal)
+                            let responseColor = isMalice ? '#b0f' : '#fff';
 
-                            // Effect at specific LLM
                             const hitY = (p.targetLLMIndex >= 0) ? llmYs[p.targetLLMIndex] : cy;
 
                             effects.push({
@@ -988,13 +995,7 @@
                                 life: 0.3
                             });
 
-                            // Spawn Response moving Right
-                            // Return from same Y
-
-                            // 2-Phase Return: 1. To Proxy, 2. To Env
-                            // Calculate VY to hit Proxy (xGuard, cy) first
                             const distToGuard = xGuard - xLLM;
-                            // Time needed to reach xGuard at current speed
                             const timeToGuard = distToGuard / refSpeed;
 
                             let vyToGuard = 0;
@@ -1010,35 +1011,27 @@
                                 payload: isMalice ? 'malice' : 'clean',
                                 color: responseColor,
                                 size: 6,
-                                vx: refSpeed, // Move Right
-                                vy: vyToGuard, // Target the Guard
+                                vx: refSpeed,
+                                vy: vyToGuard,
                                 state: 'alive'
                             });
                         }
                     }
-                    // 2. Moving Right (Response: LLM -> ... -> Env)
                     else if (p.vx > 0) {
-                         // Passing Guard? Snap to center line and move straight to Env
                          if (p.x >= xGuard) {
-                             // If we have vertical velocity, we just arrived/crossed.
-                             // Snap to exact center (xGuard, cy) for this frame to ensure
-                             // visual "pass through" through the eye.
                              if (p.vy !== 0) {
                                  p.x = xGuard;
                                  p.y = cy;
                                  p.vy = 0;
                              } else {
-                                 // Already moving straight to Env
                                  p.y = cy;
                              }
                          }
 
-                         // Reaching Env?
                          if (p.x >= xEnv) {
                             p.state = 'dead';
 
                             if (p.payload === 'malice') {
-                                // DAMAGE!
                                 effects.push({
                                     type: 'BREACH',
                                     x: xEnv,
@@ -1049,11 +1042,9 @@
                          }
                     }
 
-                    // Draw Particle
                     if (p.state === 'alive') {
                         flowCtx.fillStyle = p.color;
                         flowCtx.beginPath();
-                        // Diamond shape
                         flowCtx.moveTo(p.x, p.y - p.size);
                         flowCtx.lineTo(p.x + p.size, p.y);
                         flowCtx.lineTo(p.x, p.y + p.size);
@@ -1062,16 +1053,14 @@
                     }
                 });
 
-                // Update Effects
                 effects.forEach(e => {
                     e.life -= dt;
                     if (e.type === 'BLOCK' || e.type === 'BREACH') {
-                        e.y -= 20 * dt; // Float up
+                        e.y -= 20 * dt;
                     }
                 });
                 effects = effects.filter(e => e.life > 0);
 
-                // Draw effects
                 effects.forEach(e => {
                     const alpha = Math.max(0, e.life / 0.5);
                     flowCtx.save();
@@ -1104,7 +1093,6 @@
                     flowCtx.restore();
                 });
 
-                // Cleanup
                 particles = particles.filter(p => p.state === 'alive');
 
                 requestAnimationFrame(update);
@@ -1114,7 +1102,6 @@
 
         startFlowAnimation();
 
-        // Font Toggle Animation for Title
         function startFontToggle() {
             const h1 = document.querySelector('h1');
             if (!h1) return;
@@ -1127,7 +1114,7 @@
                 'var(--font-pixel-triangle)'
             ];
 
-            let index = 1; // Starts with Grid (index 1) in CSS
+            let index = 1;
 
             setInterval(() => {
                 index = (index + 1) % fonts.length;
