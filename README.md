@@ -1,4 +1,4 @@
-# OpenGuard
+![Splash image](./assets/splash.png)
 
 A guarding proxy for AI that applies security and privacy controls to LLM requests.
 
@@ -19,7 +19,7 @@ Use the published container image as the default entrypoint:
 ```bash
 cp guards.yaml.example guards.yaml
 
-docker run --rm -p 8000:8000 \
+docker run --rm -p 23294:23294 \
   -v "$(pwd)/guards.yaml:/app/guards.yaml:ro" \
   -e OPENGUARD_CONFIG=/app/guards.yaml \
   -e OPENGUARD_OPENAI_URL_1=http://host.docker.internal:11434/v1 \
@@ -37,7 +37,7 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u <github-username> --password-stdi
 Quick check:
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:23294/health
 ```
 
 ### Local Ollama
@@ -56,10 +56,10 @@ Run directly from this repo (no manual venv setup):
 uvx --from . openguard
 ```
 
-Run on a different port if `8000` is already in use:
+Run on a different port if `23294` is already in use:
 
 ```bash
-OPENGUARD_PORT=8010 uvx --from . openguard
+OPENGUARD_PORT=23295 uvx --from . openguard
 ```
 
 Run from PyPI (once published):
