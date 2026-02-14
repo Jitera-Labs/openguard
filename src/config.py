@@ -72,15 +72,9 @@ class StrList(List[str]):
             cls(item.strip() for item in value.split(";") if item.strip())
             if value.strip()
             else cls()
-        # Handle if value is already a dictionary (from yaml)
-        if isinstance(value, dict):
-            return cls(value)
+        )
 
-        pairs = value.split(",")
-        for pair in pairs:
-            if "=" not in pair:
-                continue
-            key, val = pair.split("=", 1
+
 class IntList(List[int]):
     @classmethod
     def from_string(cls, value: str) -> "IntList":
