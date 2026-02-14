@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenGuard</title>
+    <style>
+        @font-face {
+            font-family: 'Geist Pixel';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Square.woff2') format('woff2');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist Pixel Grid';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Grid.woff2') format('woff2');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist Mono';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --fg: #ededed;
+            --bg: #0a0a0a;
+            --font-pixel: "Geist Pixel", monospace;
+            --font-grid: "Geist Pixel Grid", monospace;
+            --font-mono: "Geist Mono", monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: var(--font-pixel);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 1rem;
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        h1 {
+            font-family: var(--font-grid);
+            font-size: clamp(2rem, 9vw, 4.5rem);
+            font-weight: 500;
+            line-height: 1;
+            letter-spacing: -0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            cursor: default;
+            transition: opacity 0.2s, text-shadow 0.2s;
+            word-wrap: normal;
+            overflow-wrap: normal;
+            max-width: 100%;
+        }
+
+        h1:hover {
+            opacity: 0.8;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        p {
+            font-size: 1rem;
+            line-height: 1.6;
+            opacity: 0.8;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        code {
+            display: inline-block;
+            padding: 1rem 1.5rem;
+            border: 1px solid #333;
+            background: #111;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-family: var(--font-mono); /* Explicitly use Geist Mono */
+            color: #fff;
+            user-select: all;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            -webkit-font-smoothing: antialiased; /* Better for standard mono */
+            max-width: 100%;
+            text-align: left;
+            white-space: pre-wrap;
+            word-break: normal;
+            overflow-wrap: anywhere;
+        }
+
+        code:hover {
+            border-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OpenGuard</h1>
+        <p>A guarding proxy for AI that applies security and privacy controls to LLM requests.</p>
+        <code onclick="navigator.clipboard.writeText(this.innerText)">docker run ghcr.io/everlier/openguard:main</code>
+    </div>
+</body>
+</html>
