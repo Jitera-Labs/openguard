@@ -146,8 +146,7 @@ def test_llm_input_inspection_max_chars_bounds(monkeypatch):
         == llm_input_inspection.DEFAULT_MAX_CHARS
     )
     assert (
-        llm_input_inspection._normalize_max_chars(10**9)
-        == llm_input_inspection.MAX_ALLOWED_CHARS
+        llm_input_inspection._normalize_max_chars(10**9) == llm_input_inspection.MAX_ALLOWED_CHARS
     )
 
 

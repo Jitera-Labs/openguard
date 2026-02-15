@@ -303,9 +303,7 @@ async def _proxy_anthropic_messages_with_guards(request: Request):
         return _anthropic_error(400, "Invalid request format")
 
     param_keys_excluded = {"model", "messages", "system"}
-    guard_params = {
-        key: value for key, value in payload.items() if key not in param_keys_excluded
-    }
+    guard_params = {key: value for key, value in payload.items() if key not in param_keys_excluded}
 
     try:
         route_config = mapper.resolve_provider_route(
@@ -348,11 +346,7 @@ async def _proxy_anthropic_messages_with_guards(request: Request):
             forwarded_payload[key] = value
 
     for key in list(forwarded_payload.keys()):
-        if (
-            key not in param_keys_excluded
-            and key in payload
-            and key not in llm_instance.params
-        ):
+        if key not in param_keys_excluded and key in payload and key not in llm_instance.params:
             del forwarded_payload[key]
 
     forwarded_body = json.dumps(forwarded_payload).encode("utf-8")
@@ -587,7 +581,10 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                 response_obj["object"] = "chat.completion"
 
                 # Reconstruct message
-                message = {"role": "assistant", "content": full_content if full_content else None}
+                message: dict[str, object] = {
+                    "role": "assistant",
+                    "content": full_content if full_content else None,
+                }
 
                 if tool_calls:
                     message["tool_calls"] = tool_calls

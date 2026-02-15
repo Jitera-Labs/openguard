@@ -420,9 +420,7 @@ class Chat:
                         {
                             "type": "text",
                             "text": (
-                                node.content
-                                if isinstance(node.content, str)
-                                else str(node.content)
+                                node.content if isinstance(node.content, str) else str(node.content)
                             ),
                         },
                     ]

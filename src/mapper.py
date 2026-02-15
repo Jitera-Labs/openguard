@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional
 
 import httpx
 from asyncache import cached
@@ -257,7 +257,7 @@ def resolve_request_config(body: Dict) -> Dict:
         if idx < len(keys):
             proxy_key = keys[idx]
 
-    proxy_config = {
+    proxy_config: Dict[str, Any] = {
         "url": proxy_backend,
         "headers": {
             "Content-Type": "application/json",

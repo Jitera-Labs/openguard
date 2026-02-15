@@ -32,6 +32,8 @@ class LLM(AsyncEventEmitter):
     params: dict
     boost_params: dict
     module: str
+    provider: str
+    raw_payload: Optional[dict]
 
     queue: asyncio.Queue
     is_streaming: bool
@@ -54,6 +56,8 @@ class LLM(AsyncEventEmitter):
         self.messages = self.chat.history()
 
         self.module = kwargs.get("module")
+        self.provider = kwargs.get("provider", "openai")
+        self.raw_payload = kwargs.get("raw_payload")
 
         self.queue = asyncio.Queue()
         self.queues = []

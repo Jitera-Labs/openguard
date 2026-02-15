@@ -63,8 +63,8 @@ def install_opencode():
         if local_opencode_path.exists():
             try:
                 with open(local_opencode_path, "r") as f:
-                     local_data = json.load(f)
-                     opencode_providers_conf = local_data.get("provider", {})
+                    local_data = json.load(f)
+                    opencode_providers_conf = local_data.get("provider", {})
             except Exception:
                 pass
 
@@ -84,9 +84,7 @@ def install_opencode():
                 p_conf = opencode_providers_conf.get(provider_name)
                 if p_conf:
                     provider_url = (
-                        p_conf.get("baseURL")
-                        or p_conf.get("options", {}).get("baseURL")
-                        or ""
+                        p_conf.get("baseURL") or p_conf.get("options", {}).get("baseURL") or ""
                     )
 
                 # Determine type
@@ -94,11 +92,7 @@ def install_opencode():
                 if "anthropic" in provider_name.lower():
                     ptype = "anthropic"
 
-                providers_list.append({
-                    "type": ptype,
-                    "key": provider_key,
-                    "url": provider_url
-                })
+                providers_list.append({"type": ptype, "key": provider_key, "url": provider_url})
 
         if providers_list:
             # Write to OpenGuard config
@@ -122,10 +116,7 @@ def install_opencode():
             logger.info(f"Migrated credentials to {og_config_file}")
 
         # Add openguard credential
-        auth_data["openguard"] = {
-            "type": "api",
-            "key": "sk-openguard"
-        }
+        auth_data["openguard"] = {"type": "api", "key": "sk-openguard"}
 
         with open(auth_path, "w") as f:
             json.dump(auth_data, f, indent=2)
@@ -147,12 +138,10 @@ def install_opencode():
                 config_data = json.load(f)
         except json.JSONDecodeError:
             logger.warning(
-                f"Could not parse existing {config_path} "
-                "(likely JSONC/comments). Backup and reset."
+                f"Could not parse existing {config_path} (likely JSONC/comments). Backup and reset."
             )
             typer.echo(
-                f"Warning: Could not parse {config_path} "
-                "(might be JSONC). Creating fresh config."
+                f"Warning: Could not parse {config_path} (might be JSONC). Creating fresh config."
             )
             shutil.copy2(config_path, config_path.with_suffix(".json.bak"))
             config_data = {}
@@ -168,9 +157,9 @@ def install_opencode():
             "baseURL": f"http://{config.OPENGUARD_HOST.value}:{config.OPENGUARD_PORT.value}/v1"
         },
         "models": {
-            "gpt-4o": { "name": "GPT-4o (Guarded)" },
-            "claude-3-5-sonnet": { "name": "Claude 3.5 Sonnet (Guarded)" }
-        }
+            "gpt-4o": {"name": "GPT-4o (Guarded)"},
+            "claude-3-5-sonnet": {"name": "Claude 3.5 Sonnet (Guarded)"},
+        },
     }
 
     # Set default model to verify installation

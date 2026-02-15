@@ -2,7 +2,7 @@
 
 import json
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from src import log
 from src.guards import GuardBlockedError
@@ -173,7 +173,7 @@ def _inspect_with_llm(
 def _parse_decision(raw_text: str) -> Tuple[str, str]:
     if isinstance(raw_text, dict):
         decision, reason = _decision_from_object(raw_text)
-        if decision:
+        if decision is not None:
             return decision, reason
         raw_text = json.dumps(raw_text)
 
@@ -184,7 +184,7 @@ def _parse_decision(raw_text: str) -> Tuple[str, str]:
     parsed = _try_parse_json(text)
     if parsed is not None:
         decision, reason = _decision_from_object(parsed)
-        if decision:
+        if decision is not None:
             return decision, reason
 
     direct = _decision_from_text(text)
@@ -218,7 +218,7 @@ def _try_parse_json(text: str) -> Any:
     return None
 
 
-def _decision_from_object(data: Any) -> Tuple[str, str] | Tuple[None, str]:
+def _decision_from_object(data: Any) -> Tuple[Optional[str], str]:
     if isinstance(data, str):
         decision = _normalize_decision_word(data)
         if decision:

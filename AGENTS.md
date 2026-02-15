@@ -53,3 +53,7 @@ To run the tests:
 - Tests must import the `variables.http` file for shared variables and setup.
 - Tests must use `helpers.http` functions and helpers for assertions and test structure.
 - Prefer writing JS assertions for the tests.
+
+## Linting
+
+Run `make check` after completing large chunks of work to ensure code quality and consistency. This will run `ruff` for linting and formatting.
