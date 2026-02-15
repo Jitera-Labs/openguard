@@ -660,12 +660,27 @@
         let width, height;
 
         function resize() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+
+            // Mobile scroll fix: prevent canvas resize on vertical scroll (URL bar toggle)
+            // Only resize if width changes (orientation change) or height change is significant (keyboard?)
+            // Actually, simply ignoring height changes if width is same is a common hack for mobile bg.
+            if (width !== newWidth) {
+                width = canvas.width = newWidth;
+                height = canvas.height = newHeight;
+            } else if (Math.abs(height - newHeight) > 100) {
+                 // Allow resize on large height changes (keyboard open/close might be large, but URL bar is usually < 100px)
+                 // This is a heuristic.
+                 width = canvas.width = newWidth;
+                 height = canvas.height = newHeight;
+            }
         }
 
         window.addEventListener('resize', resize);
-        resize();
+        // Force initial size
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
 
         const gridSize = 40;
         let offset = 0;
@@ -686,7 +701,10 @@
             });
         }
 
-        function drawGrid() {
+        function drawGrid(dt) {
+            // Default dt to 1/60 if undefined (e.g. first call)
+            const timeScale = (dt || 0.016) * 60;
+
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 1;
 
@@ -710,7 +728,7 @@
                 ctx.lineTo(star.x - star.size, star.y);
                 ctx.fill();
 
-                star.y -= star.speed;
+                star.y -= star.speed * timeScale;
                 if(star.y < 0) {
                     star.y = height;
                     star.x = Math.random() * width;
@@ -727,7 +745,7 @@
                 const spacing = 40;
             }
 
-            offset = (offset + speed) % gridSize;
+            offset = (offset + speed * timeScale) % gridSize;
 
             for (let z = 0; z < height; z += gridSize) {
             }
@@ -760,7 +778,7 @@
             }
 
             ctx.strokeStyle = 'rgba(50, 255, 50, 0.08)';
-            ctx.strokeStyle = 'rgba(237, 237, 237, 0.05)';
+            ctx.strokeStyle = 'rgba(237, 237, 237, 0.1)';
             ctx.stroke();
 
             const gradient = ctx.createLinearGradient(0, vanishingPointY, 0, height);
@@ -772,12 +790,17 @@
             ctx.fillRect(0, 0, width, vanishingPointY);
         }
 
-        function animate() {
-            drawGrid();
+        let lastTime = 0;
+        function animate(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+            
+            drawGrid(dt);
             requestAnimationFrame(animate);
         }
 
-        animate();
+        requestAnimationFrame(animate);
 
         let isGuardEnabled = true;
 
