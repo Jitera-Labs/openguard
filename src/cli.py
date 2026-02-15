@@ -1,10 +1,13 @@
 import json
 import shutil
-import yaml
 from pathlib import Path
+
 import typer
 import uvicorn
-from src import config, log as log_module
+import yaml
+
+from src import config
+from src import log as log_module
 from src.guards import get_guards
 
 # Setup logging
@@ -80,7 +83,11 @@ def install_opencode():
                 # Check known URL for provider in opencode.json
                 p_conf = opencode_providers_conf.get(provider_name)
                 if p_conf:
-                    provider_url = p_conf.get("baseURL") or p_conf.get("options", {}).get("baseURL") or ""
+                    provider_url = (
+                        p_conf.get("baseURL")
+                        or p_conf.get("options", {}).get("baseURL")
+                        or ""
+                    )
 
                 # Determine type
                 ptype = "openai"
@@ -104,7 +111,8 @@ def install_opencode():
                 try:
                     with open(og_config_file, "r") as f:
                         og_data = yaml.safe_load(f) or {}
-                except Exception: pass
+                except Exception:
+                    pass
 
             og_data["providers"] = providers_list
 
@@ -138,8 +146,14 @@ def install_opencode():
             with open(config_path, "r") as f:
                 config_data = json.load(f)
         except json.JSONDecodeError:
-            logger.warning(f"Could not parse existing {config_path} (likely JSONC/comments). Backup and reset.")
-            typer.echo(f"Warning: Could not parse {config_path} (might be JSONC). Creating fresh config.")
+            logger.warning(
+                f"Could not parse existing {config_path} "
+                "(likely JSONC/comments). Backup and reset."
+            )
+            typer.echo(
+                f"Warning: Could not parse {config_path} "
+                "(might be JSONC). Creating fresh config."
+            )
             shutil.copy2(config_path, config_path.with_suffix(".json.bak"))
             config_data = {}
 

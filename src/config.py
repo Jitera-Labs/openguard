@@ -1,8 +1,9 @@
-import os
-import yaml
 import json
+import os
 from pathlib import Path
 from typing import Dict, Generic, List, Optional, Type, TypeVar, Union
+
+import yaml
 
 # ----------------- Persistent Configuration -----------------
 
@@ -174,7 +175,8 @@ class Config(Generic[T]):
                 target_field = "url"
 
             for p in providers:
-                if not isinstance(p, dict): continue
+                if not isinstance(p, dict):
+                    continue
                 # Default type is openai
                 ptype = p.get("type", "openai").lower()
 
@@ -256,7 +258,8 @@ class Config(Generic[T]):
                 target_field = "url"
 
             for p in providers:
-                if not isinstance(p, dict): continue
+                if not isinstance(p, dict):
+                    continue
                 if p.get("type") == target_type:
                     val = p.get(target_field)
                     if val:
@@ -272,7 +275,8 @@ class Config(Generic[T]):
         ]
 
         # Combine: Config file providers first, then Env vars.
-        # Deduping is hard without knowing content, but usually Lists of keys are fine to have duplicates (will just fail/succeed sequentially).
+        # Deduping is hard without knowing content. Duplicate keys are usually
+        # fine and will fail/succeed sequentially.
         all_values = values + env_values
 
         if not all_values:
@@ -441,7 +445,8 @@ if __name__ == "__main__":
     docs = """
 # OpenGuard Configuration
 
-OpenGuard is configured using environment variables or a configuration file at `~/.config/openguard/config.yaml`.
+OpenGuard is configured using environment variables or a configuration file at
+`~/.config/openguard/config.yaml`.
 
 ## Usage
 Create `~/.config/openguard/config.yaml` with the following structure:

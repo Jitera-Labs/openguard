@@ -152,7 +152,9 @@ def resolve_provider_route(provider: str, endpoint_path: str, body: Optional[Dic
     internal_keys = get_internal_api_keys()
 
     if incoming_key and incoming_key in internal_keys:
-        internal_backend = _resolve_backend_for_model(provider_normalized, (body or {}).get("model"))
+        internal_backend = _resolve_backend_for_model(
+            provider_normalized, (body or {}).get("model")
+        )
         if internal_backend is None:
             internal_backend = backends[0]
 

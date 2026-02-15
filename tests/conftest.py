@@ -4,8 +4,8 @@ Pytest fixtures and configuration for OpenGuard integration tests.
 Provides test client, mock downstream APIs, and test guards configuration.
 """
 
-import os
 import json
+import os
 import textwrap
 from unittest.mock import AsyncMock, MagicMock
 

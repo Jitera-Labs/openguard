@@ -16,8 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from src import config, llm, mapper
-from src.chat import Chat
 from src import log as log_module
+from src.chat import Chat
 from src.guard_engine import apply_guards, log_audit
 from src.guards import GuardBlockedError, get_guards
 from src.middleware.request_id import RequestIDMiddleware
@@ -244,7 +244,13 @@ async def _forward_provider_request(
         response_headers = {
             key: value
             for key, value in response.headers.items()
-            if key.lower() not in {"content-length", "transfer-encoding", "connection", "content-type"}
+            if key.lower()
+            not in {
+                "content-length",
+                "transfer-encoding",
+                "connection",
+                "content-type",
+            }
         }
 
         return Response(
