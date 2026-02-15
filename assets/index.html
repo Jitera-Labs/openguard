@@ -124,11 +124,24 @@
             word-wrap: normal;
             overflow-wrap: normal;
             max-width: 100%;
+            /* Combined glitch/aberration + glow */
+            text-shadow:
+                -3px 0 rgba(255, 0, 0, 0.6),
+                3px 0 rgba(0, 0, 255, 0.6),
+                0 0 30px rgba(255, 255, 255, 0.8),
+                0 0 60px rgba(255, 255, 255, 0.6),
+                0 0 80px rgba(255, 255, 255, 0.4);
         }
 
         h1:hover {
-            opacity: 0.8;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            opacity: 1;
+            /* Stronger combined glitch/aberration + intense glow on hover */
+            text-shadow:
+                -4px 0 rgba(255, 0, 0, 0.8),
+                4px 0 rgba(0, 0, 255, 0.8),
+                0 0 40px rgba(255, 255, 255, 1),
+                0 0 80px rgba(255, 255, 255, 0.8),
+                0 0 120px rgba(255, 255, 255, 0.6);
         }
 
         p {
@@ -395,6 +408,23 @@
             font-size: 1.2rem;
         }
 
+        #site-footer {
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            font-family: var(--font-pixel-line);
+            font-size: calc(100vw / 6);
+            line-height: 1;
+            letter-spacing: 0;
+            text-transform: uppercase;
+            opacity: 0.95;
+            white-space: nowrap;
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+        }
+
         @keyframes bounce {
             0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);}
             40% {transform: translateX(-50%) translateY(-5px);}
@@ -406,13 +436,27 @@
 <body>
     <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
         <defs>
-            <filter id="crt-filter" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-                <feTurbulence type="fractalNoise" baseFrequency="0.002 0.02" numOctaves="1" seed="13" result="noise" />
-                <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.2" xChannelSelector="R" yChannelSelector="G" result="warped" />
-                <feGaussianBlur in="warped" stdDeviation="0.2" result="soft" />
+            <filter id="crt-filter" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+                <!-- 1. Generate noise for displacement -->
+                <feTurbulence type="fractalNoise" baseFrequency="0.002 0.003" numOctaves="1" seed="2" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="B" result="displaced" />
+
+                <!-- 2. Split channels for Chromatic Aberration -->
+                <feOffset in="displaced" dx="-1" dy="0" result="redComp" />
+                <feOffset in="displaced" dx="1" dy="0" result="blueComp" />
+                <feColorMatrix in="redComp" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red" />
+                <feColorMatrix in="displaced" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="green" />
+                <feColorMatrix in="blueComp" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="blue" />
+
+                <!-- 3. Recombine channels -->
+                <feBlend in="red" in2="green" mode="screen" result="blend1" />
+                <feBlend in="blend1" in2="blue" mode="screen" result="blend2" />
+
+                <!-- 4. Add subtle blur/glow -->
+                <feGaussianBlur in="blend2" stdDeviation="0.5" result="glow" />
                 <feMerge>
-                    <feMergeNode in="soft" />
-                    <feMergeNode in="warped" />
+                    <feMergeNode in="blend2" />
+                    <feMergeNode in="glow" />
                 </feMerge>
             </filter>
         </defs>
@@ -459,12 +503,73 @@
             </div>
         </section>
 
+        <section id="modular-stack">
+             <div class="architecture-container">
+                <h2>The Pipeline</h2>
+                <p style="margin-bottom: 2rem;">Guards are middlewares. Each guard inspects, validates, or transforms the data.</p>
+                <div id="stack-wrapper">
+                    <canvas id="stack-canvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <style>
+             #stack-wrapper {
+                position: relative;
+                width: 100%;
+                height: 400px;
+                border: 1px solid #333;
+                background: rgba(10, 10, 10, 0.6);
+                overflow: hidden;
+                box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            }
+            #stack-canvas {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+        </style>
+
         <section id="run-command">
             <div class="container">
                 <code onclick="navigator.clipboard.writeText(this.innerText)">docker run ghcr.io/everlier/openguard:main</code>
                 <code onclick="navigator.clipboard.writeText(this.innerText)">uvx openguard</code>
             </div>
         </section>
+
+        <div class="sub-footer">
+            <a href="https://github.com/everlier/openguard" target="_blank">GitHub</a>
+            <span>2026</span>
+        </div>
+
+        <style>
+            .sub-footer {
+                width: 100%;
+                margin: 0 auto;
+                padding: 1rem;
+                display: flex;
+                justify-content: space-between;
+                font-family: var(--font-pixel-square);
+                position: relative;
+                z-index: 20;
+                font-size: 5vw;
+            }
+            .sub-footer a {
+                color: inherit;
+                text-decoration: none;
+                opacity: 0.7;
+                transition: opacity 0.2s;
+            }
+            .sub-footer a:hover {
+                opacity: 1;
+                text-decoration: underline;
+            }
+            .sub-footer span {
+                opacity: 0.5;
+            }
+        </style>
+
+        <footer id="site-footer">OpenGuard</footer>
     </div>
 
     <div class="crt-noise"></div>
@@ -570,12 +675,14 @@
         const numStars = 100;
 
         for(let i=0; i<numStars; i++) {
+            const isRed = Math.random() > 0.8;
             stars.push({
                 x: Math.random() * width,
                 y: Math.random() * height,
-                size: Math.random() * 2,
+                size: Math.random() * 2 + 1, // slightly larger for visibility
                 opacity: Math.random(),
-                speed: Math.random() * 0.5 + 0.1
+                speed: Math.random() * 0.5 + 0.1,
+                color: isRed ? '#ef5350' : '#66bb6a'
             });
         }
 
@@ -592,11 +699,15 @@
             const isMobile = width < 600;
             const starOpacity = isMobile ? 0.15 : 0.3;
 
-            ctx.fillStyle = '#fff';
             stars.forEach(star => {
-                ctx.globalAlpha = star.opacity * starOpacity;
+                ctx.fillStyle = star.color;
+
+                // Draw as diamond shape (data packet style)
                 ctx.beginPath();
-                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.moveTo(star.x, star.y - star.size);
+                ctx.lineTo(star.x + star.size, star.y);
+                ctx.lineTo(star.x, star.y + star.size);
+                ctx.lineTo(star.x - star.size, star.y);
                 ctx.fill();
 
                 star.y -= star.speed;
@@ -1102,9 +1213,307 @@
 
         startFlowAnimation();
 
+        function startStackAnimation() {
+            const canvas = document.getElementById('stack-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let w, h;
+            function resize() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                w = canvas.width = rect.width;
+                h = canvas.height = rect.height;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            const lanesCount = 3;
+            // Guards: Max Tokens, PII Filter, Content Filter, Keyword Filter, Input Inspection
+            // Grid Layout (tightly packed):
+            // y=0:  Max Tokens (All lanes) - h40
+            // y=50: Content Filter (Lanes 1,2) - h40 | PII Filter (Lane 0) - h90 (spans accross)
+            // y=100: Input Inspection (Lane 1, 2) - h40
+            // y=150: Keyword Filter (All lanes) - h40
+
+            const guardBlocks = [
+                // 1. Max Tokens (Global limit)
+                { name: 'Max Tokens',       color: 'rgb(129, 199, 132)', lanes: [0, 1, 2], y: 0, height: 40 },
+
+                // 2. PII Filter (Dedicated deeply check for Lane 0)
+                { name: 'PII Filter',       color: 'rgb(79, 195, 247)', lanes: [0],       y: 50, height: 90 },
+
+                // 3. Content Filter (Toxicity) - checking other lanes
+                { name: 'Content Filter',   color: 'rgb(255, 138, 101)', lanes: [1, 2],    y: 50, height: 40 },
+
+                // 4. Input Inspection (Advanced check)
+                { name: 'Input Inspection', color: 'rgb(186, 104, 200)', lanes: [1, 2],    y: 100, height: 40 },
+
+                // 5. Keyword Filter (Final check for everyone)
+                { name: 'Keyword Filter',   color: 'rgb(255, 238, 88)',  lanes: [0, 1, 2], y: 150, height: 40 }
+            ];
+
+            let packets = [];
+            let particles = [];
+            let lastTime = 0;
+            let spawnTimer = 0;
+
+            function spawnPacket() {
+                 const lane = Math.floor(Math.random() * lanesCount);
+                 const isMalicious = Math.random() < 0.25;
+
+                 // Find guards that intersect this lane
+                 const relevantGuards = guardBlocks.filter(g => g.lanes.includes(lane));
+
+                 let stopBlockIndex = -1;
+
+                 // If malicious, pick one of the relevant guards to stop at
+                 if (isMalicious && relevantGuards.length > 0) {
+                     const randomGuard = relevantGuards[Math.floor(Math.random() * relevantGuards.length)];
+                     stopBlockIndex = guardBlocks.indexOf(randomGuard);
+                 }
+
+                 packets.push({
+                     x: 0, // Will be calculated in draw
+                     y: -30,
+                     lane: lane,
+                     speed: 100 + Math.random() * 80,
+                     isMalicious: isMalicious,
+                     stopBlockIndex: stopBlockIndex,
+                     state: 'moving',
+                     color: isMalicious ? '#ef5350' : '#66bb6a',
+                     width: 8,
+                     height: 8,
+                     analyzeTimer: 0,
+                     id: Math.random().toString(36).substr(2, 9)
+                 });
+            }
+
+            function spawnParticles(x, y, color, count) {
+                for(let i=0; i<count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 20 + Math.random() * 60;
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 1.0,
+                        color: color,
+                        size: 2 + Math.random() * 3
+                    });
+                }
+            }
+
+            function update(timestamp) {
+                if (!lastTime) lastTime = timestamp;
+                const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+                lastTime = timestamp;
+
+                ctx.clearRect(0, 0, w, h);
+
+                // Layout calc
+                const totalContentHeight = 200; // sum of max y + height (150 + 40 = 190, rounded to 200 for padding)
+                const startY = (h - totalContentHeight) / 2;
+                const totalWidth = Math.min(600, w * 0.9);
+                const laneWidth = totalWidth / lanesCount;
+                const startX = (w - totalWidth) / 2;
+
+                // --- 1. Draw Stream Lines (Background) ---
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+
+                for (let i = 0; i < lanesCount; i++) {
+                    const lx = startX + i * laneWidth + laneWidth / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(lx, 0);
+                    ctx.lineTo(lx, h);
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]);
+
+                // --- 2. Update Packets & Interactions ---
+                spawnTimer += dt;
+                if (spawnTimer > 0.4) {
+                    spawnPacket();
+                    spawnTimer = 0;
+                }
+
+                packets.forEach(p => {
+                    if (p.state === 'dead') return;
+
+                    const laneCenterX = startX + p.lane * laneWidth + laneWidth / 2;
+                    p.x = laneCenterX;
+
+                    // Move
+                    if (p.state === 'moving' || p.state === 'passed') {
+                        p.y += p.speed * dt;
+                    }
+
+                    // Check collisions with guards
+                    let activeGuardIndex = -1;
+
+                    for (let i = 0; i < guardBlocks.length; i++) {
+                        const g = guardBlocks[i];
+                        if (!g.lanes.includes(p.lane)) continue;
+
+                        const gy = startY + g.y;
+                        const gh = g.height;
+
+                        if (p.y >= gy && p.y <= gy + gh) {
+                            activeGuardIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (activeGuardIndex !== -1) {
+                         // Inside a guard
+                         if (p.state === 'moving') {
+                             p.state = 'analyzing';
+                             p.speed = 20; // Slow down
+                         }
+
+                         if (p.state === 'analyzing') {
+                             p.y += p.speed * dt;
+
+                             // Rejection check
+                             if (p.isMalicious && p.stopBlockIndex === activeGuardIndex) {
+                                 p.analyzeTimer += dt;
+                                 if (p.analyzeTimer > 0.5) {
+                                     p.state = 'rejected';
+                                     spawnParticles(p.x, p.y, '#f44336', 10);
+                                 }
+                             }
+                         }
+                    } else {
+                        // Not in a guard
+                           if (p.state === 'analyzing') {
+                             p.state = 'moving';
+                             p.speed = 150;
+                         }
+                    }
+
+                    // Cleanup
+                    if (p.y > h + 20) p.state = 'dead';
+                });
+
+                // --- 3. Draw Guards (Masonry) ---
+                guardBlocks.forEach((g, idx) => {
+                    // Calculate geometry
+                    // Find min lane and max lane for x and width
+                    const minLane = Math.min(...g.lanes);
+                    const maxLane = Math.max(...g.lanes);
+                    const laneSpan = maxLane - minLane + 1;
+
+                    const gx = startX + minLane * laneWidth + 4; // 4px padding
+                    const gy = startY + g.y;
+                    const gw = laneSpan * laneWidth - 8;
+                    const gh = g.height;
+
+                    // Check activity
+                    const activePackets = packets.filter(p =>
+                        p.state === 'analyzing' &&
+                        g.lanes.includes(p.lane) &&
+                        p.y >= gy && p.y <= gy + gh
+                    );
+                    const isBusy = activePackets.length > 0;
+                    const isBlocking = activePackets.some(p => p.stopBlockIndex === idx);
+
+                    // --- DRAWING ---
+                    // 1. Semi-transparent background (User Request #1)
+                    ctx.fillStyle = g.color.replace('rgb', 'rgba').replace(')', ', 0.1)');
+                    ctx.fillRect(gx, gy, gw, gh);
+
+                    // 2. Border
+                    ctx.strokeStyle = isBusy ? (isBlocking ? '#ef5350' : '#fff') : '#333';
+                    ctx.lineWidth = isBusy ? 2 : 1;
+                    ctx.strokeRect(gx, gy, gw, gh);
+
+                    // 3. Grid/Texture effect
+                    if (!isBusy) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                        for(let i=4; i<gw; i+=10) ctx.fillRect(gx+i, gy, 1, gh);
+                    }
+
+                    // 4. Active Scan Effect
+                    if (isBusy) {
+                        ctx.fillStyle = g.color.replace('rgb', 'rgba').replace(')', ', 0.2)');
+                        ctx.fillRect(gx, gy, gw, gh);
+
+                        const scanY = gy + (Math.sin(timestamp * 5 + idx) * 0.5 + 0.5) * gh;
+                        ctx.beginPath();
+                        ctx.moveTo(gx, scanY);
+                        ctx.lineTo(gx + gw, scanY);
+                        ctx.strokeStyle = g.color;
+                        ctx.globalAlpha = 0.5;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        ctx.globalAlpha = 1;
+                    }
+
+                    // 5. Label
+                    ctx.fillStyle = isBusy ? '#fff' : '#888';
+                    ctx.font = '12px "Geist Mono", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(g.name, gx + gw/2, gy + gh/2);
+                });
+
+                // --- 4. Draw Packets (On top so they are visible "passing through") ---
+                packets.forEach(p => {
+                    if (p.state === 'dead' || p.state === 'rejected') return;
+
+                    ctx.fillStyle = p.isMalicious ? '#ef5350' : '#66bb6a';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = ctx.fillStyle;
+
+                    if (p.isMalicious) {
+                         const shake = (Math.random() - 0.5) * 3;
+                         ctx.fillRect(p.x - 3 + shake, p.y - 3, 6, 6);
+                    } else {
+                         ctx.beginPath();
+                         ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                         ctx.fill();
+                    }
+                    ctx.shadowBlur = 0;
+                });
+
+                // --- 5. Particles ---
+                particles.forEach(p => {
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.life -= dt * 2.5;
+
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = Math.max(0, p.life);
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                    ctx.globalAlpha = 1;
+                });
+                particles = particles.filter(p => p.life > 0);
+
+                requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        startStackAnimation();
+
         function startFontToggle() {
-            const h1 = document.querySelector('h1');
+            const h1 = document.querySelector('#hero h1');
             if (!h1) return;
+
+            const titleText = h1.textContent || '';
+            const characters = Array.from(titleText);
+
+            h1.textContent = '';
+
+            const glyphs = characters.map((character) => {
+                const span = document.createElement('span');
+                span.textContent = character === ' ' ? '\u00A0' : character;
+                span.style.display = 'inline-block';
+                h1.appendChild(span);
+                return span;
+            });
 
             const fonts = [
                 'var(--font-pixel-circle)',
@@ -1114,12 +1523,16 @@
                 'var(--font-pixel-triangle)'
             ];
 
-            let index = 1;
+            glyphs.forEach((glyph, glyphIndex) => {
+                let fontIndex = glyphIndex % fonts.length;
+                glyph.style.fontFamily = fonts[fontIndex];
 
-            setInterval(() => {
-                index = (index + 1) % fonts.length;
-                h1.style.fontFamily = fonts[index];
-            }, 1000);
+                setInterval(() => {
+                    const step = 1 + Math.floor(Math.random() * 2);
+                    fontIndex = (fontIndex + step) % fonts.length;
+                    glyph.style.fontFamily = fonts[fontIndex];
+                }, 1000);
+            });
         }
 
         startFontToggle();
