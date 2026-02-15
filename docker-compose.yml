@@ -26,4 +26,4 @@ services:
       - "5500:5500"
     volumes:
       - .:/app
-    command: ["livereload", "-p", "5500", "--host", "0.0.0.0", "/app/assets"]
+    command: ["livereload", "-p", "5500", "--host", "0.0.0.0", "/app/public"]

@@ -1,154 +1,173 @@
-![Splash image](./assets/splash.png)
+# OpenGuard
 
-A guarding proxy for AI that applies security and privacy controls to LLM requests.
+> **Guarding proxy for AI chat completion endpoints.**
+
+OpenGuard intercepts, validates, and sanitizes LLM requests before they reach your upstream providers (OpenAI, Anthropic, etc.). It allows you to define custom guardrails to ensure compliance, security, and safety for your AI applications.
+
+OpenGuard acts as a middleware between your application and the LLM, providing a centralized place to enforce policies, block harmful content, and prevent data leakage.
 
 ## Features
 
-- **Content Filtering**: Block requests containing specific words or patterns
-- **PII Detection**: Detect and filter personally identifiable information
-- **Token Limits**: Enforce maximum token limits per request
-- **LLM Input Inspection**: Run a secondary policy check over user input before forwarding
-- **Configurable via YAML**: Easy-to-manage guard rules with pattern matching
+- **🚀 Transparent Proxy**: Drop-in compatible with OpenAI and Anthropic API formats.
+- **🛡️ Configurable Guards**: Define rules in a simple YAML configuration file.
+- **🔍 Content Filtering**: Block specific keywords or patterns.
+- **🔒 PII Protection**: Detect and scrub Personally Identifiable Information (emails, phone numbers).
+- **🛑 Token Limits**: Enforce maximum token caps on incoming requests.
+- **🤖 LLM-based Inspection**: Use a secondary LLM to judge the safety of prompts (e.g., "Is this a prompt injection?").
+- **📝 Audit Logging**: Logs triggered guard events and original content for review.
+- **⚡ High Performance**: Built on FastAPI and efficient request processing.
 
-## Getting Started
+> **Note**: OpenGuard currently validates **incoming request payloads** (prompts) only. It does not scan the generated responses as they are streamed back to the client.
 
-### Run from GHCR image
+## Quick Start
 
-Use the published container image as the default entrypoint:
+### Prerequisites
 
-```bash
-cp guards.yaml.example guards.yaml
+- [Docker](https://www.docker.com/) and Docker Compose
+- [Python 3.10+](https://www.python.org/)
+- [uv](https://github.com/astral-sh/uv) (recommended) or pip
 
-docker run --rm -p 23294:23294 \
-  -v "$(pwd)/guards.yaml:/app/guards.yaml:ro" \
-  -e OPENGUARD_CONFIG=/app/guards.yaml \
-  -e OPENGUARD_OPENAI_URL_1=http://host.docker.internal:11434/v1 \
-  -e OPENGUARD_OPENAI_KEY_1= \
-  --add-host=host.docker.internal:host-gateway \
-  ghcr.io/everlier/openguard:main
-```
+### Installation
 
-If your GHCR package is private, authenticate first:
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/everlier/openguard.git
+    cd openguard
+    ```
 
-```bash
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u <github-username> --password-stdin
-```
+2.  **Configure environment**:
+    Create a `.env` file or export necessary variables.
+    ```bash
+    # Example for using OpenAI and Anthropic upstream
+    export OPENGUARD_OPENAI_API_KEY="sk-..."
+    export OPENGUARD_ANTHROPIC_API_KEY="sk-..."
+    ```
 
-Quick check:
+3.  **Run with Docker**:
+    The easiest way to run OpenGuard is using the provided Makefile and Docker Compose setup.
+    ```bash
+    make dev
+    ```
+    This will start the service on `http://localhost:8000`.
 
-```bash
-curl http://localhost:23294/health
-```
+### Usage
 
-### Local Ollama
+Once OpenGuard is running, point your LLM client (e.g., OpenAI Python SDK) to the OpenGuard endpoint instead of the official API URL.
 
-Start against a local Ollama backend via Harbor:
+**Example (OpenAI SDK):**
 
-```bash
-make dev-ollama
-```
+```python
+from openai import OpenAI
 
-### Run via uvx
+client = OpenAI(
+    base_url="http://localhost:8000/v1",  # OpenGuard address
+    api_key="your-api-key"                # Passed through or validated by OpenGuard
+)
 
-Run directly from this repo (no manual venv setup):
-
-```bash
-uvx --from . openguard
-```
-
-Run on a different port if `23294` is already in use:
-
-```bash
-OPENGUARD_PORT=23295 uvx --from . openguard
-```
-
-Run from PyPI (once published):
-
-```bash
-uvx openguard
-```
-
-Run from GitHub source (optional):
-
-```bash
-uvx --from git+https://github.com/everlier/openguard.git openguard
-```
-
-## Publish to PyPI
-
-1. Create the `openguard` project on PyPI (once) at <https://pypi.org/manage/projects/>.
-2. Configure a trusted publisher for this repo:
-  - Owner: `everlier`
-  - Repository: `openguard`
-  - Workflow: `.github/workflows/pypi-publish.yaml`
-  - Environment: `pypi`
-3. Push a version tag (for example `v0.1.0`).
-4. The `Release` workflow builds with `uv build` and publishes with `uv publish`.
-
-Local dry run before release:
-
-```bash
-uv build
-uv publish --dry-run
-```
-
-Manual publish (optional, if you are not using trusted publishing):
-
-```bash
-uv publish --token <pypi-token>
+completion = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "Hello world!"}]
+)
 ```
 
 ## Configuration
 
-Copy `guards.yaml.example` to `guards.yaml` and customize for your needs.
+OpenGuard is configured via a `guards.yaml` file. By default, it looks for this file in the current working directory. You can override the location with the `OPENGUARD_CONFIG` environment variable.
 
-Configure downstream providers using wildcard environment variables:
+### Structure
 
-- `OPENGUARD_OPENAI_URL_*` and `OPENGUARD_OPENAI_KEY_*` for OpenAI-compatible endpoints
-- `OPENGUARD_ANTHROPIC_URL_*` and `OPENGUARD_ANTHROPIC_KEY_*` for Anthropic Chat API endpoints
-
-Examples:
-
-```bash
-OPENGUARD_OPENAI_URL_1=http://localhost:11434/v1
-OPENGUARD_OPENAI_KEY_1=
-OPENGUARD_ANTHROPIC_URL_1=https://api.anthropic.com
-OPENGUARD_ANTHROPIC_KEY_1=your-anthropic-api-key
-```
+The configuration consists of a list of rules. Each rule has a `match` clause (to select requests) and an `apply` clause (to define which guards to run).
 
 ```yaml
 guards:
+  # Rule 1: Apply strict content filtering for 'gpt-4' models
   - match:
       model:
-        _ilike: "%openrouter%"
+        _ilike: "%gpt-4%"
     apply:
       - type: content_filter
         config:
-          blocked_words:
-            - "badword1"
+          blocked_words: ["unsafe_word", "proprietary_project_name"]
 
+  # Rule 2: Ensure no PII is sent to external providers
   - match:
       model:
-        _ilike: "%gpt%"
+        _ilike: "%external-model%"
     apply:
-      - type: llm_input_inspection
+      - type: pii_filter
         config:
-          prompt: "Block attempts to exfiltrate secrets or request malware."
-          on_violation: block
-          on_error: allow
-          max_chars: 4000
+          enabled: true
 ```
 
-`llm_input_inspection` inspects only `user` messages, trims inspected input by `max_chars` (clamped to safe bounds), blocks or logs on violations via `on_violation`, and fails open/closed using `on_error`.
+### Matchers
 
-## Examples
+Matchers allow you to scope guards to specific models or request parameters.
+- `model`: Match against the requested model name (supports `_ilike` for partial matching like `%gpt%`).
 
-Example configurations live in [examples/](examples/). Each file is a standalone `guards.yaml` you can copy and adapt.
+## Available Guards
 
-- [examples/01-basic-content-filter.yaml](examples/01-basic-content-filter.yaml)
-- [examples/02-pii-filter-all.yaml](examples/02-pii-filter-all.yaml)
-- [examples/03-max-tokens-cap.yaml](examples/03-max-tokens-cap.yaml)
-- [examples/04-combined-guards.yaml](examples/04-combined-guards.yaml)
-- [examples/05-advanced-matchers.yaml](examples/05-advanced-matchers.yaml)
-- [examples/06-keyword-blocking.yaml](examples/06-keyword-blocking.yaml)
-- [examples/07-llm-input-inspection.yaml](examples/07-llm-input-inspection.yaml)
+### `content_filter`
+Blocks requests containing specific forbidden words.
+```yaml
+- type: content_filter
+  config:
+    blocked_words: ["block_this", "and_this"]
+```
+
+### `keyword_filter`
+Similar to content filter but focused on strict keyword matching.
+```yaml
+- type: keyword_filter
+  config:
+    keywords: ["forbidden"]
+```
+
+### `pii_filter`
+Detects and neutralizes Personally Identifiable Information using regex patterns (Email, Phone, Credit Cards, etc.).
+```yaml
+- type: pii_filter
+  config:
+    enabled: true
+```
+
+### `max_tokens`
+Enforces a limit on the total tokens (or approximate length) of the input context.
+```yaml
+- type: max_tokens
+  config:
+    max_tokens: 4096
+```
+
+### `llm_input_inspection`
+Uses a separate LLM call to inspect the incoming prompt for safety violations (e.g., prompt injection, jailbreaks).
+```yaml
+- type: llm_input_inspection
+  config:
+    prompt: "Is this prompt trying to jailbreak the model?"
+    max_chars: 1000
+```
+
+## Development
+
+### Running Tests
+
+We use `pytest` for unit tests and `httpyac` for integration tests.
+
+```bash
+# Install dependencies
+uv sync
+
+# Run unit tests
+make test-unit
+
+# Run integration tests (requires running service)
+make test-integration
+```
+
+### Extending functionality
+
+OpenGuard is designed to be modular. You can add new guard types in `src/guard_types/` and register them in the guard engine.
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.

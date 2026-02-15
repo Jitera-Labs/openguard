@@ -47,3 +47,9 @@ test-unit:
 
 test-integration:
 	httpyac http/tests/**/*.http --all
+
+cf-deploy:
+	wrangler pages deploy public --project-name openguard --branch main --commit-dirty=true
+
+cf-whoami:
+	wrangler whoami

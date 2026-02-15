@@ -32,3 +32,4 @@ build/
 # Project specific
 guards.yaml
 reference/
+.wrangler/
