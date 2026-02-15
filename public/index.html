@@ -795,7 +795,7 @@
             if (!lastTime) lastTime = timestamp;
             const dt = (timestamp - lastTime) / 1000;
             lastTime = timestamp;
-            
+
             drawGrid(dt);
             requestAnimationFrame(animate);
         }
