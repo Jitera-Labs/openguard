@@ -1,6 +1,6 @@
 [project]
 name = "openguard"
-version = "0.0.1"
+version = "0.0.2"
 description = "guarding proxy for AI"
 readme = "README.md"
 license = "MIT"
