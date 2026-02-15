@@ -1,4 +1,4 @@
-# OpenGuard
+![Splash image](./public/splash.png)
 
 > **Guarding proxy for AI chat completion endpoints.**
 
@@ -167,7 +167,3 @@ make test-integration
 ### Extending functionality
 
 OpenGuard is designed to be modular. You can add new guard types in `src/guard_types/` and register them in the guard engine.
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
