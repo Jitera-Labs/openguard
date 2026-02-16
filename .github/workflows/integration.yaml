@@ -1,0 +1,76 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches:
+      - "**"
+  push:
+    branches:
+      - main
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    services:
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+        env:
+          OLLAMA_ALLOW_INSECURE: "true"
+          OLLAMA_ALLOW_UNVERIFIED: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.10"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen
+
+      - name: Wait for Ollama
+        run: |
+          echo "Waiting for Ollama service..."
+          timeout 30s bash -c 'until curl -s http://localhost:11434/ > /dev/null; do sleep 1; done'
+
+      - name: Pull Ollama Model
+        run: |
+          echo "Pulling llama3.2:1b..."
+          # Use stream=false to wait for completion
+          curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.2:1b", "stream": false}'
+
+      - name: Start OpenGuard Service
+        env:
+          OPENGUARD_OPENAI_URL_1: "http://localhost:11434/v1"
+          OPENGUARD_OPENAI_KEY_1: "sk-ollama"
+          # Ensure we match variables.http port
+          OPENGUARD_PORT: "23294"
+          OPENGUARD_CONFIG: "guards.yaml"
+        run: |
+          # Run in background
+          uv run uvicorn src.main:app --host 0.0.0.0 --port 23294 > openguard.log 2>&1 &
+
+          echo "Waiting for OpenGuard to be healthy..."
+          timeout 30s bash -c 'until curl -s http://localhost:23294/health > /dev/null; do sleep 1; done'
+
+      - name: Install httpyac
+        run: |
+          sudo npm install -g httpyac --unsafe-perm=true
+
+      - name: Run Integration Tests
+        run: |
+          # Run all http files under http/tests
+          export PATH=$PATH:$(npm bin -g)
+          httpyac http/tests/**/*.http --all --output short
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          cat openguard.log

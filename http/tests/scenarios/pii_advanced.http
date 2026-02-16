@@ -1,0 +1,221 @@
+# @import ../../variables.http
+# @import ../../helpers.http
+
+### 1. SSN Redaction (Standard Format)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Please repeat the following text exactly: Code: 123-45-6789"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('SSN should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('123-45-6789', "Original SSN was leaked");
+    expect(content).toInclude('<protected:ssn>', "Redaction marker <protected:ssn> not found");
+  });
+}}
+
+### 2. Credit Card Redaction (Dashes)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Please repeat exactly: Sequence: 4532-7561-9234-8812"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Credit Card (dashes) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('4532-7561-9234-8812', "Original CC was leaked");
+    expect(content).toInclude('<protected:creditcard>', "Redaction marker <protected:creditcard> not found");
+  });
+}}
+
+### 3. Credit Card Redaction (Spaces)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Please repeat exactly: Sequence: 4532 7561 9234 8812"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Credit Card (spaces) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('4532 7561 9234 8812', "Original CC was leaked");
+    expect(content).toInclude('<protected:creditcard>', "Redaction marker <protected:creditcard> not found");
+  });
+}}
+
+### 4. Contextual PII - JSON Object
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Please repeat exactly: {\"id1\": \"987-65-4321\", \"id2\": \"1111-2222-3333-4444\"}"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('PII in JSON should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('987-65-4321', "SSN in JSON leaked");
+    expect(content).not.toInclude('1111-2222-3333-4444', "CC in JSON leaked");
+    expect(content).toInclude('<protected:ssn>', "JSON SSN marker missing");
+    expect(content).toInclude('<protected:creditcard>', "JSON CC marker missing");
+  });
+}}
+
+### 5. Contextual PII - Markdown Code Block
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Please repeat exactly:\n```\nuser_id: 123-45-6789\n```"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('PII in Code Block should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('123-45-6789', "SSN in code block leaked");
+    expect(content).toInclude('<protected:ssn>', "Code block SSN marker missing");
+  });
+}}
+
+### 6. Contextual PII - Long Paragraph
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Please repeat exactly: Lorem sequence 555-01-9999 ipsum."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('PII in Long Paragraph should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('555-01-9999', "Embedded SSN leaked");
+    expect(content).toInclude('<protected:ssn>', "Paragraph SSN marker missing");
+  });
+}}
+
+### 7. False Positives - UUID
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Please repeat the following text exactly as written: Resource ID: 123e4567-e89b-12d3-a456-426614174000"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('UUID should NOT be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('123e4567-e89b-12d3-a456-426614174000', "UUID was incorrectly redacted/altered");
+    expect(content).not.toInclude('<protected:ssn>', "UUID triggered SSN filter");
+    expect(content).not.toInclude('<protected:creditcard>', "UUID triggered CC filter");
+  });
+}}
+
+### 8. False Positives - Simple Numbers
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Please repeat exactly: Blue 1234 5678"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Simple number sequence should NOT be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('1234 5678', "Number sequence was incorrectly redacted");
+    expect(content).not.toInclude('<protected:creditcard>', "Simple sequence triggered CC filter");
+  });
+}}
+
+### 9. False Positives - Long Timestamp
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Please repeat exactly: EPOCH-1678901234567"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Long timestamp should NOT be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('1678901234567', "Timestamp was incorrectly redacted");
+    expect(content).not.toInclude('<protected:creditcard>', "Timestamp triggered CC filter");
+  });
+}}

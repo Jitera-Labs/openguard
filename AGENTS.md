@@ -38,6 +38,10 @@ You always use package management tools for any dependencies. For Python, you us
 
 This means that you can not use `pip` directly to install packages or add dependencies. Instead, you must use `uv` commands.
 
+## Knowledge Cutoff
+
+Your knowledge cutoff is in the past. So much so - you're strictly required to lookup actual recent versions/docs of any tools, libraries, or frameworks you use. You must not rely on outdated information or assumptions about these technologies. Always verify the latest documentation and best practices before implementing any solution.
+
 ## Integration Tests with Httpyac
 
 We use `httpyac` (CLI) to run integration tests against the running service.

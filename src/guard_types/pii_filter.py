@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from src.chat import Chat
     from src.llm import LLM
 
+
 # PII regex patterns
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
 PHONE_PATTERN = re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b")

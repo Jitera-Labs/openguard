@@ -50,6 +50,25 @@ def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
                 node.content = content
 
         elif isinstance(content, list):
+            # Handle multimodal content (list of dicts)
+            for part_idx, part in enumerate(content):
+                if isinstance(part, dict) and part.get("type") == "text":
+                    text_content = part.get("text", "")
+                    modified = False
+
+                    for word in blocked_words:
+                        if word.lower() in text_content.lower():
+                            pattern = re.compile(re.escape(word), re.IGNORECASE)
+                            text_content = pattern.sub("[FILTERED]", text_content)
+                            modified = True
+                            audit_logs.append(
+                                f"content_filter: Replaced '{word}' in message {idx} ({node.role}), part {part_idx}"
+                            )
+
+                    if modified:
+                        part["text"] = text_content
+
+        elif isinstance(content, list):
             # Multimodal content
             for part_idx, part in enumerate(content):
                 if isinstance(part, dict) and "text" in part:
