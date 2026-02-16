@@ -42,13 +42,33 @@ This means that you can not use `pip` directly to install packages or add depend
 
 Your knowledge cutoff is in the past. So much so - you're strictly required to lookup actual recent versions/docs of any tools, libraries, or frameworks you use. You must not rely on outdated information or assumptions about these technologies. Always verify the latest documentation and best practices before implementing any solution.
 
+## Development Workflow
+
+### Default Mode (Friendly)
+To run the service locally with the default configuration (`guards.yaml`):
+```bash
+make dev
+```
+By default, `guards.yaml` is empty, allowing all traffic to pass through. This is useful for initial exploration and development without interference.
+
+### Test Mode (Strict)
+To run the service with the integration test configuration (`guards-test.yaml`):
+```bash
+make dev-test
+```
+This configuration includes specific guards required for the integration test suite. Use this when running integration tests or debugging guard behavior.
+
 ## Integration Tests with Httpyac
 
 We use `httpyac` (CLI) to run integration tests against the running service.
-Tests are located in the `./http/tests/` directory.
+Tests are located in the `./http/tests/` directory and rely on specific guard configurations found in `guards-test.yaml`.
 
 To run the tests:
-1. Ensure the service is running (e.g. `make dev` or `python -m src.main`)
+1. Start the service in **Test Mode**:
+   ```bash
+   make dev-test
+   ```
+
 2. Run httpyac:
    ```bash
    httpyac http/tests/*.http --all
@@ -58,6 +78,6 @@ To run the tests:
 - Tests must use `helpers.http` functions and helpers for assertions and test structure.
 - Prefer writing JS assertions for the tests.
 
-## Linting
+## Verification and Linting
 
-Run `make check` after completing large chunks of work to ensure code quality and consistency. This will run `ruff` for linting and formatting.
+You MUST run `make check` after completing any code change or modification to the repository (even configuration files) to ensure code quality and consistency. This command runs `ruff` for linting and formatting, and `mypy` for type checking. Do not mark a task as complete without a passing `make check`.
