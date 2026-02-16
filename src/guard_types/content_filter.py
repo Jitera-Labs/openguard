@@ -62,7 +62,8 @@ def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
                             text_content = pattern.sub("[FILTERED]", text_content)
                             modified = True
                             audit_logs.append(
-                                f"content_filter: Replaced '{word}' in message {idx} ({node.role}), part {part_idx}"
+                                f"content_filter: Replaced '{word}' in message {idx} "
+                                f"({node.role}), part {part_idx}"
                             )
 
                     if modified:

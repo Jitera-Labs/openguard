@@ -203,5 +203,21 @@ def main(ctx: typer.Context):
         _run_server()
 
 
+@app.command(
+    name="launch",
+    help="Launch an integration/tool configured to use OpenGuard.",
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
+def launch(
+    ctx: typer.Context,
+    name: str = typer.Argument(..., help="Name of the integration (e.g. opencode)."),
+):
+    from src.launch.core import launch_integration
+
+    args = ctx.args
+    exit_code = launch_integration(name, args)
+    raise typer.Exit(code=exit_code)
+
+
 if __name__ == "__main__":
     app()
