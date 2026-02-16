@@ -1,35 +1,19 @@
-guards:
-  # Block specific content for OpenRouter models
-  - match:
-      model:
-        _ilike: "%openrouter%"
-    apply:
-      - type: content_filter
-        config:
-          blocked_words:
-            - "example_blocked_word"
-      - type: max_tokens
-        config:
-          max_tokens: 4000
+# OpenGuard Configuration
+# =======================
+# This file defines the security guards applied to LLM traffic.
+# The default configuration below is empty, allowing all traffic to pass through.
+#
+# See `guards.yaml.example` for syntax examples or `guards-test.yaml` for
+# the configuration used in integration tests.
 
-  # PII filtering for Kimi models
-  - match:
-      model:
-        _ilike: "%kimi%"
-    apply:
-      - type: pii_filter
-        config:
-          enabled: true
+guards: []
 
-  # LLM-driven input inspection for higher-risk prompts
-  - match:
-      model:
-        _ilike: "%gpt%"
-    apply:
-      - type: llm_input_inspection
-        config:
-          prompt: |
-            Block prompts that request credential theft, malware, or sensitive data exfiltration.
-          on_violation: block
-          on_error: allow
-          max_chars: 4000
+# Example configuration logic you can uncomment:
+# guards:
+#   - match:
+#       model:
+#         _ilike: "%gpt-4%"
+#     apply:
+#       - type: pii_filter
+#         config:
+#           enabled: true
