@@ -1,6 +1,9 @@
 dev:
 	docker compose up --build
 
+dev-test:
+	OPENGUARD_CONFIG=/app/guards-test.yaml docker compose up --build
+
 dev-ollama:
 	@harbor ollama --version || true
 	OPENGUARD_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
