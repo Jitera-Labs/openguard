@@ -1,17 +1,19 @@
 import json
 import os
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 # Add src to sys.path to ensure we can import the modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-from launch.core import launch_integration
+from launch.core import ensure_server_running, launch_integration
 
 # Constants used in the tests
 OPENGUARD_URL = "http://127.0.0.1:23294"
+OPENGUARD_HOST = "127.0.0.1"
+OPENGUARD_PORT = 23294
 
 
 @pytest.fixture
@@ -21,11 +23,101 @@ def mock_subprocess_run():
         yield mock_run
 
 
-def test_launch_opencode_config_strategy(mock_subprocess_run, tmp_path):
+@pytest.fixture
+def mock_popen():
+    with patch("subprocess.Popen") as mock_popen:
+        process_mock = MagicMock()
+        process_mock.poll.return_value = None
+        process_mock.terminate.return_value = None
+        process_mock.kill.return_value = None
+        process_mock.wait.return_value = None
+        mock_popen.return_value = process_mock
+        yield mock_popen
+
+
+@pytest.fixture
+def mock_socket():
+    with patch("socket.socket") as mock_sock:
+        yield mock_sock
+
+
+def test_ensure_server_already_running(mock_socket):
+    # Setup socket to indicate port is open (connect_ex returns 0)
+    mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 0
+
+    server_process = ensure_server_running(OPENGUARD_HOST, OPENGUARD_PORT)
+
+    # Should perform check and return None (no new process started)
+    assert server_process is None
+    # Verify connect_ex called with correct host/port
+    connect_ex = mock_socket.return_value.__enter__.return_value.connect_ex
+    connect_ex.assert_called_with((OPENGUARD_HOST, OPENGUARD_PORT))
+
+
+def test_ensure_server_starts_successfully(mock_socket, mock_popen):
+    # Setup socket: first call (check if running) returns 1 (not running)
+    # Subsequent calls (wait for start) return 1 then 0 (success)
+    mock_socket.return_value.__enter__.return_value.connect_ex.side_effect = [1, 1, 0]
+
+    server_process = ensure_server_running(OPENGUARD_HOST, OPENGUARD_PORT)
+
+    # Should start process and return it
+    assert server_process is not None
+    assert mock_popen.called
+    # Should have checked at least once for startup
+    assert mock_socket.return_value.__enter__.return_value.connect_ex.call_count >= 2
+
+
+def test_ensure_server_fails_to_start(mock_socket, mock_popen):
+    # Setup socket: always returns 1 (not running)
+    # Setup process: poll returns 1 (exited with error)
+    mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 1
+
+    process_mock = mock_popen.return_value
+    process_mock.poll.return_value = 1  # Process exited
+    process_mock.communicate.return_value = (b"", b"Error starting")
+
+    server_process = ensure_server_running(OPENGUARD_HOST, OPENGUARD_PORT)
+
+    # Should return None as it failed
+    assert server_process is None
+
+
+def test_launch_integration_server_already_running(mock_subprocess_run, mock_socket):
+    # Test that launch_integration proceeds when server is running
+    mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 0
+
+    exit_code = launch_integration("opencode", [])
+
+    assert exit_code == 0
+    mock_subprocess_run.assert_called_once()
+
+
+def test_launch_integration_starts_and_stops_server(mock_subprocess_run, mock_socket, mock_popen):
+    # Server not running initially, then starts
+    mock_socket.return_value.__enter__.return_value.connect_ex.side_effect = [1, 0]
+
+    # We need to verify terminate is called on the process
+    process_mock = mock_popen.return_value
+
+    exit_code = launch_integration("opencode", [])
+
+    assert exit_code == 0
+    mock_subprocess_run.assert_called_once()
+
+    # Verify server was terminated
+    process_mock.terminate.assert_called_once()
+    process_mock.wait.assert_called_once()
+
+
+def test_launch_opencode_config_strategy(mock_subprocess_run, mock_socket, tmp_path):
     """
     Test ConfigFileStrategy with 'opencode' integration.
     Verifies that the config file is created/updated with the correct settings.
     """
+    # Ensure server is seen as running
+    mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 0
+
     # Create a dummy home directory in tmp_path
     dummy_home = tmp_path / "home"
     dummy_home.mkdir()
@@ -62,11 +154,14 @@ def test_launch_opencode_config_strategy(mock_subprocess_run, tmp_path):
         assert content["provider"]["api_key"] == "sk-openguard-placeholder"
 
 
-def test_launch_claude_env_strategy(mock_subprocess_run):
+def test_launch_claude_env_strategy(mock_subprocess_run, mock_socket):
     """
     Test EnvVarStrategy with 'claude' integration.
     Verifies that environment variables are injected.
     """
+    # Ensure server is seen as running
+    mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 0
+
     # Call the function under test
     exit_code = launch_integration("claude", [])
 
@@ -87,11 +182,14 @@ def test_launch_claude_env_strategy(mock_subprocess_run):
     assert env["ANTHROPIC_API_KEY"] == "sk-openguard-placeholder"
 
 
-def test_launch_codex_arg_strategy(mock_subprocess_run):
+def test_launch_codex_arg_strategy(mock_subprocess_run, mock_socket):
     """
     Test CliArgStrategy with 'codex' integration.
     Verifies that CLI arguments are appended.
     """
+    # Ensure server is seen as running
+    mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 0
+
     # Call the function under test
     exit_code = launch_integration("codex", [])
 
@@ -126,10 +224,13 @@ def test_launch_integration_not_found(mock_subprocess_run):
     mock_subprocess_run.assert_not_called()
 
 
-def test_launch_with_extra_args(mock_subprocess_run):
+def test_launch_with_extra_args(mock_subprocess_run, mock_socket):
     """
     Test that extra arguments passed to launch_integration are appended to the command.
     """
+    # Ensure server is seen as running
+    mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 0
+
     extra_args = ["--verbose", "--dry-run"]
     exit_code = launch_integration("codex", extra_args)
 
