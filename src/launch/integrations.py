@@ -1,5 +1,6 @@
 from typing import Dict
 
+from .setup import setup_opencode
 from .types import Integration, LaunchStrategy, StrategyConfig
 
 # Standard OpenGuard port from docker-compose.yml
@@ -10,6 +11,7 @@ INTEGRATIONS: Dict[str, Integration] = {
     "opencode": Integration(
         name="opencode",
         default_command="opencode",
+        setup_callback=setup_opencode,
         strategies=[
             StrategyConfig(
                 type=LaunchStrategy.FILE,
@@ -17,10 +19,17 @@ INTEGRATIONS: Dict[str, Integration] = {
                     "file_path": "~/.config/opencode/opencode.json",
                     "data": {
                         "provider": {
-                            "type": "openai",
-                            "base_url": OPENGUARD_URL,
-                            "api_key": "sk-openguard-placeholder",
-                        }
+                            "openguard": {
+                                "npm": "@ai-sdk/openai-compatible",
+                                "name": "OpenGuard",
+                                "options": {
+                                    "baseURL": f"{OPENGUARD_URL}/v1",
+                                    "apiKey": "sk-openguard-placeholder",
+                                },
+                                "models": {},
+                            }
+                        },
+                        "model": "openguard:gpt-4o",
                     },
                     "format": "json",
                 },
