@@ -423,6 +423,24 @@
             overflow: hidden;
             position: relative;
             z-index: 10;
+            cursor: default;
+            transition: opacity 0.2s, text-shadow 0.2s;
+            text-shadow:
+                -3px 0 rgba(255, 0, 0, 0.6),
+                3px 0 rgba(0, 0, 255, 0.6),
+                0 0 30px rgba(255, 255, 255, 0.8),
+                0 0 60px rgba(255, 255, 255, 0.6),
+                0 0 80px rgba(255, 255, 255, 0.4);
+        }
+
+        #site-footer:hover {
+            opacity: 1;
+            text-shadow:
+                -4px 0 rgba(255, 0, 0, 0.8),
+                4px 0 rgba(0, 0, 255, 0.8),
+                0 0 40px rgba(255, 255, 255, 1),
+                0 0 80px rgba(255, 255, 255, 0.8),
+                0 0 120px rgba(255, 255, 255, 0.6);
         }
 
         @keyframes bounce {
@@ -1522,22 +1540,6 @@
         startStackAnimation();
 
         function startFontToggle() {
-            const h1 = document.querySelector('#hero h1');
-            if (!h1) return;
-
-            const titleText = h1.textContent || '';
-            const characters = Array.from(titleText);
-
-            h1.textContent = '';
-
-            const glyphs = characters.map((character) => {
-                const span = document.createElement('span');
-                span.textContent = character === ' ' ? '\u00A0' : character;
-                span.style.display = 'inline-block';
-                h1.appendChild(span);
-                return span;
-            });
-
             const fonts = [
                 'var(--font-pixel-circle)',
                 'var(--font-pixel-grid)',
@@ -1546,16 +1548,36 @@
                 'var(--font-pixel-triangle)'
             ];
 
-            glyphs.forEach((glyph, glyphIndex) => {
-                let fontIndex = glyphIndex % fonts.length;
-                glyph.style.fontFamily = fonts[fontIndex];
+            const applyPerLetterFontToggle = (element) => {
+                if (!element) return;
 
-                setInterval(() => {
-                    const step = 1 + Math.floor(Math.random() * 2);
-                    fontIndex = (fontIndex + step) % fonts.length;
+                const text = element.textContent || '';
+                const characters = Array.from(text);
+
+                element.textContent = '';
+
+                const glyphs = characters.map((character) => {
+                    const span = document.createElement('span');
+                    span.textContent = character === ' ' ? '\u00A0' : character;
+                    span.style.display = 'inline-block';
+                    element.appendChild(span);
+                    return span;
+                });
+
+                glyphs.forEach((glyph, glyphIndex) => {
+                    let fontIndex = glyphIndex % fonts.length;
                     glyph.style.fontFamily = fonts[fontIndex];
-                }, 1000);
-            });
+
+                    setInterval(() => {
+                        const step = 1 + Math.floor(Math.random() * 2);
+                        fontIndex = (fontIndex + step) % fonts.length;
+                        glyph.style.fontFamily = fonts[fontIndex];
+                    }, 1000);
+                });
+            };
+
+            applyPerLetterFontToggle(document.querySelector('#hero h1'));
+            applyPerLetterFontToggle(document.querySelector('#site-footer'));
         }
 
         startFontToggle();
