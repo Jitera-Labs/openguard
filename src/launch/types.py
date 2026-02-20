@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 
 class LaunchStrategy(Enum):
@@ -20,3 +20,4 @@ class Integration:
     name: str
     default_command: str
     strategies: List[StrategyConfig] = field(default_factory=list)
+    setup_callback: Optional[Callable[[], None]] = None
