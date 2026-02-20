@@ -31,6 +31,8 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
     action = config.get("action", "block")  # "block", "sanitize", "log"
     replacement = config.get("replacement", "[REDACTED]")
 
+    use_regex = config.get("use_regex", False)
+
     audit_logs = []
 
     flags = 0 if case_sensitive else re.IGNORECASE
@@ -47,7 +49,10 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
         return str(content)
 
     def check_text(text: str, keyword: str) -> bool:
-        pattern = re.escape(keyword)
+        if use_regex:
+            pattern = keyword
+        else:
+            pattern = re.escape(keyword)
         return bool(re.search(pattern, text, flags))
 
     # Identify which keywords are present in the payload
