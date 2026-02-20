@@ -1,0 +1,746 @@
+# @import ../../variables.http
+# @import ../../helpers.http
+
+### 1. Email Redaction
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: test.user@example.co.uk"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Email should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('test.user@example.co.uk', "Original email was leaked");
+    expect(content).toInclude('<protected:email>', "Redaction marker <protected:email> not found");
+  });
+}}
+
+### 2. Phone Redaction (Format: Dashes)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 555-012-3456"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Phone (dashes) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('555-012-3456', "Original phone number was leaked");
+    expect(content).toInclude('<protected:phone>', "Redaction marker <protected:phone> not found");
+  });
+}}
+
+### 3. Phone Redaction (Format: Dots)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 555.012.3456"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Phone (dots) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('555.012.3456', "Original phone number was leaked");
+    expect(content).toInclude('<protected:phone>', "Redaction marker <protected:phone> not found");
+  });
+}}
+
+### 4. SSN Redaction
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 123-45-6789"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('SSN should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('123-45-6789', "Original SSN was leaked");
+    const hasMarker = content.includes('<protected:ssn>');
+    const hasRefusal = content.toLowerCase().includes('personal identification')
+      || content.toLowerCase().includes("can't provide");
+    expect(hasMarker || hasRefusal).toBeTruthy("Expected SSN redaction marker or refusal response");
+  });
+}}
+
+### 5. Credit Card Redaction (Format: Dashes)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 4532-1234-5678-9012"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Credit card (dashes) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('4532-1234-5678-9012', "Original credit card was leaked");
+    expect(content).toInclude('<protected:creditcard>', "Redaction marker <protected:creditcard> not found");
+  });
+}}
+
+### 6. Credit Card Redaction (Format: Spaces)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 4532 1234 5678 9012"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Credit card (spaces) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('4532 1234 5678 9012', "Original credit card was leaked");
+    expect(content).toInclude('<protected:creditcard>', "Redaction marker <protected:creditcard> not found");
+  });
+}}
+
+### 7. Mixed PII Types
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: mixed@example.com and 987-654-3210"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Mixed PII should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('mixed@example.com', "Original email was leaked");
+    expect(content).not.toInclude('987-654-3210', "Original phone was leaked");
+    expect(content).toInclude('<protected:email>', "Email marker not found");
+    expect(content).toInclude('<protected:phone>', "Phone marker not found");
+  });
+}}
+
+### 8. Multiple Emails in One Message
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: alice@example.com bob@example.org"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Multiple emails should all be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('alice@example.com', "First email leaked");
+    expect(content).not.toInclude('bob@example.org', "Second email leaked");
+    const matches = content.match(/<protected:email>/g);
+    expect(matches && matches.length >= 2).toBeTruthy("Should find at least 2 email protection markers");
+  });
+}}
+
+### 9. Multimodal Content (Array)
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Repeat exactly this text and nothing else: backup@example.org"
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Email in structured content should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('backup@example.org', "Original email in structured content was leaked");
+    expect(content).toInclude('<protected:email>', "Redaction marker not found in structured content response");
+  });
+}}
+
+### 10. PII in System Message Context
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "system",
+      "content": "The admin email is admin@internal.corp and their phone is 800-555-0199."
+    },
+    {
+      "role": "user",
+      "content": "Repeat exactly the system message text and nothing else."
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('PII in system message should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('admin@internal.corp', "Email in system message was leaked");
+    expect(content).not.toInclude('800-555-0199', "Phone in system message was leaked");
+  });
+}}
+
+### 11. False Positive - UUID Not Redacted
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 123e4567-e89b-12d3-a456-426614174000"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('UUID should not be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('123e4567-e89b-12d3-a456-426614174000', "UUID should be preserved");
+    expect(content).not.toInclude('<protected:', "No protection markers should appear for UUID");
+  });
+}}
+
+### 12. False Positive - Short Number Sequence
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 1234 5678"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Short number sequence should not trigger credit card filter', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('1234 5678', "Short number should be preserved");
+    expect(content).not.toInclude('<protected:', "No protection markers should appear for short numbers");
+  });
+}}
+
+### 13. False Positive - Long Timestamp
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: EPOCH-1678901234567"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Epoch timestamp should not trigger any PII filter', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('EPOCH-1678901234567', "Timestamp should be preserved");
+    expect(content).not.toInclude('<protected:', "No protection markers should appear for timestamps");
+  });
+}}
+
+### 14. Email with Plus Addressing
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: user+tag@gmail.com"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Email with plus addressing should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('user+tag@gmail.com', "Email with plus addressing was leaked");
+    expect(content).toInclude('<protected:email>', "Redaction marker <protected:email> not found");
+  });
+}}
+
+### 15. Email with Many Subdomains
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: admin@mail.server.department.company.co.uk"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Email with many subdomains should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('admin@mail.server.department.company.co.uk', "Email with subdomains was leaked");
+    expect(content).toInclude('<protected:email>', "Redaction marker <protected:email> not found");
+  });
+}}
+
+### 16. Email Embedded in Mailto URL
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: mailto:secret@company.com?subject=hello"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Email embedded in mailto URL should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('secret@company.com', "Email in mailto URL was leaked");
+    expect(content).toInclude('<protected:email>', "Redaction marker <protected:email> not found");
+  });
+}}
+
+### 17. Emails in Different Message Roles
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "system",
+      "content": "Contact support at support@helpdesk.io for assistance."
+    },
+    {
+      "role": "user",
+      "content": "Repeat exactly the system message and also include this: ceo@bigcorp.com"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Emails in both system and user messages should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('support@helpdesk.io', "System message email was leaked");
+    expect(content).not.toInclude('ceo@bigcorp.com', "User message email was leaked");
+  });
+}}
+
+### 18. False Positive - Email Without TLD
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: user@localhost"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Email-like string without TLD should not be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('user@localhost', "user@localhost should be preserved");
+    expect(content).not.toInclude('<protected:email>', "No email redaction marker should appear");
+  });
+}}
+
+### 19. Phone with No Separators
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 5550123456"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Phone with no separators (10 continuous digits) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('5550123456', "Phone without separators was leaked");
+    expect(content).toInclude('<protected:phone>', "Redaction marker <protected:phone> not found");
+  });
+}}
+
+### 20. False Positive - Parenthetical Phone Format
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: (555) 012-3456"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Parenthetical phone format should not be redacted by phone regex', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('(555) 012-3456', "Parenthetical phone should be preserved");
+    expect(content).not.toInclude('<protected:phone>', "No phone redaction marker should appear");
+  });
+}}
+
+### 21. Phone Pattern in Continuous Order Number
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: Order number 3125559876 confirmed"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('10-digit order number matching phone pattern should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('3125559876', "10-digit number matching phone pattern was leaked");
+    expect(content).toInclude('<protected:phone>', "Redaction marker <protected:phone> not found");
+  });
+}}
+
+### 22. SSN Embedded in JSON String
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: {\"ssn\": \"078-05-1120\", \"name\": \"John\"}"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('SSN inside JSON string should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('078-05-1120', "SSN in JSON context was leaked");
+    expect(content).toInclude('<protected:ssn>', "Redaction marker <protected:ssn> not found");
+  });
+}}
+
+### 23. False Positive - ISO Date vs SSN
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 2024-01-15"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('ISO date should not trigger SSN filter', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('2024-01-15', "ISO date should be preserved");
+    expect(content).not.toInclude('<protected:ssn>', "No SSN redaction marker should appear for a date");
+  });
+}}
+
+### 24. Credit Card as 16 Continuous Digits
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 4532123456789012"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Credit card as 16 continuous digits should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('4532123456789012', "16-digit credit card was leaked");
+    expect(content).toInclude('<protected:creditcard>', "Redaction marker <protected:creditcard> not found");
+  });
+}}
+
+### 25. Credit Card with Mixed Separators
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: 4532-1234 5678-9012"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Credit card with mixed separators should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('4532-1234 5678-9012', "Credit card with mixed separators was leaked");
+    expect(content).toInclude('<protected:creditcard>', "Redaction marker <protected:creditcard> not found");
+  });
+}}
+
+### 26. False Positive - Digits Inside Longer Alphanumeric Token
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: ACC28453212345678901234"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('16 digits embedded in longer alphanumeric token should not be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).toInclude('ACC28453212345678901234', "Embedded digits should be preserved");
+    expect(content).not.toInclude('<protected:creditcard>', "No credit card marker should appear");
+  });
+}}
+
+### 27. PII in Markdown Table Format
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: | Name | Email | Phone |\n| John | john.doe@megacorp.com | 800.555.0199 |"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('PII in markdown table should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('john.doe@megacorp.com', "Email in markdown table was leaked");
+    expect(content).not.toInclude('800.555.0199', "Phone in markdown table was leaked");
+    expect(content).toInclude('<protected:email>', "Email redaction marker not found");
+    expect(content).toInclude('<protected:phone>', "Phone redaction marker not found");
+  });
+}}
+
+### 28. PII in Code Snippet Context
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: config = {\"admin_email\": \"root@internal.io\", \"support\": \"555-867-5309\"}"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('PII in code snippet should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('root@internal.io', "Email in code context was leaked");
+    expect(content).not.toInclude('555-867-5309', "Phone in code context was leaked");
+    expect(content).toInclude('<protected:email>', "Email redaction marker not found");
+    expect(content).toInclude('<protected:phone>', "Phone redaction marker not found");
+  });
+}}
+
+### 29. Email with Single-Character Local Part
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: a@b.co"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Minimal email (single-char local part) should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('a@b.co', "Minimal email was leaked");
+    expect(content).toInclude('<protected:email>', "Redaction marker <protected:email> not found");
+  });
+}}
+
+### 30. Email with Very Long TLD
+POST {{host}}/v1/chat/completions
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Repeat exactly this text and nothing else: user@domain.technology"
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Email with long TLD should be redacted', () => {
+    const content = response.parsedBody.choices[0].message.content;
+    expect(content).not.toInclude('user@domain.technology', "Email with long TLD was leaked");
+    expect(content).toInclude('<protected:email>', "Redaction marker <protected:email> not found");
+  });
+}}
