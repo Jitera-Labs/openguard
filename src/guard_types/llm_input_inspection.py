@@ -99,7 +99,8 @@ def _collect_inspected_text(chat: "Chat", max_chars: int) -> str:
     if len(combined) <= max_chars:
         return combined
 
-    return combined[:max_chars]
+    # Keep tail — recent messages are more likely to contain attacks
+    return combined[-max_chars:]
 
 
 def _extract_text(content: Any) -> str:
@@ -120,6 +121,9 @@ def _extract_text(content: Any) -> str:
         text = content.get("text")
         if isinstance(text, str):
             return text
+
+    if isinstance(content, (int, float, bool)):
+        return str(content)
 
     return ""
 
@@ -191,7 +195,7 @@ def _parse_decision(raw_text: str) -> Tuple[str, str]:
     if direct:
         return direct
 
-    raise ValueError(f"unable to parse inspector decision from: {text[:200]}")
+    return ("block", "ambiguous inspector output — defaulting to block")
 
 
 def _try_parse_json(text: str) -> Any:
@@ -254,7 +258,24 @@ def _normalize_decision_word(value: Any) -> str | None:
 
     token = str(value).strip().lower()
 
-    if token in {"allow", "allowed", "pass", "safe", "ok", "approve", "approved"}:
+    if token in {
+        "allow",
+        "allowed",
+        "pass",
+        "safe",
+        "ok",
+        "approve",
+        "approved",
+        "permit",
+        "permitted",
+        "benign",
+        "harmless",
+        "clean",
+        "legitimate",
+        "acceptable",
+        "accepted",
+        "false",
+    }:
         return "allow"
 
     if token in {
@@ -266,6 +287,19 @@ def _normalize_decision_word(value: Any) -> str | None:
         "rejected",
         "unsafe",
         "violation",
+        "forbidden",
+        "harmful",
+        "malicious",
+        "dangerous",
+        "suspicious",
+        "flagged",
+        "detected",
+        "threat",
+        "disallow",
+        "disallowed",
+        "refuse",
+        "refused",
+        "true",
     }:
         return "block"
 
@@ -274,6 +308,11 @@ def _normalize_decision_word(value: Any) -> str | None:
 
 def _decision_from_text(text: str) -> Tuple[str, str] | None:
     normalized = text.strip().lower()
+
+    # Try direct synonym recognition for single-word responses
+    word_decision = _normalize_decision_word(normalized)
+    if word_decision:
+        return word_decision, ""
 
     decision_match = re.search(
         r"\b(decision|verdict|action|result)\b\s*[:=\-]\s*(allow|block)",
@@ -292,5 +331,9 @@ def _decision_from_text(text: str) -> Tuple[str, str] | None:
         return "block", "policy violation"
     if has_allow and not has_block:
         return "allow", ""
+
+    # Fail-safe: ambiguous response defaults to block
+    if has_block and has_allow:
+        return "block", "ambiguous inspector response"
 
     return None

@@ -125,6 +125,31 @@ class LLM(AsyncEventEmitter):
             response_format=response_format,
         )
 
+    # Params stripped from inspection calls to prevent user manipulation
+    # of the inspector LLM (e.g. high temperature to randomize output,
+    # logit_bias to favor "allow" tokens, stop sequences to truncate decisions).
+    _INSPECTION_STRIPPED_PARAMS: frozenset[str] = frozenset(
+        {
+            "stream",
+            "stream_options",
+            "messages",
+            "temperature",
+            "top_p",
+            "top_k",
+            "logit_bias",
+            "frequency_penalty",
+            "presence_penalty",
+            "seed",
+            "max_tokens",
+            "max_completion_tokens",
+            "response_format",
+            "stop",
+            "tools",
+            "tool_choice",
+            "n",
+        }
+    )
+
     def _inspect_completion_openai(
         self,
         *,
@@ -137,10 +162,11 @@ class LLM(AsyncEventEmitter):
         if not resolved_model:
             raise RuntimeError("missing model for inspection completion")
 
-        params = dict(self.params or {})
-        params.pop("stream", None)
-        params.pop("stream_options", None)
-        params.pop("messages", None)
+        params = {
+            k: v
+            for k, v in (self.params or {}).items()
+            if k not in self._INSPECTION_STRIPPED_PARAMS
+        }
 
         body = {
             "model": resolved_model,
