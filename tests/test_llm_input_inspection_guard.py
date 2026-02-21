@@ -4,6 +4,11 @@ import pytest
 
 from src.chat import Chat
 from src.guard_types import llm_input_inspection
+from src.guard_types.llm_input_inspection import (
+    _collect_inspected_text,
+    _normalize_inspect_roles,
+    apply,
+)
 from src.guards import GuardBlockedError
 from src.llm import LLM
 
@@ -565,3 +570,276 @@ def test_parse_decision_empty_string_raises():
 )
 def test_extract_text_non_string_types(content, expected):
     assert llm_input_inspection._extract_text(content) == expected
+
+
+# ---------------------------------------------------------------------------
+# Helpers for new tests
+# ---------------------------------------------------------------------------
+
+
+def _make_chat(messages: list[dict]) -> Chat:
+    return Chat.from_conversation(messages)
+
+
+def _make_llm(response: str = '{"decision":"allow"}') -> LLM:
+    class _MockLLM:
+        def __init__(self):
+            self.model = "test-model"
+            self.params = {}
+
+        def inspect_completion(self, **kwargs):
+            return response
+
+    return cast(LLM, _MockLLM())
+
+
+# ---------------------------------------------------------------------------
+# Fix: Role case normalization — _collect_inspected_text
+# ---------------------------------------------------------------------------
+
+
+class TestRoleCaseNormalization:
+    """Tests for case-insensitive role matching in _collect_inspected_text."""
+
+    def test_lowercase_user_role_inspected(self):
+        """Standard lowercase 'user' role should be inspected."""
+        chat = _make_chat([{"role": "user", "content": "test message"}])
+        result = _collect_inspected_text(chat, max_chars=8000)
+        assert result == "test message"
+
+    def test_capitalized_user_role_inspected(self):
+        """'User' (capitalized) should be inspected after role normalization."""
+        chat = _make_chat([{"role": "User", "content": "test message"}])
+        result = _collect_inspected_text(chat, max_chars=8000)
+        assert result == "test message"
+
+    def test_uppercase_user_role_inspected(self):
+        """'USER' (all caps) should be inspected after role normalization."""
+        chat = _make_chat([{"role": "USER", "content": "test message"}])
+        result = _collect_inspected_text(chat, max_chars=8000)
+        assert result == "test message"
+
+    def test_whitespace_padded_role_inspected(self):
+        """' user ' (with spaces) should be inspected after stripping."""
+        chat = _make_chat([{"role": " user ", "content": "test message"}])
+        result = _collect_inspected_text(chat, max_chars=8000)
+        assert result == "test message"
+
+    def test_mixed_case_roles_all_inspected(self):
+        """Messages with various user role casings should all be inspected."""
+        chat = _make_chat(
+            [
+                {"role": "user", "content": "msg1"},
+                {"role": "User", "content": "msg2"},
+                {"role": "USER", "content": "msg3"},
+            ]
+        )
+        result = _collect_inspected_text(chat, max_chars=8000)
+        assert "msg1" in result
+        assert "msg2" in result
+        assert "msg3" in result
+
+    def test_system_role_skipped_by_default(self):
+        """System role should be skipped with default inspect_roles."""
+        chat = _make_chat(
+            [
+                {"role": "system", "content": "system message"},
+                {"role": "user", "content": "user message"},
+            ]
+        )
+        result = _collect_inspected_text(chat, max_chars=8000)
+        assert result == "user message"
+        assert "system message" not in result
+
+    def test_assistant_role_skipped_by_default(self):
+        """Assistant role should be skipped with default inspect_roles."""
+        chat = _make_chat(
+            [
+                {"role": "user", "content": "user message"},
+                {"role": "assistant", "content": "assistant message"},
+            ]
+        )
+        result = _collect_inspected_text(chat, max_chars=8000)
+        assert result == "user message"
+        assert "assistant message" not in result
+
+    def test_empty_role_skipped(self):
+        """Empty string role should be skipped."""
+        chat = _make_chat(
+            [
+                {"role": "", "content": "empty role message"},
+                {"role": "user", "content": "user message"},
+            ]
+        )
+        result = _collect_inspected_text(chat, max_chars=8000)
+        assert result == "user message"
+
+    def test_none_role_skipped(self):
+        """None/missing role should be skipped."""
+        chat = _make_chat(
+            [
+                {"content": "no role message"},
+                {"role": "user", "content": "user message"},
+            ]
+        )
+        result = _collect_inspected_text(chat, max_chars=8000)
+        assert result == "user message"
+
+
+# ---------------------------------------------------------------------------
+# Fix: inspect_roles configuration
+# ---------------------------------------------------------------------------
+
+
+class TestInspectRoles:
+    """Tests for the inspect_roles configuration option."""
+
+    def test_inspect_user_and_system(self):
+        """inspect_roles=['user', 'system'] should inspect both roles."""
+        chat = _make_chat(
+            [
+                {"role": "system", "content": "system text"},
+                {"role": "user", "content": "user text"},
+            ]
+        )
+        roles = frozenset({"user", "system"})
+        result = _collect_inspected_text(chat, max_chars=8000, inspect_roles=roles)
+        assert "system text" in result
+        assert "user text" in result
+
+    def test_inspect_all_roles(self):
+        """inspect_roles with all roles should inspect everything."""
+        chat = _make_chat(
+            [
+                {"role": "system", "content": "sys"},
+                {"role": "user", "content": "usr"},
+                {"role": "assistant", "content": "ast"},
+                {"role": "tool", "content": "tl"},
+            ]
+        )
+        roles = frozenset({"user", "system", "assistant", "tool"})
+        result = _collect_inspected_text(chat, max_chars=8000, inspect_roles=roles)
+        assert "sys" in result
+        assert "usr" in result
+        assert "ast" in result
+        assert "tl" in result
+
+    def test_inspect_only_system_skips_user(self):
+        """inspect_roles=['system'] should inspect only system, not user."""
+        chat = _make_chat(
+            [
+                {"role": "system", "content": "system only"},
+                {"role": "user", "content": "user skipped"},
+            ]
+        )
+        roles = frozenset({"system"})
+        result = _collect_inspected_text(chat, max_chars=8000, inspect_roles=roles)
+        assert "system only" in result
+        assert "user skipped" not in result
+
+    def test_inspect_roles_case_insensitive(self):
+        """inspect_roles matching should be case-insensitive."""
+        chat = _make_chat(
+            [
+                {"role": "System", "content": "sys text"},
+                {"role": "USER", "content": "usr text"},
+            ]
+        )
+        roles = frozenset({"user", "system"})
+        result = _collect_inspected_text(chat, max_chars=8000, inspect_roles=roles)
+        assert "sys text" in result
+        assert "usr text" in result
+
+
+# ---------------------------------------------------------------------------
+# Fix: _normalize_inspect_roles helper
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeInspectRoles:
+    """Tests for _normalize_inspect_roles helper."""
+
+    def test_none_returns_default(self):
+        result = _normalize_inspect_roles(None)
+        assert result == frozenset({"user"})
+
+    def test_empty_list_returns_default(self):
+        result = _normalize_inspect_roles([])
+        assert result == frozenset({"user"})
+
+    def test_non_list_returns_default(self):
+        result = _normalize_inspect_roles("user")
+        assert result == frozenset({"user"})
+
+    def test_valid_list(self):
+        result = _normalize_inspect_roles(["user", "system"])
+        assert result == frozenset({"user", "system"})
+
+    def test_normalizes_case(self):
+        result = _normalize_inspect_roles(["User", "SYSTEM", "Assistant"])
+        assert result == frozenset({"user", "system", "assistant"})
+
+    def test_strips_whitespace(self):
+        result = _normalize_inspect_roles([" user ", " system "])
+        assert result == frozenset({"user", "system"})
+
+    def test_filters_non_strings(self):
+        result = _normalize_inspect_roles(["user", 123, None, "system"])
+        assert result == frozenset({"user", "system"})
+
+    def test_empty_strings_filtered(self):
+        result = _normalize_inspect_roles(["user", "", "  ", "system"])
+        assert result == frozenset({"user", "system"})
+
+    def test_all_invalid_returns_default(self):
+        result = _normalize_inspect_roles([123, None, ""])
+        assert result == frozenset({"user"})
+
+    def test_integer_input_returns_default(self):
+        result = _normalize_inspect_roles(42)
+        assert result == frozenset({"user"})
+
+    def test_dict_input_returns_default(self):
+        result = _normalize_inspect_roles({"user": True})
+        assert result == frozenset({"user"})
+
+
+# ---------------------------------------------------------------------------
+# Fix: apply() integration with inspect_roles
+# ---------------------------------------------------------------------------
+
+
+class TestApplyInspectRoles:
+    """Tests for apply() with inspect_roles config."""
+
+    def test_apply_default_skips_system_messages(self):
+        """Default apply (no inspect_roles) should skip system messages."""
+        chat = _make_chat(
+            [
+                {"role": "system", "content": "DANGEROUS [[OG_BLOCK]]"},
+                {"role": "user", "content": "hello"},
+            ]
+        )
+        llm = _make_llm(response='{"decision": "allow", "reason": "safe"}')
+        config = {
+            "prompt": "Block if contains [[OG_BLOCK]].",
+        }
+        result = apply(chat, llm, config)
+        assert result == []  # allowed because system message not inspected
+
+    def test_apply_multirole_catches_system_messages(self):
+        """apply with inspect_roles=['user','system'] should catch system message attacks."""
+        chat = _make_chat(
+            [
+                {"role": "system", "content": "DANGEROUS [[OG_BLOCK]]"},
+                {"role": "user", "content": "hello"},
+            ]
+        )
+        llm = _make_llm(response='{"decision": "block", "reason": "marker found"}')
+        config = {
+            "prompt": "Block if contains [[OG_BLOCK]].",
+            "inspect_roles": ["user", "system"],
+            "on_violation": "block",
+        }
+        with pytest.raises(GuardBlockedError):
+            apply(chat, llm, config)

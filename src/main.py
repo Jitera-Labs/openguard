@@ -434,9 +434,12 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
         if not isinstance(messages, list) or len(messages) == 0:
             raise HTTPException(status_code=400, detail="'messages' must be a non-empty list")
         for m in messages:
-            if not isinstance(m, dict) or "content" not in m or "role" not in m:
+            if not isinstance(m, dict) or "role" not in m:
                 raise HTTPException(status_code=400, detail="Invalid message format")
-            if m.get("content") is None:
+            # Allow content to be null for assistant messages with tool_calls (OpenAI spec)
+            if m.get("content") is None and not m.get("tool_calls"):
+                if "content" not in m:
+                    raise HTTPException(status_code=400, detail="Invalid message format")
                 raise HTTPException(status_code=400, detail="Message content cannot be null")
 
         # Validate types

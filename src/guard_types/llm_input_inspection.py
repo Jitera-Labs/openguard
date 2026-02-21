@@ -40,8 +40,9 @@ def apply(chat: "Chat", llm: "LLM", config: Dict[str, Any]) -> List[str]:
     on_error = _normalize_choice(config.get("on_error"), ERROR_ACTIONS, "allow")
     max_chars = _normalize_max_chars(config.get("max_chars", DEFAULT_MAX_CHARS))
     inspector_model = config.get("inspector_model")
+    inspect_roles = _normalize_inspect_roles(config.get("inspect_roles"))
 
-    inspected_text = _collect_inspected_text(chat, max_chars=max_chars)
+    inspected_text = _collect_inspected_text(chat, max_chars=max_chars, inspect_roles=inspect_roles)
     if not inspected_text:
         return []
 
@@ -81,11 +82,23 @@ def _normalize_max_chars(value: Any) -> int:
     return max(1, min(parsed, MAX_ALLOWED_CHARS))
 
 
-def _collect_inspected_text(chat: "Chat", max_chars: int) -> str:
+def _normalize_inspect_roles(value: Any) -> frozenset[str]:
+    default = frozenset({"user"})
+    if not isinstance(value, list):
+        return default
+    normalized = [str(r).strip().lower() for r in value if isinstance(r, str) and str(r).strip()]
+    roles = frozenset(normalized)
+    return roles or default
+
+
+def _collect_inspected_text(
+    chat: "Chat", max_chars: int, inspect_roles: frozenset[str] = frozenset({"user"})
+) -> str:
     parts: List[str] = []
 
     for node in chat.plain():
-        if getattr(node, "role", None) != "user":
+        role = (getattr(node, "role", None) or "").strip().lower()
+        if role not in inspect_roles:
             continue
 
         text = _extract_text(node.content)
