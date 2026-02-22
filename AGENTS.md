@@ -44,6 +44,29 @@ Your knowledge cutoff is in the past. So much so - you're strictly required to l
 
 ## Development Workflow
 
+### Global Docker-backed OpenGuard command
+
+Use the repository helper to install a host-level `openguard` command:
+```bash
+make install-global-openguard
+```
+
+This installs `~/.local/bin/openguard` from `scripts/openguard-wrapper.sh`.
+
+Behavior:
+- Runs OpenGuard inside Docker (image: `openguard-dev`).
+- Mounts the current directory to `/workspace` (or `OPENGUARD_MOUNT_DIR` if set).
+- Exposes port `23294` by default (`OPENGUARD_PORT` override).
+- Defaults to `serve` if no CLI subcommand is provided.
+- Supports `--build` to force rebuilding the image.
+
+Common usage:
+```bash
+openguard
+OPENGUARD_CONFIG=./guards-test.yaml openguard
+OPENGUARD_MOUNT_DIR=/path/to/project openguard
+```
+
 ### Default Mode (Friendly)
 To run the service locally with the default configuration (`guards.yaml`):
 ```bash

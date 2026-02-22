@@ -153,6 +153,33 @@ Uses a separate LLM call to inspect the incoming prompt for safety violations (e
 
 ## Development
 
+### Global Docker command
+
+If you want a host-level `openguard` command that always runs in Docker and mounts your current directory:
+
+```bash
+make install-global-openguard
+```
+
+Then run from any directory:
+
+```bash
+openguard
+```
+
+Useful variants:
+
+```bash
+# Force image rebuild
+openguard --build
+
+# Use a specific mounted directory
+OPENGUARD_MOUNT_DIR=/path/to/project openguard
+
+# Use strict test config from mounted workspace
+OPENGUARD_CONFIG=./guards-test.yaml openguard
+```
+
 ### Running Tests
 
 We use `pytest` for unit tests and `httpyac` for integration tests.

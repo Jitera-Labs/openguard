@@ -32,6 +32,17 @@ restart:
 logs:
 	docker compose logs -f
 
+install-global-openguard:
+	@mkdir -p "$(HOME)/.local/bin"
+	@sed "s|__OPENGUARD_REPO_ROOT__|$(CURDIR)|g" scripts/openguard-wrapper.sh > "$(HOME)/.local/bin/openguard"
+	@chmod +x "$(HOME)/.local/bin/openguard"
+	@echo "Installed $(HOME)/.local/bin/openguard"
+	@echo "Ensure $(HOME)/.local/bin is in PATH"
+
+uninstall-global-openguard:
+	@rm -f "$(HOME)/.local/bin/openguard"
+	@echo "Removed $(HOME)/.local/bin/openguard"
+
 lint:
 	uv run ruff check .
 	uv run ruff format --check .

@@ -1,6 +1,8 @@
 services:
   openguard:
-    build: .
+    build:
+      context: .
+      target: dev
     image: openguard-dev
     ports:
       - "23294:23294"
@@ -20,7 +22,9 @@ services:
     command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "23294", "--reload", "--reload-dir", "/app"]
 
   ui:
-    build: .
+    build:
+      context: .
+      target: base
     image: openguard-dev
     ports:
       - "5500:5500"
