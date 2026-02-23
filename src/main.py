@@ -9,6 +9,7 @@ This module creates the FastAPI application that handles:
 """
 
 import json
+from importlib.metadata import version as _get_version
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -23,19 +24,23 @@ from src.guards import GuardBlockedError, get_guards
 from src.middleware.request_id import RequestIDMiddleware
 from src.middleware.request_state import RequestStateMiddleware
 
+__version__ = _get_version("openguard")
+
 # Setup logging
 logger = log_module.setup_logger(__name__)
 
 # Create FastAPI app
-app = FastAPI(title="OpenGuard", description="guarding proxy for AI", version="0.1.0")
+app = FastAPI(title="OpenGuard", description="guarding proxy for AI", version=__version__)
 
 # Add middlewares in correct order
 app.add_middleware(RequestStateMiddleware)
 app.add_middleware(RequestIDMiddleware)
+_cors_origins = config.OPENGUARD_CORS_ORIGINS.value
+_cors_allow_credentials = "*" not in _cors_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config.OPENGUARD_CORS_ORIGINS.value,
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -75,7 +80,7 @@ def _anthropic_error(status_code: int, message: str, error_type: str = "invalid_
 
 
 def _is_guard_blocked_error(error: Exception):
-    return error.__class__.__name__ == "GuardBlockedError"
+    return isinstance(error, GuardBlockedError)
 
 
 def _requires_explicit_anthropic_tool_use(payload: dict | None):
@@ -170,7 +175,9 @@ async def _forward_provider_request(
     query_params = dict(request.query_params)
 
     try:
-        async with httpx.AsyncClient(timeout=None) as client:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=10.0)
+        ) as client:
             response = await client.request(
                 method=request.method,
                 url=route_config["endpoint"],
@@ -330,7 +337,7 @@ async def _proxy_anthropic_messages_with_guards(request: Request):
 
     try:
         guards = get_guards()
-        _, audit_logs = apply_guards(chat, llm_instance, guards)
+        _, audit_logs = await apply_guards(chat, llm_instance, guards)
         log_audit(audit_logs)
     except GuardBlockedError as e:
         return _anthropic_error(403, str(e), error_type="invalid_request_error")
@@ -376,7 +383,7 @@ async def root():
     """Root endpoint - API information"""
     return {
         "name": "OpenGuard",
-        "version": "0.1.0",
+        "version": __version__,
         "description": "guarding proxy for AI",
         "endpoints": {"health": "/health", "models": "/v1/models", "chat": "/v1/chat/completions"},
     }
@@ -401,19 +408,19 @@ async def list_models(request: Request, authorized: bool = Depends(verify_auth))
 
 
 @app.get("/v1/anthropic/models")
-async def list_anthropic_models(request: Request):
+async def list_anthropic_models(request: Request, authorized: bool = Depends(verify_auth)):
     """Dedicated Anthropic-compatible models listing endpoint."""
     return await _proxy_provider_passthrough(request, provider="anthropic", endpoint_path="/models")
 
 
 @app.post("/v1/messages")
-async def anthropic_messages(request: Request):
+async def anthropic_messages(request: Request, authorized: bool = Depends(verify_auth)):
     """Dedicated Anthropic messages endpoint with guard-aware passthrough semantics."""
     return await _proxy_anthropic_messages_with_guards(request)
 
 
 @app.post("/v1/messages/count_tokens")
-async def anthropic_count_tokens(request: Request):
+async def anthropic_count_tokens(request: Request, authorized: bool = Depends(verify_auth)):
     """Dedicated Anthropic count_tokens endpoint if supported by downstream."""
     return await _proxy_provider_passthrough(
         request,
@@ -467,7 +474,7 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
         # Apply guards
         guards = get_guards()
         # Guards modify chat/llm in-place
-        _, audit_logs = apply_guards(llm_instance.chat, llm_instance, guards)
+        _, audit_logs = await apply_guards(llm_instance.chat, llm_instance, guards)
         log_audit(audit_logs)
 
         # Proxy request
