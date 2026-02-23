@@ -3,8 +3,8 @@
 # This file defines the security guards applied to LLM traffic.
 # The default configuration below is empty, allowing all traffic to pass through.
 #
-# See `guards.yaml.example` for syntax examples or `guards-test.yaml` for
-# the configuration used in integration tests.
+# Copy this file to guards.yaml and uncomment the example below to get started.
+# See `guards-test.yaml` for the configuration used in integration tests.
 
 guards: []
 

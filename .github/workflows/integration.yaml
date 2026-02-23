@@ -67,7 +67,6 @@ jobs:
       - name: Run Integration Tests
         run: |
           # Run all http files under http/tests
-          export PATH=$PATH:$(npm bin -g)
           httpyac http/tests/**/*.http --all --output short
 
       - name: Show logs on failure
