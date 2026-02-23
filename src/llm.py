@@ -101,7 +101,7 @@ class LLM(AsyncEventEmitter):
 
         return content
 
-    def inspect_completion(
+    async def inspect_completion(
         self,
         *,
         system_prompt: str,
@@ -111,14 +111,14 @@ class LLM(AsyncEventEmitter):
     ):
         provider = getattr(self, "provider", "openai")
         if provider == "anthropic":
-            return self._inspect_completion_anthropic(
+            return await self._inspect_completion_anthropic(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 model=model,
                 response_format=response_format,
             )
 
-        return self._inspect_completion_openai(
+        return await self._inspect_completion_openai(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             model=model,
@@ -150,7 +150,7 @@ class LLM(AsyncEventEmitter):
         }
     )
 
-    def _inspect_completion_openai(
+    async def _inspect_completion_openai(
         self,
         *,
         system_prompt: str,
@@ -181,8 +181,8 @@ class LLM(AsyncEventEmitter):
         if response_format is not None:
             body["response_format"] = response_format
 
-        with httpx.Client(timeout=30.0) as client:
-            response = client.post(
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
                 self.chat_completion_endpoint,
                 headers=self.headers,
                 params=self.query_params,
@@ -193,7 +193,7 @@ class LLM(AsyncEventEmitter):
 
         return self._extract_inspection_text(payload)
 
-    def _inspect_completion_anthropic(
+    async def _inspect_completion_anthropic(
         self,
         *,
         system_prompt: str,
@@ -217,8 +217,8 @@ class LLM(AsyncEventEmitter):
 
         endpoint = self._provider_endpoint("/messages")
 
-        with httpx.Client(timeout=30.0) as client:
-            response = client.post(
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
                 endpoint,
                 headers=self.headers,
                 params=self.query_params,
@@ -280,7 +280,7 @@ class LLM(AsyncEventEmitter):
     def get_chunk_content(self, chunk):
         try:
             choices = chunk.get("choices", [])
-            choice = choices[0] if choices and len(choices) > 0 else {}
+            choice = choices[0] if choices else {}
             delta = choice.get("delta", {})
             return delta.get("content", "")
         except (KeyError, IndexError):
@@ -290,12 +290,12 @@ class LLM(AsyncEventEmitter):
     def get_chunk_tool_calls(self, chunk):
         try:
             choices = chunk.get("choices", [])
-            choice = choices[0] if choices and len(choices) > 0 else {}
+            choice = choices[0] if choices else {}
             delta = choice.get("delta", {})
             return delta.get("tool_calls", [])
         except (KeyError, IndexError):
             logger.error(f"Unexpected chunk format: {chunk}")
-            return
+            return []
 
     def parse_chunk(self, chunk):
         if isinstance(chunk, dict):
@@ -363,7 +363,7 @@ class LLM(AsyncEventEmitter):
 
     def is_tool_call(self, chunk):
         choices = chunk.get("choices", [])
-        choice = choices[0] if choices and len(choices) > 0 else {}
+        choice = choices[0] if choices else {}
         delta = choice.get("delta", {})
         has_tool_calls = delta.get("tool_calls", [])
         return len(has_tool_calls) > 0
@@ -443,7 +443,12 @@ class LLM(AsyncEventEmitter):
             # logger.debug(f"'{self.module}' application complete for '{self.model}'")
             # await self.emit_done()
 
-        asyncio.create_task(apply_mod())
+        task = asyncio.create_task(apply_mod())
+        task.add_done_callback(
+            lambda t: (
+                logger.error("Modifier task failed: %s", t.exception()) if t.exception() else None
+            )
+        )
         return self.response_stream()
 
     async def generator(self):
@@ -524,6 +529,7 @@ class LLM(AsyncEventEmitter):
         await self.emit_data(None)
         await self.remove_all_listeners()
         self.is_streaming = False
+        llm_registry.unregister(self)
 
     async def stream_final_completion(self, **kwargs):
         self.is_final_stream = True
@@ -547,7 +553,9 @@ class LLM(AsyncEventEmitter):
         pending_tool_calls = {}  # Track tool calls being built, keyed by id
         first_tool_call_id = None
 
-        async with httpx.AsyncClient(timeout=None) as client:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=10.0)
+        ) as client:
             current_stream_content = ""
 
             while True:
@@ -615,7 +623,7 @@ class LLM(AsyncEventEmitter):
 
                                 # Safely check finish_reason
                                 choices = parsed.get("choices", [])
-                                if choices and len(choices) > 0:
+                                if choices:
                                     finish_reason = choices[0].get("finish_reason")
                                     if finish_reason == "tool_calls":
                                         end_of_stream = True
@@ -727,7 +735,9 @@ class LLM(AsyncEventEmitter):
         if chat is None:
             chat = self.chat
 
-        async with httpx.AsyncClient(timeout=None) as client:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=10.0)
+        ) as client:
             body = {"model": self.model, "messages": chat.history(), **params, "stream": False}
             response = await client.post(
                 self.chat_completion_endpoint, headers=self.headers, json=body
