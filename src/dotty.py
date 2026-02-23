@@ -4,6 +4,8 @@ from typing import Any, List, Optional, Tuple, Union
 
 DottyPath = Union[str, List, Tuple]
 
+_MISSING = object()
+
 
 def is_int(value: Any) -> bool:
     """Check if the value is an integer or can be converted to an integer."""
@@ -181,10 +183,11 @@ def get(obj: Any, path: DottyPath, default: Any = None) -> Any:
     Args:
         obj: The object to query
         path: The path of the property to get (string, list, or tuple)
-        default: The value returned for undefined resolved values
+        default: The value returned for undefined resolved values. Defaults to None.
 
     Returns:
-        The resolved value or default if the path doesn't exist
+        The resolved value, or default if the path doesn't exist.
+        Use _MISSING as default to distinguish "path not found" from "value is None".
     """
     if obj is None:
         return default
@@ -213,9 +216,6 @@ def get(obj: Any, path: DottyPath, default: Any = None) -> Any:
                     result = result[part]
                 except (KeyError, TypeError, IndexError):
                     return default
-
-        if result is None:
-            return default
 
         return result
     except (KeyError, AttributeError, IndexError, TypeError):
