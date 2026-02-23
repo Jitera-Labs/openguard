@@ -27,6 +27,7 @@ async def list_downstream(provider: str = "openai"):
     for backend in get_provider_backends(provider):
         url = backend["url"]
         key = backend["key"]
+        endpoint = url
         try:
             endpoint = build_provider_endpoint(url, provider, "/models")
             headers = {
