@@ -83,20 +83,23 @@ class ConfigFileStrategy(Strategy):
 
         deep_merge(existing_data, data_to_merge)
 
-        # Ensure directory exists
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Write back
+        # Ensure directory exists and write back
         try:
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+
             if fmt == "json":
                 with open(file_path, "w") as f:
                     json.dump(existing_data, f, indent=2)
             elif fmt == "yaml":
                 with open(file_path, "w") as f:
                     yaml.dump(existing_data, f)
-        except Exception:
-            # Handle write errors gracefully
-            pass
+        except OSError as e:
+            import sys
+
+            print(
+                f"Warning: Could not write config file {file_path}: {e}",
+                file=sys.stderr,
+            )
 
 
 class CliArgStrategy(Strategy):
