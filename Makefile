@@ -1,3 +1,6 @@
+build:
+	docker compose build openguard
+
 dev:
 	docker compose up --build
 
