@@ -22,8 +22,8 @@ guards:
           use_regex: true
           # Regex patterns for common secrets
           keywords:
-            # AWS Access Key ID
-            - "(?<![A-Z0-9])[A-Z0-9]{20}(?![A-Z0-9])"
+            # AWS Access Key ID (always starts with AKIA followed by 16 alphanumeric chars)
+            - "AKIA[0-9A-Z]{16}"
             # AWS Secret Access Key
             - "(?<![A-Za-z0-9/+=])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])"
             # Private Key Header
