@@ -101,7 +101,7 @@ def test_pii_filter_email():
     # Check audit log
     assert len(logs) == 1
     assert "email" in logs[0]
-    assert "john.doe@example.com" in logs[0]
+    assert "1 match(es)" in logs[0]
 
 
 def test_pii_filter_phone():
@@ -199,7 +199,8 @@ def test_max_tokens_preserves_lower():
     assert len(logs) == 0  # No change needed
 
 
-def test_guard_engine_applies_matching_guards():
+@pytest.mark.asyncio
+async def test_guard_engine_applies_matching_guards():
     """Test guard engine applies guards that match."""
     messages = [{"role": "user", "content": "Test message"}]
     chat = Chat.from_conversation(messages)
@@ -212,13 +213,14 @@ def test_guard_engine_applies_matching_guards():
         )
     ]
 
-    modified_chat, logs = apply_guards(chat, llm, guards)
+    modified_chat, logs = await apply_guards(chat, llm, guards)
 
     assert llm.params["max_tokens"] == 2000
     assert len(logs) > 0
 
 
-def test_guard_engine_skips_non_matching():
+@pytest.mark.asyncio
+async def test_guard_engine_skips_non_matching():
     """Test guard engine skips guards that don't match."""
     messages = [{"role": "user", "content": "Test message"}]
     chat = Chat.from_conversation(messages)
@@ -231,13 +233,14 @@ def test_guard_engine_skips_non_matching():
         )
     ]
 
-    modified_chat, logs = apply_guards(chat, llm, guards)
+    modified_chat, logs = await apply_guards(chat, llm, guards)
 
     assert "max_tokens" not in llm.params
     assert len(logs) == 0
 
 
-def test_guard_engine_applies_multiple_actions():
+@pytest.mark.asyncio
+async def test_guard_engine_applies_multiple_actions():
     """Test guard engine applies multiple actions in order."""
     messages = [{"role": "user", "content": "Email me at test@example.com with badword"}]
     chat = Chat.from_conversation(messages)
@@ -254,7 +257,7 @@ def test_guard_engine_applies_multiple_actions():
         )
     ]
 
-    modified_chat, logs = apply_guards(chat, llm, guards)
+    modified_chat, logs = await apply_guards(chat, llm, guards)
 
     # All guards should have been applied
     nodes = chat.plain()

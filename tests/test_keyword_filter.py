@@ -31,10 +31,8 @@ class TestKeywordFilter:
         chat = Chat.from_conversation(messages)
 
         # Should not raise
-        # result_payload, logs = keyword_filter.apply(payload, config)
         logs = keyword_filter.apply(chat, MockLLM(), config)
         assert logs == []
-        # assert result_payload == payload
 
     def test_block_match_all_hit_full_match(self):
         """Test blocking when match_mode is 'all' and ALL keywords are found."""
@@ -60,12 +58,8 @@ class TestKeywordFilter:
         assert "Sanitized keywords" in logs[0]
 
         # Check replacement
-        # content = result_payload["messages"][0]["content"]
         content = chat.plain()[0].content
         assert "This has [REDACTED] in it." == content
-        # Ensure original payload wasn't mutated - we can't really do that easily with inplace chat
-        # unless we cloned it before, but that's not the point of the test now.
-        # assert payload["messages"][0]["content"] == "This has badwords in it."
 
     def test_logging_only(self):
         """Test 'log' action which should not block or modify, just audit."""
@@ -80,7 +74,6 @@ class TestKeywordFilter:
         assert "Keyword filter triggered" in logs[0]
 
         # Payload should be unchanged
-        # assert result_payload == payload
         content = chat.plain()[0].content
         assert content == "Please monitor this conversation."
 

@@ -1,3 +1,5 @@
+import contextlib
+import io
 import os
 import sys
 from unittest.mock import MagicMock, mock_open, patch
@@ -33,6 +35,7 @@ def test_discover_models_empty_when_no_global_config():
 # Mocking the file system interactions for setup_opencode
 @patch("launch.setup.Path")
 @patch("launch.setup.shutil.copy2")
+@patch("launch.setup._secure_open")
 @patch("launch.setup.open", new_callable=mock_open)
 @patch("launch.setup.json.load")
 @patch("launch.setup.json.dump")
@@ -44,10 +47,18 @@ def test_setup_opencode_flow(
     mock_json_dump,
     mock_json_load,
     mock_file,
+    mock_secure_open,
     mock_copy2,
     mock_path_cls,
 ):
     # --- Setup Mocks ---
+
+    # Make _secure_open return a context manager that yields a StringIO file handle
+    def make_ctx():
+        buf = io.StringIO()
+        return contextlib.contextmanager(lambda: (yield buf))()
+
+    mock_secure_open.side_effect = lambda _path: make_ctx()
 
     # 1. Mock Path.home() and Path.cwd()
     mock_home = MagicMock()

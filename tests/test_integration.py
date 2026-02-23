@@ -10,6 +10,7 @@ Tests cover:
 """
 
 import json
+from importlib.metadata import version as _get_version
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
@@ -27,7 +28,7 @@ def test_root(test_client):
 
     data = response.json()
     assert data["name"] == "OpenGuard"
-    assert data["version"] == "0.1.0"
+    assert data["version"] == _get_version("openguard")
     assert "endpoints" in data
     assert data["endpoints"]["health"] == "/health"
     assert data["endpoints"]["models"] == "/v1/models"
@@ -499,6 +500,12 @@ def test_content_filter_multiple_words(test_client, setup_mock_non_streaming):
     response = test_client.post("/v1/chat/completions", json=payload)
     assert response.status_code == 200
 
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
+    content = forwarded["messages"][0]["content"]
+    assert "badword" not in content.lower()
+    assert "offensive" not in content.lower()
+    assert content.count("[FILTERED]") == 2
+
 
 def test_pii_filter_multiple_types(test_client, setup_mock_non_streaming):
     """Test PII filter detects multiple PII types"""
@@ -515,6 +522,14 @@ def test_pii_filter_multiple_types(test_client, setup_mock_non_streaming):
 
     response = test_client.post("/v1/chat/completions", json=payload)
     assert response.status_code == 200
+
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
+    # System message injected when PII found
+    assert forwarded["messages"][0]["role"] == "system"
+    assert "PII has been filtered" in forwarded["messages"][0]["content"]
+    user_content = forwarded["messages"][1]["content"]
+    assert "<protected:email>" in user_content
+    assert "<protected:ssn>" in user_content
 
 
 def test_multimodal_content_with_filter(test_client, setup_mock_non_streaming):
@@ -536,6 +551,11 @@ def test_multimodal_content_with_filter(test_client, setup_mock_non_streaming):
     response = test_client.post("/v1/chat/completions", json=payload)
     assert response.status_code == 200
 
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
+    parts = forwarded["messages"][0]["content"]
+    assert parts[0]["text"] == "This has [FILTERED] in it"
+    assert parts[1]["text"] == "And more [FILTERED] content"
+
 
 def test_max_tokens_enforces_when_absent(test_client, setup_mock_non_streaming):
     """Test max_tokens guard adds limit when not present"""
@@ -549,6 +569,9 @@ def test_max_tokens_enforces_when_absent(test_client, setup_mock_non_streaming):
     response = test_client.post("/v1/chat/completions", json=payload)
     assert response.status_code == 200
 
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
+    assert forwarded["max_tokens"] == 100
+
 
 def test_guard_with_case_insensitive_matching(test_client, setup_mock_non_streaming):
     """Test guards match models case-insensitively"""
@@ -560,6 +583,11 @@ def test_guard_with_case_insensitive_matching(test_client, setup_mock_non_stream
 
     response = test_client.post("/v1/chat/completions", json=payload)
     assert response.status_code == 200
+
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
+    content = forwarded["messages"][0]["content"]
+    assert "BADWORD" not in content
+    assert "[FILTERED]" in content
 
 
 def test_downstream_timeout_handling(test_client, setup_mock_downstream):
@@ -631,3 +659,11 @@ def test_multiple_messages_with_guards(test_client, setup_mock_non_streaming):
 
     response = test_client.post("/v1/chat/completions", json=payload)
     assert response.status_code == 200
+
+    forwarded = setup_mock_non_streaming["stream"][0]["json"]
+    messages = forwarded["messages"]
+    # All messages should have filtered content
+    assert "badword" not in messages[1]["content"].lower()
+    assert "[FILTERED]" in messages[1]["content"]
+    assert "offensive" not in messages[3]["content"].lower()
+    assert "[FILTERED]" in messages[3]["content"]
