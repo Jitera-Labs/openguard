@@ -96,8 +96,5 @@ def get_guards() -> List[GuardRule]:
         except FileNotFoundError:
             logger.warning(f"No guards config found at {config_path}, using empty guards list")
             _guards_cache = []
-        except Exception as e:
-            logger.error(f"Error loading guards: {e}")
-            _guards_cache = []
 
     return _guards_cache
