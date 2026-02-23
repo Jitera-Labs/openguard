@@ -76,7 +76,10 @@ def select_last(chat: "Chat"):
 
 
 def select_any(chat: "Chat"):
-    return [random.choice(chat.plain())]
+    nodes = chat.plain()
+    if not nodes:
+        return []
+    return [random.choice(nodes)]
 
 
 selection_strategies = {
@@ -231,8 +234,6 @@ def apply_operator(field_value, operator, expected_value):
         return field_value >= expected_value
     if operator == "_lte":
         return field_value <= expected_value
-    if operator == "_neq":
-        return field_value != expected_value
 
     # Array operators
     if operator == "_in":
