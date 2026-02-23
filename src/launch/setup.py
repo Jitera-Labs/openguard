@@ -1,8 +1,10 @@
+import contextlib
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 import yaml
 
@@ -10,6 +12,22 @@ from src import config
 from src import log as log_module
 
 logger = log_module.setup_logger(__name__)
+
+
+@contextlib.contextmanager
+def _secure_open(path: str) -> Iterator[Any]:
+    """Open a file for writing with 0o600 permissions (owner read/write only).
+
+    Uses os.open to atomically set permissions at creation time, avoiding the
+    TOCTOU window that exists when using open() followed by os.chmod().
+    """
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    f = os.fdopen(fd, "w")
+    try:
+        yield f
+    finally:
+        f.close()
+
 
 KNOWN_PROVIDER_URLS: Dict[str, str] = {
     "openrouter": "https://openrouter.ai/api/v1",
@@ -182,15 +200,14 @@ def setup_opencode() -> None:
                 else:
                     og_data["providers"].append(p)
 
-            with open(og_config_file, "w") as f:
+            with _secure_open(str(og_config_file)) as f:
                 yaml.safe_dump(og_data, f)
-
             logger.info(f"Migrated credentials to {og_config_file}")
 
         # Add openguard credential to auth.json if missing
         if "openguard" not in auth_data:
             auth_data["openguard"] = {"type": "api", "key": "sk-openguard"}
-            with open(auth_path, "w") as f:
+            with _secure_open(str(auth_path)) as f:
                 json.dump(auth_data, f, indent=2)
             logger.info("Added 'openguard' credentials to auth.json")
 
