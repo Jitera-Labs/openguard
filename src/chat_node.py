@@ -1,4 +1,4 @@
-import random
+import uuid
 from typing import List, Optional
 
 from . import log
@@ -57,7 +57,7 @@ class ChatNode:
         return node
 
     def __init__(self, **kwargs):
-        self.id = "".join(random.choices("abcdefghijklmnopqrstuvwxyz0987654321", k=4))
+        self.id = uuid.uuid4().hex[:12]
         self.content = kwargs.get("content", "")
         self.role = kwargs.get("role", "")
 
@@ -131,11 +131,12 @@ class ChatNode:
         return substring.lower() in self.content.lower()
 
     def parents(self):
-        parents = [self]
+        node = self
+        parents = [node]
 
-        while self.parent:
-            self = self.parent
-            parents.append(self)
+        while node.parent:
+            node = node.parent
+            parents.append(node)
 
         return parents[::-1]
 
