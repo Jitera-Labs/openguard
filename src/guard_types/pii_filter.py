@@ -1,18 +1,24 @@
 """PII filtering guard - detects and replaces personally identifiable information."""
 
 import re
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from src.chat import Chat
     from src.llm import LLM
 
 
-# PII regex patterns
+# PII regex patterns — tightened to reduce false positives
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
-PHONE_PATTERN = re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b")
+# Phone: requires separator between groups to reduce false positives on plain digit sequences
+PHONE_PATTERN = re.compile(
+    r"\b(?:\+?1[-.\s]?)?"
+    r"(?:\(\d{3}\)|\d{3})"
+    r"[-.\s]\d{3}[-.\s]\d{4}\b"
+)
 SSN_PATTERN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
-CREDITCARD_PATTERN = re.compile(r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b")
+# Credit card: requires separators between all groups to reduce false positives
+CREDITCARD_PATTERN = re.compile(r"\b\d{4}[\s-]\d{4}[\s-]\d{4}[\s-]\d{4}\b")
 
 PII_PATTERNS = {
     "email": (EMAIL_PATTERN, "<protected:email>"),
@@ -22,6 +28,15 @@ PII_PATTERNS = {
 }
 
 
+def _get_active_patterns(config: dict) -> dict:
+    """Return only the PII patterns that are enabled by config."""
+    pii_types: Optional[List[str]] = config.get("pii_types")
+    if pii_types is None:
+        # Default: run all detectors (backward compatible)
+        return PII_PATTERNS
+    return {k: v for k, v in PII_PATTERNS.items() if k in pii_types}
+
+
 def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
     """
     Filter PII from message content.
@@ -29,11 +44,16 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
     Args:
         chat: Chat object
         llm: LLM object
-        config: Guard configuration
+        config: Guard configuration. Optional 'pii_types' list to select specific
+                detectors (e.g. ["email", "phone"]). If omitted, all detectors run.
 
     Returns:
         List of audit logs
     """
+    active_patterns = _get_active_patterns(config)
+    if not active_patterns:
+        return []
+
     audit_logs = []
     pii_found = False
 
@@ -47,14 +67,14 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
         if isinstance(content, str):
             modified_content = content
 
-            for pii_type, (pattern, replacement) in PII_PATTERNS.items():
+            for pii_type, (pattern, replacement) in active_patterns.items():
                 matches = pattern.findall(modified_content)
                 if matches:
-                    for match in matches:
-                        audit_logs.append(
-                            f"pii_filter: Found {pii_type} in message {idx} ({node.role}): {match}"
-                        )
-                        pii_found = True
+                    audit_logs.append(
+                        f"pii_filter: Found {pii_type} in message {idx}"
+                        f" ({node.role}): {len(matches)} match(es)"
+                    )
+                    pii_found = True
                     modified_content = pattern.sub(replacement, modified_content)
 
             if modified_content != content:
@@ -62,23 +82,20 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
 
         # Handle array content (multimodal messages)
         elif isinstance(content, list):
-            # content for list is mutable?
-            # Usually chat node content stores the list object.
-
             for part_idx, part in enumerate(content):
                 if isinstance(part, dict) and "text" in part:
                     modified_text = part["text"]
                     part_modified = False
 
-                    for pii_type, (pattern, replacement) in PII_PATTERNS.items():
+                    for pii_type, (pattern, replacement) in active_patterns.items():
                         matches = pattern.findall(modified_text)
                         if matches:
-                            for match in matches:
-                                audit_logs.append(
-                                    f"pii_filter: Found {pii_type} "
-                                    f"in message {idx} ({node.role}), part {part_idx}: {match}"
-                                )
-                                pii_found = True
+                            audit_logs.append(
+                                f"pii_filter: Found {pii_type} "
+                                f"in message {idx} ({node.role}),"
+                                f" part {part_idx}: {len(matches)} match(es)"
+                            )
+                            pii_found = True
                             modified_text = pattern.sub(replacement, modified_text)
                             part_modified = True
 
