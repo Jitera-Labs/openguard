@@ -3,11 +3,14 @@
 import re
 from typing import TYPE_CHECKING, Any, List
 
+from src import log
 from src.guards import GuardBlockedError
 
 if TYPE_CHECKING:
     from src.chat import Chat
     from src.llm import LLM
+
+logger = log.setup_logger(__name__)
 
 
 def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
@@ -50,10 +53,14 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
 
     def check_text(text: str, keyword: str) -> bool:
         if use_regex:
-            pattern = keyword
+            try:
+                compiled = re.compile(keyword, flags)
+            except re.error:
+                logger.warning("Invalid regex pattern skipped: %r", keyword)
+                return False
+            return bool(compiled.search(text))
         else:
-            pattern = re.escape(keyword)
-        return bool(re.search(pattern, text, flags))
+            return bool(re.search(re.escape(keyword), text, flags))
 
     # Identify which keywords are present in the payload
     present_keywords = set()
@@ -109,8 +116,13 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
                     # Or only the ones found?
                     # If match_mode=all and we found all, we likely want to remove all.
                     if kw in present_keywords:
-                        pattern = re.compile(re.escape(kw), flags)
-                        new_text = pattern.sub(replacement, new_text)
+                        raw_pattern = kw if use_regex else re.escape(kw)
+                        try:
+                            compiled = re.compile(raw_pattern, flags)
+                        except re.error:
+                            logger.warning("Invalid regex pattern skipped: %r", kw)
+                            continue
+                        new_text = compiled.sub(replacement, new_text)
             return new_text
 
         for node in chat.plain():
