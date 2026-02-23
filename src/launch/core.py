@@ -3,6 +3,7 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -73,7 +74,12 @@ def kill_server_on_port(host: str, port: int) -> None:
                 f"Stopping existing OpenGuard instance (PIDs: {', '.join(pids)})...",
                 file=sys.stderr,
             )
-            subprocess.run(["kill"] + pids, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                subprocess.run(
+                    ["kill"] + pids, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+            except (ProcessLookupError, OSError):
+                pass
 
             # Wait for port to be free
             start_time = time.time()
@@ -86,9 +92,12 @@ def kill_server_on_port(host: str, port: int) -> None:
 
             # Force kill if still running
             print("Force killing process...", file=sys.stderr)
-            subprocess.run(
-                ["kill", "-9"] + pids, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
+            try:
+                subprocess.run(
+                    ["kill", "-9"] + pids, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+            except (ProcessLookupError, OSError):
+                pass
             time.sleep(1)  # Give it a second to release the port completely
 
     except FileNotFoundError:
@@ -114,6 +123,7 @@ def ensure_server_running(host: str, port: int) -> Optional[subprocess.Popen]:
     # Start the server
     server_process = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "src.main:app", "--host", host, "--port", str(port)],
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,  # Capture stderr to show if startup fails
     )
@@ -130,6 +140,12 @@ def ensure_server_running(host: str, port: int) -> Optional[subprocess.Popen]:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if s.connect_ex((host, port)) == 0:
                 print("Server started successfully.", file=sys.stderr)
+                # Drain stderr in background to prevent pipe buffer deadlock
+                threading.Thread(
+                    target=lambda p: p.stderr.read() if p.stderr else None,
+                    args=(server_process,),
+                    daemon=True,
+                ).start()
                 return server_process
         time.sleep(0.5)
 
