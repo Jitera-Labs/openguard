@@ -1,18 +1,19 @@
 """Guard application engine - applies guards to requests based on matching rules."""
 
+import asyncio
 import importlib
 from typing import List, Tuple
 
 from src import log
 from src.chat import Chat
-from src.guards import GuardBlockedError, GuardRule
+from src.guards import GuardRule
 from src.llm import LLM
 from src.selection import match_filter
 
 logger = log.setup_logger(__name__)
 
 
-def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[Chat, List[str]]:
+async def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[Chat, List[str]]:
     """
     Apply guards to a chat session in order.
 
@@ -61,24 +62,30 @@ def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[Chat, L
                 module_name = f"src.guard_types.{action_type}"
                 guard_module = importlib.import_module(module_name)
 
-                # Call the apply function
+                # Call the apply function — supports both sync and async apply
                 # Signature: apply(chat, llm, config) -> List[str]
-                action_logs = guard_module.apply(chat, llm, action_config)
+                result = guard_module.apply(chat, llm, action_config)
+                if asyncio.iscoroutine(result):
+                    action_logs = await result
+                else:
+                    action_logs = result
 
                 if action_logs:
                     audit_logs.extend(action_logs)
 
                 logger.debug(f"Applied guard action '{action_type}'")
 
-            except GuardBlockedError:
-                raise
             except ModuleNotFoundError:
                 logger.error(f"Guard type '{action_type}' not found")
             except AttributeError:
                 logger.error(f"Guard type '{action_type}' does not have an 'apply' function")
             except Exception as e:
-                if e.__class__.__name__ == "GuardBlockedError":
-                    raise GuardBlockedError(str(e)) from e
+                if type(e).__name__ == "GuardBlockedError":
+                    # Re-raise using the current class to survive module reloads.
+                    # importlib.import_module returns the cached (potentially reloaded)
+                    # module, so the class identity matches what callers expect.
+                    _guards_mod = importlib.import_module("src.guards")
+                    raise _guards_mod.GuardBlockedError(str(e)) from e
                 logger.error(f"Error applying guard action '{action_type}': {e}")
 
     return chat, audit_logs
