@@ -1,11 +1,12 @@
 from typing import Dict
 
+from src.config import OPENGUARD_PORT
+
 from .setup import setup_opencode
 from .types import Integration, LaunchStrategy, StrategyConfig
 
-# Standard OpenGuard port from docker-compose.yml
-OPENGUARD_PORT = 23294
-OPENGUARD_URL = f"http://127.0.0.1:{OPENGUARD_PORT}"
+# Standard OpenGuard port from configuration
+OPENGUARD_URL = f"http://127.0.0.1:{OPENGUARD_PORT.value}"
 
 INTEGRATIONS: Dict[str, Integration] = {
     "opencode": Integration(
