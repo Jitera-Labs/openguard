@@ -14,6 +14,8 @@ class AsyncEventEmitter:
         self._lock = asyncio.Lock()
 
     async def on(self, event_name: str, listener: Callable):
+        if not asyncio.iscoroutinefunction(listener):
+            raise TypeError("Listener must be async")
         async with self._lock:
             self._listeners[event_name].append(listener)
         logger.debug(f"ON: {listener.__name__} for '{event_name}'")  # type: ignore
