@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from src import llm
@@ -11,11 +11,11 @@ class LLMRegistry:
     def register(self, instance: "llm.LLM"):
         self._registry[instance.id] = instance
 
-    def get(self, llm_id) -> "llm.LLM":
+    def get(self, llm_id) -> "Optional[llm.LLM]":
         return self._registry.get(llm_id)
 
     def unregister(self, instance: "llm.LLM"):
-        del self._registry[instance.id]
+        self._registry.pop(instance.id, None)
 
     def list_all(self):
         return list(self._registry.values())
