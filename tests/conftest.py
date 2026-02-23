@@ -65,28 +65,23 @@ guards:
 
 
 @pytest.fixture
-def test_env(guards_yaml):
+def test_env(guards_yaml, monkeypatch):
     """Set up test environment variables with isolation."""
-    old_env = os.environ.copy()
-
-    # Clear conflicting OpenGuard vars
+    # Clear conflicting OpenGuard vars using monkeypatch (auto-restored after test)
     for key in list(os.environ.keys()):
         if key.startswith("OPENGUARD_"):
-            del os.environ[key]
+            monkeypatch.delenv(key, raising=False)
 
-    os.environ["OPENGUARD_CONFIG"] = guards_yaml
-    os.environ["OPENGUARD_OPENAI_URL_TEST"] = "http://downstream.test"
-    os.environ["OPENGUARD_OPENAI_KEY_TEST"] = ""
-    os.environ["OPENGUARD_ANTHROPIC_URL_TEST"] = "http://anthropic.test"
-    os.environ["OPENGUARD_ANTHROPIC_KEY_TEST"] = "anthropic-downstream-key"
-    os.environ["OPENGUARD_API_KEY"] = ""
-    os.environ["OPENGUARD_API_KEYS"] = ""
-    os.environ["OPENGUARD_LOG_LEVEL"] = "DEBUG"
+    monkeypatch.setenv("OPENGUARD_CONFIG", guards_yaml)
+    monkeypatch.setenv("OPENGUARD_OPENAI_URL_TEST", "http://downstream.test")
+    monkeypatch.setenv("OPENGUARD_OPENAI_KEY_TEST", "")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_TEST", "http://anthropic.test")
+    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_TEST", "anthropic-downstream-key")
+    monkeypatch.setenv("OPENGUARD_API_KEY", "")
+    monkeypatch.setenv("OPENGUARD_API_KEYS", "")
+    monkeypatch.setenv("OPENGUARD_LOG_LEVEL", "DEBUG")
 
     yield
-
-    os.environ.clear()
-    os.environ.update(old_env)
 
 
 @pytest.fixture(scope="function")
