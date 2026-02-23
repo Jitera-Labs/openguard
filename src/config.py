@@ -222,6 +222,10 @@ class Config(Generic[T]):
 
 
 # ----------------- OpenGuard Configuration -----------------
+# NOTE: Config instances below resolve their values at import time by reading
+# environment variables and the persistent config file. This means env vars set
+# after this module is first imported will NOT be reflected. In tests, set env
+# vars before importing this module, or patch Config.value / Config.__value__.
 
 OPENGUARD_CONFIG = Config[str](
     name="OPENGUARD_CONFIG",
