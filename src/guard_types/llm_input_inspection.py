@@ -29,7 +29,7 @@ INSPECTION_SCHEMA = {
 }
 
 
-def apply(chat: "Chat", llm: "LLM", config: Dict[str, Any]) -> List[str]:
+async def apply(chat: "Chat", llm: "LLM", config: Dict[str, Any]) -> List[str]:
     """Inspect input text with an LLM and decide whether to allow or block."""
     prompt = str(config.get("prompt") or "").strip()
     if not prompt:
@@ -47,7 +47,7 @@ def apply(chat: "Chat", llm: "LLM", config: Dict[str, Any]) -> List[str]:
         return []
 
     try:
-        decision, reason = _inspect_with_llm(
+        decision, reason = await _inspect_with_llm(
             llm=llm,
             instructions=prompt,
             inspected_text=inspected_text,
@@ -82,17 +82,19 @@ def _normalize_max_chars(value: Any) -> int:
     return max(1, min(parsed, MAX_ALLOWED_CHARS))
 
 
+_DEFAULT_INSPECT_ROLES = frozenset({"user", "tool", "tool_result"})
+
+
 def _normalize_inspect_roles(value: Any) -> frozenset[str]:
-    default = frozenset({"user"})
     if not isinstance(value, list):
-        return default
+        return _DEFAULT_INSPECT_ROLES
     normalized = [str(r).strip().lower() for r in value if isinstance(r, str) and str(r).strip()]
     roles = frozenset(normalized)
-    return roles or default
+    return roles or _DEFAULT_INSPECT_ROLES
 
 
 def _collect_inspected_text(
-    chat: "Chat", max_chars: int, inspect_roles: frozenset[str] = frozenset({"user"})
+    chat: "Chat", max_chars: int, inspect_roles: frozenset[str] = _DEFAULT_INSPECT_ROLES
 ) -> str:
     parts: List[str] = []
 
@@ -141,7 +143,7 @@ def _extract_text(content: Any) -> str:
     return ""
 
 
-def _inspect_with_llm(
+async def _inspect_with_llm(
     llm: "LLM", instructions: str, inspected_text: str, inspector_model: Any
 ) -> Tuple[str, str]:
     model = inspector_model or getattr(llm, "model", None)
@@ -164,7 +166,7 @@ def _inspect_with_llm(
     )
 
     try:
-        output_text = inspect_completion(
+        output_text = await inspect_completion(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             model=model,
@@ -177,7 +179,7 @@ def _inspect_with_llm(
             },
         )
     except Exception:
-        output_text = inspect_completion(
+        output_text = await inspect_completion(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             model=model,
