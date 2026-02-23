@@ -24,6 +24,11 @@ def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
     if not blocked_words:
         return []
 
+    # Compile patterns once before iterating nodes
+    compiled_patterns = [
+        (word, re.compile(re.escape(word), re.IGNORECASE)) for word in blocked_words
+    ]
+
     audit_logs = []
 
     # Iterate over all messages in the chat
@@ -36,10 +41,9 @@ def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
 
         if isinstance(content, str):
             modified = False
-            for word in blocked_words:
+            for word, pattern in compiled_patterns:
                 # Case-insensitive search
                 if word.lower() in content.lower():
-                    pattern = re.compile(re.escape(word), re.IGNORECASE)
                     content = pattern.sub("[FILTERED]", content)
                     modified = True
                     audit_logs.append(
@@ -56,9 +60,8 @@ def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
                     text_content = part.get("text", "")
                     modified = False
 
-                    for word in blocked_words:
+                    for word, pattern in compiled_patterns:
                         if word.lower() in text_content.lower():
-                            pattern = re.compile(re.escape(word), re.IGNORECASE)
                             text_content = pattern.sub("[FILTERED]", text_content)
                             modified = True
                             audit_logs.append(
@@ -68,26 +71,5 @@ def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
 
                     if modified:
                         part["text"] = text_content
-
-        elif isinstance(content, list):
-            # Multimodal content
-            for part_idx, part in enumerate(content):
-                if isinstance(part, dict) and "text" in part:
-                    original_text = part["text"]
-                    text = original_text
-                    modified = False
-
-                    for word in blocked_words:
-                        if word.lower() in text.lower():
-                            pattern = re.compile(re.escape(word), re.IGNORECASE)
-                            text = pattern.sub("[FILTERED]", text)
-                            modified = True
-                            audit_logs.append(
-                                f"content_filter: Replaced '{word}' "
-                                f"in message {idx}, part {part_idx} ({node.role})"
-                            )
-
-                    if modified:
-                        part["text"] = text
 
     return audit_logs
