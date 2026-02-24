@@ -99,21 +99,25 @@ def mock_httpx(
 
 
 @pytest.fixture(scope="function")
-def test_client(test_env, mock_httpx):
+def test_client(test_env, mock_httpx, tmp_path):
     """Create FastAPI test client with test config."""
     import importlib
+    from unittest.mock import patch
 
-    from src import config as config_module
-    from src import guards as guards_module
-    from src import main as main_module
+    with patch("src.config.Path.home") as mock_home:
+        mock_home.return_value = tmp_path
+        from src import config as config_module
+        from src import guards as guards_module
+        from src import main as main_module
 
-    importlib.reload(config_module)
-    from src import mapper as mapper_module
+        config_module.PERSISTENT_CONFIG.clear()
+        importlib.reload(config_module)
+        from src import mapper as mapper_module
 
-    importlib.reload(mapper_module)
-    guards_module._guards_cache = None
-    importlib.reload(guards_module)
-    importlib.reload(main_module)
+        importlib.reload(mapper_module)
+        guards_module._guards_cache = None
+        importlib.reload(guards_module)
+        importlib.reload(main_module)
 
     return TestClient(main_module.app)
 
