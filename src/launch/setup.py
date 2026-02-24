@@ -95,7 +95,7 @@ def setup_opencode() -> None:
         return
 
     # 2. Read opencode.json in current directory (the OUTPUT config written by this tool)
-    config_path = Path.cwd() / "opencode.json"
+    config_path = Path.home() / ".config/opencode/opencode.json"
     config_data: Dict[str, Any] = {}
 
     if config_path.exists():
