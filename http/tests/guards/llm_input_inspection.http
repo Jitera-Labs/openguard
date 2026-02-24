@@ -1,7 +1,7 @@
 # @import ../../variables.http
 # @import ../../helpers.http
 
-# Uses the `llm-input-inspection` user selector configured in guards.yaml.
+# Uses the `llm-input-inspection` user selector configured in presets/full.yaml.
 
 ### 1. OpenAI Allow Baseline (No llm_input_inspection match)
 POST {{host}}/v1/chat/completions

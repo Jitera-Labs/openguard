@@ -8,7 +8,7 @@
 #   Fix 3: Ambiguous parsing defaults to block
 #
 # All tests targeting 403 use the [[OG_BLOCK]] marker for reliable detection.
-# Guard config: guards-test.yaml, user="llm-input-inspection", max_chars=4000
+# Guard config: presets/full.yaml, user="llm-input-inspection", max_chars=4000
 
 # ============================================================
 # Section A: Parameter Manipulation Attacks (tests Fix #1)

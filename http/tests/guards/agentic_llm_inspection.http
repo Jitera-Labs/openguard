@@ -2,7 +2,7 @@
 # @import ../../helpers.http
 
 # LLM Input Inspection Guard — Rewritten Test Suite
-# Config: guards-agentic.yaml (model matcher: _iregex "claude|gpt-4|llama")
+# Config: presets/agentic.yaml (model matcher: _iregex "claude|gpt-4|llama")
 # Inspector: llama3.2:1b, max_chars=4000, on_violation=block
 #
 # Structure:
