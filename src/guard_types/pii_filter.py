@@ -11,11 +11,7 @@ if TYPE_CHECKING:
 # PII regex patterns — tightened to reduce false positives
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
 # Phone: requires separator between groups to reduce false positives on plain digit sequences
-PHONE_PATTERN = re.compile(
-    r"\b(?:\+?1[-.\s]?)?"
-    r"(?:\(\d{3}\)|\d{3})"
-    r"[-.\s]\d{3}[-.\s]\d{4}\b"
-)
+PHONE_PATTERN = re.compile(r"\b(?:\+?1[-.\s]?)?" r"(?:\(\d{3}\)|\d{3})" r"[-.\s]\d{3}[-.\s]\d{4}\b")
 SSN_PATTERN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 # Credit card: requires separators between all groups to reduce false positives
 CREDITCARD_PATTERN = re.compile(r"\b\d{4}[\s-]\d{4}[\s-]\d{4}[\s-]\d{4}\b")
@@ -53,6 +49,10 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
     active_patterns = _get_active_patterns(config)
     if not active_patterns:
         return []
+
+    if hasattr(llm, "stream_patterns"):
+        for pii_type, (pattern, replacement) in active_patterns.items():
+            llm.stream_patterns.append((pattern, replacement))
 
     audit_logs = []
     pii_found = False
