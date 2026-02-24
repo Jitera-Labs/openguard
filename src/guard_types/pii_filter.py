@@ -3,6 +3,10 @@
 import re
 from typing import TYPE_CHECKING, List, Optional
 
+from pydantic import BaseModel, Field
+
+from src.guard_meta import GuardMeta
+
 if TYPE_CHECKING:
     from src.chat import Chat
     from src.llm import LLM
@@ -24,13 +28,22 @@ PII_PATTERNS = {
 }
 
 
-def _get_active_patterns(config: dict) -> dict:
+class Config(BaseModel):
+    pii_types: Optional[List[str]] = Field(
+        default=None,
+        description=(
+            "Optional list of PII types to filter (e.g. ['email', 'phone']). "
+            "If omitted, all detectors run."
+        ),
+    )
+
+
+def _get_active_patterns(cfg: Config) -> dict:
     """Return only the PII patterns that are enabled by config."""
-    pii_types: Optional[List[str]] = config.get("pii_types")
-    if pii_types is None:
+    if cfg.pii_types is None:
         # Default: run all detectors (backward compatible)
         return PII_PATTERNS
-    return {k: v for k, v in PII_PATTERNS.items() if k in pii_types}
+    return {k: v for k, v in PII_PATTERNS.items() if k in cfg.pii_types}
 
 
 def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
@@ -46,7 +59,8 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
     Returns:
         List of audit logs
     """
-    active_patterns = _get_active_patterns(config)
+    cfg = Config.model_validate(config)
+    active_patterns = _get_active_patterns(cfg)
     if not active_patterns:
         return []
 
@@ -110,3 +124,24 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
         )
 
     return audit_logs
+
+
+META = GuardMeta(
+    name="pii_filter",
+    description="Detects and replaces personally identifiable information in message content.",
+    config_schema=Config,
+    docs=(
+        "The `pii_filter` guard scans the chat context for Personally Identifiable\n"
+        "Information (PII) such as email addresses, phone numbers, SSNs, and credit card\n"
+        "numbers.\n"
+        "When PII is found, it is replaced with a masked value like `<protected:email>`\n"
+        "before being sent to the LLM.\n"
+        "You can configure which types of PII to filter by passing an optional `pii_types`\n"
+        'list containing values like `"email"`, `"phone"`, `"ssn"`, or `"creditcard"`.\n'
+        "If `pii_types` is omitted, all available PII detectors will run."
+    ),
+    examples=[
+        {"pii_types": ["email", "phone"]},
+        {},
+    ],
+)

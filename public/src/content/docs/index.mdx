@@ -1,0 +1,37 @@
+---
+title: OpenGuard Documentation
+description: A lightweight, modular AI proxy for applying guards to LLM traffic.
+template: splash
+hero:
+  tagline: Apply configurable security and policy guards to any LLM-compatible API.
+  actions:
+    - text: Browse Guards
+      link: /docs/guards/
+      icon: right-arrow
+    - text: GitHub
+      link: https://github.com/Jitera-Labs/openguard
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## What is OpenGuard?
+
+OpenGuard is a drop-in proxy that sits between your application and any OpenAI-compatible LLM API.
+Each request passes through a pipeline of configurable **guards** that can block, sanitize, or audit the traffic.
+
+<CardGrid stagger>
+  <Card title="Keyword Filter" icon="warning">
+    Block or redact messages containing specific words or regex patterns.
+  </Card>
+  <Card title="PII Filter" icon="information">
+    Detect and redact personally identifiable information before it reaches the model.
+  </Card>
+  <Card title="Content Filter" icon="approve-check">
+    Enforce topic and content policy rules using configurable categories.
+  </Card>
+  <Card title="LLM Inspection" icon="magnifier">
+    Use a secondary LLM to inspect input and make allow/block decisions.
+  </Card>
+</CardGrid>

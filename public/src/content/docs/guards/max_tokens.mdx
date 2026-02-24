@@ -1,0 +1,31 @@
+---
+title: max_tokens
+description: Enforces maximum token limit on LLM requests.
+---
+
+Enforces maximum token limit on LLM requests.
+
+## Max Tokens Guard
+
+This guard ensures that the `max_tokens` parameter sent to the LLM does not exceed
+the configured limit. If the parameter is absent, it adds the limit.
+If it's present and exceeds the limit, it overwrites it.
+
+### Configuration
+- `max_tokens` (int, optional): The maximum allowed tokens.
+
+## Configuration
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `max_tokens` | `integer | null` | `None` | The maximum number of tokens allowed for the LLM request. Overrides any existing limit if it is higher. |
+
+## Examples
+
+```yaml
+# Example 1
+type: max_tokens
+config:
+  max_tokens: 1000
+```
+

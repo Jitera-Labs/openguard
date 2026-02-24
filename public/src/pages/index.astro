@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Square.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Grid.woff2" as="font" type="font/woff2" crossorigin>
+    <title>OpenGuard</title>
+    <style>
+        @font-face {
+            font-family: 'Geist Pixel Circle';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Circle.woff2') format('woff2');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist Pixel Grid';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Grid.woff2') format('woff2');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist Pixel Line';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Line.woff2') format('woff2');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist Pixel Square';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Square.woff2') format('woff2');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist Pixel Triangle';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Triangle.woff2') format('woff2');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist Mono';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --fg: #ededed;
+            --bg: #0a0a0a;
+            --font-pixel-circle: "Geist Pixel Circle", monospace;
+            --font-pixel-grid: "Geist Pixel Grid", monospace;
+            --font-pixel-line: "Geist Pixel Line", monospace;
+            --font-pixel-square: "Geist Pixel Square", monospace;
+            --font-pixel-triangle: "Geist Pixel Triangle", monospace;
+            --font-mono: "Geist Mono", monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 24px;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: var(--font-pixel-square);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        .crt-stage {
+            position: relative;
+            isolation: isolate;
+            filter: url(#crt-filter);
+            transform: translateZ(0);
+        }
+
+        section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 1rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 912px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        h1 {
+            font-family: var(--font-pixel-grid);
+            font-size: clamp(2rem, 9vw, 4.5rem);
+            font-weight: 500;
+            line-height: 1;
+            letter-spacing: -0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            cursor: default;
+            transition: opacity 0.2s, text-shadow 0.2s;
+            word-wrap: normal;
+            overflow-wrap: normal;
+            max-width: 100%;
+            /* Combined glitch/aberration + glow */
+            text-shadow:
+                -3px 0 rgba(255, 0, 0, 0.6),
+                3px 0 rgba(0, 0, 255, 0.6),
+                0 0 30px rgba(255, 255, 255, 0.8),
+                0 0 60px rgba(255, 255, 255, 0.6),
+                0 0 80px rgba(255, 255, 255, 0.4);
+        }
+
+        h1:hover {
+            opacity: 1;
+            /* Stronger combined glitch/aberration + intense glow on hover */
+            text-shadow:
+                -4px 0 rgba(255, 0, 0, 0.8),
+                4px 0 rgba(0, 0, 255, 0.8),
+                0 0 40px rgba(255, 255, 255, 1),
+                0 0 80px rgba(255, 255, 255, 0.8),
+                0 0 120px rgba(255, 255, 255, 0.6);
+        }
+
+        p {
+            font-size: 1rem;
+            line-height: 1.6;
+            opacity: 0.8;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        code {
+            display: inline-block;
+            padding: 1rem 1.5rem;
+            border: 1px solid #333;
+            background: #111;
+            font-size: 0.85rem;
+            font-family: var(--font-mono);
+            color: #fff;
+            user-select: all;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            -webkit-font-smoothing: antialiased;
+            max-width: 100%;
+            text-align: left;
+            white-space: pre-wrap;
+            word-break: normal;
+            overflow-wrap: anywhere;
+        }
+
+        code:hover {
+            border-color: #555;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+            repeating-linear-gradient(
+                to right,
+                rgba(255, 0, 0, 0.03) 0,
+                rgba(255, 0, 0, 0.03) 1px,
+                rgba(0, 255, 255, 0.02) 1px,
+                rgba(0, 255, 255, 0.02) 2px,
+                rgba(0, 0, 255, 0.03) 2px,
+                rgba(0, 0, 255, 0.03) 3px
+            ),
+            linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 3px 100%, 100% 4px;
+            z-index: 999;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        .crt-grille {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 997;
+            background: repeating-linear-gradient(
+                to right,
+                rgba(255,255,255,0.02) 0,
+                rgba(255,255,255,0.02) 1px,
+                rgba(0,0,0,0.02) 1px,
+                rgba(0,0,0,0.02) 2px
+            );
+            opacity: 0.35;
+        }
+
+        .crt-noise {
+            position: fixed;
+            inset: 0;
+            z-index: 996;
+            pointer-events: none;
+            opacity: 0.06;
+            mix-blend-mode: screen;
+            background-image:
+                radial-gradient(circle at 25% 35%, rgba(255,255,255,0.8) 0 1px, transparent 2px),
+                radial-gradient(circle at 80% 65%, rgba(255,255,255,0.8) 0 1px, transparent 2px),
+                radial-gradient(circle at 45% 20%, rgba(255,255,255,0.8) 0 1px, transparent 2px);
+            background-size: 180px 180px, 220px 220px, 160px 160px;
+            animation: static-shift 0.16s steps(2) infinite;
+        }
+
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                circle at center,
+                transparent 50%,
+                rgba(0,0,0,0.8) 150%
+            );
+            z-index: 998;
+            pointer-events: none;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            5% { opacity: 0.95; }
+            10% { opacity: 0.9; }
+            15% { opacity: 0.95; }
+            20% { opacity: 0.98; }
+            25% { opacity: 0.95; }
+            30% { opacity: 0.9; }
+            35% { opacity: 0.96; }
+            40% { opacity: 0.98; }
+            45% { opacity: 0.95; }
+            50% { opacity: 0.99; }
+            55% { opacity: 0.93; }
+            60% { opacity: 0.9; }
+            65% { opacity: 0.96; }
+            70% { opacity: 1; }
+            75% { opacity: 0.97; }
+            80% { opacity: 0.95; }
+            85% { opacity: 0.92; }
+            90% { opacity: 0.96; }
+            95% { opacity: 0.99; }
+            100% { opacity: 0.94; }
+        }
+
+        @keyframes static-shift {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-1px, 1px); }
+            50% { transform: translate(1px, -1px); }
+            75% { transform: translate(1px, 1px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: rgba(18, 16, 16, 0.1);
+            opacity: 0;
+            z-index: 999;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        #architecture {
+            background: linear-gradient(to bottom, transparent, #0a0a0a 30%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        .architecture-container {
+            width: 100%;
+            max-width: 900px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            z-index: 20;
+        }
+
+        .flow-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .architecture-container {
+                padding: 1rem;
+            }
+
+            .flow-header {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .toggle-container {
+                margin: 0 auto;
+            }
+
+            #flow-wrapper {
+                height: 220px !important;
+            }
+        }
+
+        #architecture h2 {
+            font-family: var(--font-pixel-grid);
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        #flow-wrapper {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            border: 1px solid #333;
+            background: rgba(10, 10, 10, 0.6);
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #flow-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .labels {
+            display: none;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.6;
+            animation: bounce 2s infinite;
+        }
+
+        .scroll-indicator span {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .scroll-indicator .arrow {
+            font-size: 1.2rem;
+        }
+
+        #site-footer {
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            font-family: var(--font-pixel-line);
+            font-size: calc(100vw / 6);
+            line-height: 1;
+            letter-spacing: 0;
+            text-transform: uppercase;
+            opacity: 0.95;
+            white-space: nowrap;
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+            cursor: default;
+            transition: opacity 0.2s, text-shadow 0.2s;
+            text-shadow:
+                -3px 0 rgba(255, 0, 0, 0.6),
+                3px 0 rgba(0, 0, 255, 0.6),
+                0 0 30px rgba(255, 255, 255, 0.8),
+                0 0 60px rgba(255, 255, 255, 0.6),
+                0 0 80px rgba(255, 255, 255, 0.4);
+        }
+
+        #site-footer:hover {
+            opacity: 1;
+            text-shadow:
+                -4px 0 rgba(255, 0, 0, 0.8),
+                4px 0 rgba(0, 0, 255, 0.8),
+                0 0 40px rgba(255, 255, 255, 1),
+                0 0 80px rgba(255, 255, 255, 0.8),
+                0 0 120px rgba(255, 255, 255, 0.6);
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);}
+            40% {transform: translateX(-50%) translateY(-5px);}
+            60% {transform: translateX(-50%) translateY(-2px);}
+        }
+
+         #stack-wrapper {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            border: 1px solid #333;
+            background: rgba(10, 10, 10, 0.6);
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #stack-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            user-select: none;
+            background: rgba(20, 20, 20, 0.8);
+            padding: 10px 20px;
+            border: 1px solid #333;
+            transition: all 0.2s;
+        }
+
+        .toggle-container:hover {
+            border-color: #666;
+            background: rgba(30, 30, 30, 0.9);
+        }
+
+        .toggle-label {
+            font-family: var(--font-pixel-grid);
+            font-size: 1rem;
+            color: #ccc;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-track {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #333;
+            transition: background 0.3s;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .toggle-thumb {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: #888;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .toggle-container.active .toggle-track {
+            background: rgba(50, 255, 50, 0.2);
+            border: 1px solid rgba(50, 255, 50, 0.5);
+        }
+
+        .toggle-container.active .toggle-thumb {
+            left: 27px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .status-label {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: #666;
+            min-width: 60px;
+        }
+
+        .toggle-container.active .status-label {
+            color: #fff;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+
+        .sub-footer {
+            width: 100%;
+            margin: 0 auto;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-pixel-square);
+            position: relative;
+            z-index: 20;
+            font-size: 5vw;
+        }
+        .sub-footer a {
+            color: inherit;
+            text-decoration: none;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .sub-footer a:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+        .sub-footer span {
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+        <defs>
+            <filter id="crt-filter" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+                <!-- 1. Generate noise for displacement -->
+                <feTurbulence type="fractalNoise" baseFrequency="0.002 0.003" numOctaves="1" seed="2" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="B" result="displaced" />
+
+                <!-- 2. Split channels for Chromatic Aberration -->
+                <feOffset in="displaced" dx="-1" dy="0" result="redComp" />
+                <feOffset in="displaced" dx="1" dy="0" result="blueComp" />
+                <feColorMatrix in="redComp" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red" />
+                <feColorMatrix in="displaced" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="green" />
+                <feColorMatrix in="blueComp" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="blue" />
+
+                <!-- 3. Recombine channels -->
+                <feBlend in="red" in2="green" mode="screen" result="blend1" />
+                <feBlend in="blend1" in2="blue" mode="screen" result="blend2" />
+
+                <!-- 4. Add subtle blur/glow -->
+                <feGaussianBlur in="blend2" stdDeviation="0.5" result="glow" />
+                <feMerge>
+                    <feMergeNode in="blend2" />
+                    <feMergeNode in="glow" />
+                </feMerge>
+            </filter>
+        </defs>
+    </svg>
+
+    <div class="crt-stage">
+        <canvas id="bg-canvas"></canvas>
+
+        <section id="hero">
+            <div class="container">
+                <h1>OpenGuard</h1>
+                <p>The security gateway for LLMs. Inspect, redact, and govern AI traffic in real-time.</p>
+            </div>
+            <div class="scroll-indicator">
+                <span>More</span>
+                <div class="arrow">&#x2193;</div>
+            </div>
+        </section>
+
+        <section id="architecture">
+            <div class="architecture-container">
+                <div class="flow-header">
+                    <h2 style="margin: 0;">Traffic Control</h2>
+
+                    <div class="toggle-container" id="toggle-container">
+                        <div class="toggle-label">OpenGuard</div>
+                        <div class="toggle-switch" id="guard-toggle">
+                            <div class="toggle-track"></div>
+                            <div class="toggle-thumb"></div>
+                        </div>
+                        <div class="status-label" id="guard-status">ENABLED</div>
+                    </div>
+                </div>
+
+                <div id="flow-wrapper">
+                    <canvas id="flow-canvas"></canvas>
+                    <div class="labels">
+                        <div class="label-item">LLM</div>
+                        <div class="label-item">Proxy</div>
+                        <div class="label-item">App</div>
+                        <div class="label-item">Env</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="modular-stack">
+             <div class="architecture-container">
+                <h2>Modular Defense</h2>
+                <p style="margin-bottom: 2rem;">Composable security layers. Block PII, filter toxicity, and enforce limits without touching application code.</p>
+                <div id="stack-wrapper">
+                    <canvas id="stack-canvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="run-command">
+            <div class="container">
+                <code id="code-docker">docker run ghcr.io/Jitera-Labs/openguard:main</code>
+                <code id="code-uvx">uvx openguard</code>
+            </div>
+        </section>
+
+        <div class="sub-footer">
+            <a href="/docs/">Docs</a>
+            <a href="https://github.com/Jitera-Labs/openguard" target="_blank">GitHub</a>
+            <span>2026</span>
+        </div>
+
+        <footer id="site-footer">OpenGuard</footer>
+    </div>
+
+    <div class="crt-noise"></div>
+    <div class="crt-grille"></div>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <script is:inline>
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+
+        function resize() {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+
+            if (width !== newWidth) {
+                width = canvas.width = newWidth;
+                height = canvas.height = newHeight;
+            } else if (Math.abs(height - newHeight) > 100) {
+                 width = canvas.width = newWidth;
+                 height = canvas.height = newHeight;
+            }
+        }
+
+        window.addEventListener('resize', resize);
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+
+        const gridSize = 40;
+        let offset = 0;
+        const speed = 0.5;
+
+        const stars = [];
+        const numStars = 100;
+
+        for(let i=0; i<numStars; i++) {
+            const isRed = Math.random() > 0.8;
+            stars.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                size: Math.random() * 2 + 1,
+                opacity: Math.random(),
+                speed: Math.random() * 0.5 + 0.1,
+                color: isRed ? '#ef5350' : '#66bb6a'
+            });
+        }
+
+        function drawGrid(dt) {
+            const timeScale = (dt || 0.016) * 60;
+
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+
+            const horizon = height * 0.3;
+            const fov = 300;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, width, height);
+
+            const isMobile = width < 600;
+            const starOpacity = isMobile ? 0.15 : 0.3;
+
+            stars.forEach(star => {
+                ctx.fillStyle = star.color;
+
+                ctx.beginPath();
+                ctx.moveTo(star.x, star.y - star.size);
+                ctx.lineTo(star.x + star.size, star.y);
+                ctx.lineTo(star.x, star.y + star.size);
+                ctx.lineTo(star.x - star.size, star.y);
+                ctx.fill();
+
+                star.y -= star.speed * timeScale;
+                if(star.y < 0) {
+                    star.y = height;
+                    star.x = Math.random() * width;
+                }
+            });
+            ctx.globalAlpha = 1;
+
+            ctx.beginPath();
+
+            const centerX = width / 2;
+
+            for (let x = -width; x < width * 2; x += gridSize) {
+                ctx.moveTo(x, height);
+                const spacing = 40;
+            }
+
+            offset = (offset + speed * timeScale) % gridSize;
+
+            for (let z = 0; z < height; z += gridSize) {
+            }
+
+            const vanishingPointY = height * 0.2;
+            const vanishingPointX = width / 2;
+
+            const numLines = 40;
+            const bottomWidth = width * 4;
+
+            for(let i = 0; i <= numLines; i++) {
+                const xBottom = (i / numLines) * bottomWidth - (bottomWidth - width)/2;
+                ctx.moveTo(vanishingPointX, vanishingPointY);
+                ctx.lineTo(xBottom, height);
+            }
+
+            const time = Date.now() / 1000;
+            const gridSpeed = 0.4;
+            const gridOffset = (time * gridSpeed) % 1;
+
+            for(let i = 0; i < 20; i++) {
+                let z = (i + gridOffset) / 20;
+                let y = vanishingPointY + (height - vanishingPointY) * Math.pow(z, 2);
+
+                if (y > height) continue;
+                if (y < vanishingPointY) continue;
+
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+            }
+
+            ctx.strokeStyle = 'rgba(50, 255, 50, 0.08)';
+            ctx.strokeStyle = 'rgba(237, 237, 237, 0.1)';
+            ctx.stroke();
+
+            const gradient = ctx.createLinearGradient(0, vanishingPointY, 0, height);
+            gradient.addColorStop(0, 'rgba(10,10,10, 1)');
+            gradient.addColorStop(0.2, 'rgba(10,10,10, 0)');
+            gradient.addColorStop(1, 'rgba(10,10,10, 0)');
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, width, vanishingPointY);
+        }
+
+        let lastTime = 0;
+        function animate(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            drawGrid(dt);
+            requestAnimationFrame(animate);
+        }
+
+        requestAnimationFrame(animate);
+
+        let isGuardEnabled = true;
+
+        function toggleGuard() {
+            isGuardEnabled = !isGuardEnabled;
+            const container = document.querySelector('.toggle-container');
+            const status = document.getElementById('guard-status');
+
+            if (isGuardEnabled) {
+                container.classList.add('active');
+                status.innerText = 'ENABLED';
+                status.style.color = '#fff';
+            } else {
+                container.classList.remove('active');
+                status.innerText = 'DISABLED';
+                status.style.color = '#666';
+            }
+        }
+
+        document.getElementById('toggle-container').addEventListener('click', toggleGuard);
+        document.querySelector('.toggle-container').classList.add('active');
+
+        document.getElementById('code-docker').addEventListener('click', function() {
+            navigator.clipboard.writeText(this.innerText);
+        });
+        document.getElementById('code-uvx').addEventListener('click', function() {
+            navigator.clipboard.writeText(this.innerText);
+        });
+
+        function startFlowAnimation() {
+            const flowCanvas = document.getElementById('flow-canvas');
+            if (!flowCanvas) return;
+            const flowCtx = flowCanvas.getContext('2d');
+
+            let w, h;
+            let particles = [];
+            let effects = [];
+            const eyeState = {
+                offsetX: 0,
+                offsetY: 0,
+                targetX: 0,
+                targetY: 0,
+                nextTargetAt: 0,
+                nextBlinkAt: 0,
+                blinkStart: -1,
+                blinkEnd: -1
+            };
+
+            let lastTime = 0;
+            let spawnTimer = 0;
+            let nextSpawnTime = 0.5;
+
+            function resizeFlow() {
+                const rect = flowCanvas.parentElement.getBoundingClientRect();
+                w = flowCanvas.width = rect.width;
+                h = flowCanvas.height = rect.height;
+            }
+            window.addEventListener('resize', resizeFlow);
+            resizeFlow();
+
+            function drawBox(x, y, width, height, label, color) {
+                flowCtx.strokeStyle = color;
+                flowCtx.lineWidth = 2;
+                flowCtx.strokeRect(x - width/2, y - height/2, width, height);
+
+                flowCtx.fillStyle = color;
+                flowCtx.font = '12px "Geist Mono", monospace';
+                flowCtx.textAlign = 'center';
+                flowCtx.textBaseline = 'middle';
+                flowCtx.fillText(label, x, y);
+            }
+
+            function drawEye(x, y, radius, isOpen) {
+                if (!isOpen) {
+                    flowCtx.strokeStyle = '#333';
+                    flowCtx.lineWidth = 1;
+                    flowCtx.beginPath();
+                    flowCtx.moveTo(x - radius, y);
+                    flowCtx.lineTo(x + radius, y);
+                    flowCtx.stroke();
+                    return;
+                }
+
+                flowCtx.save();
+                flowCtx.translate(x, y);
+
+                flowCtx.strokeStyle = '#fff';
+                flowCtx.lineWidth = 2;
+                flowCtx.beginPath();
+                flowCtx.moveTo(-radius, 0);
+                flowCtx.quadraticCurveTo(0, -radius*0.7, radius, 0);
+                flowCtx.quadraticCurveTo(0, radius*0.7, -radius, 0);
+                flowCtx.stroke();
+
+                const time = Date.now() / 1000;
+
+                if (time >= eyeState.nextTargetAt) {
+                    eyeState.targetX = (Math.random() * 2 - 1) * (radius * 0.35);
+                    eyeState.targetY = (Math.random() * 2 - 1) * (radius * 0.18);
+                    eyeState.nextTargetAt = time + 0.15 + Math.random() * 0.85;
+                }
+
+                eyeState.offsetX += (eyeState.targetX - eyeState.offsetX) * 0.22;
+                eyeState.offsetY += (eyeState.targetY - eyeState.offsetY) * 0.22;
+
+                eyeState.offsetX += (Math.random() - 0.5) * radius * 0.01;
+                eyeState.offsetY += (Math.random() - 0.5) * radius * 0.006;
+
+                eyeState.offsetX = Math.max(-radius * 0.42, Math.min(radius * 0.42, eyeState.offsetX));
+                eyeState.offsetY = Math.max(-radius * 0.25, Math.min(radius * 0.25, eyeState.offsetY));
+
+                if (eyeState.nextBlinkAt === 0) {
+                    eyeState.nextBlinkAt = time + 1.2 + Math.random() * 1.8;
+                }
+
+                if (time >= eyeState.nextBlinkAt && time > eyeState.blinkEnd) {
+                    const blinkDuration = 0.11 + Math.random() * 0.08;
+                    eyeState.blinkStart = time;
+                    eyeState.blinkEnd = time + blinkDuration;
+                    eyeState.nextBlinkAt = eyeState.blinkEnd + 1.2 + Math.random() * 2.8;
+                }
+
+                let openness = 1;
+                if (time >= eyeState.blinkStart && time <= eyeState.blinkEnd) {
+                    const t = (time - eyeState.blinkStart) / (eyeState.blinkEnd - eyeState.blinkStart);
+                    if (t < 0.5) {
+                        openness = 1 - (t * 2 * 0.92);
+                    } else {
+                        openness = 0.08 + ((t - 0.5) * 2 * 0.92);
+                    }
+                }
+
+                flowCtx.fillStyle = '#fff';
+                flowCtx.beginPath();
+                flowCtx.save();
+                flowCtx.translate(eyeState.offsetX, eyeState.offsetY);
+                flowCtx.scale(1, openness);
+                flowCtx.arc(0, 0, radius * 0.25, 0, Math.PI * 2);
+                flowCtx.fill();
+
+                flowCtx.shadowBlur = 10;
+                flowCtx.shadowColor = '#fff';
+                flowCtx.fill();
+                flowCtx.shadowBlur = 0;
+                flowCtx.restore();
+
+                flowCtx.restore();
+            }
+
+            function update(timestamp) {
+                if (!lastTime) lastTime = timestamp;
+                const dt = (timestamp - lastTime) / 1000;
+                lastTime = timestamp;
+
+                flowCtx.clearRect(0, 0, w, h);
+
+                const cy = h / 2;
+                const cw = Math.max(40, Math.min(60, w * 0.08));
+
+                const margin = w * 0.1;
+                const availableWidth = w - (margin * 2);
+
+                const xLLM = margin;
+                const xGuard = margin + (availableWidth * 0.33);
+                const xHarness = margin + (availableWidth * 0.66);
+                const xEnv = w - margin;
+
+                const travelDist = xEnv - xLLM;
+                const refSpeed = travelDist / 1.0;
+
+                const llmSpacing = cw * 1.5;
+                const llmYs = [cy - llmSpacing, cy, cy + llmSpacing];
+
+                flowCtx.strokeStyle = '#333';
+                flowCtx.lineWidth = 2;
+                flowCtx.setLineDash([5, 5]);
+
+                flowCtx.beginPath();
+                flowCtx.moveTo(xEnv, cy);
+                flowCtx.lineTo(xHarness, cy);
+                flowCtx.stroke();
+
+                flowCtx.beginPath();
+                flowCtx.moveTo(xHarness, cy);
+                flowCtx.lineTo(xGuard, cy);
+                flowCtx.stroke();
+
+                llmYs.forEach(y => {
+                    flowCtx.beginPath();
+                    flowCtx.moveTo(xGuard, cy);
+                    flowCtx.lineTo(xLLM, y);
+                    flowCtx.stroke();
+                });
+
+                flowCtx.setLineDash([]);
+
+                function drawBottomLabel(x, text) {
+                    flowCtx.fillStyle = '#666';
+                    flowCtx.font = '10px "Geist Mono", monospace';
+                    flowCtx.textAlign = 'center';
+                    flowCtx.textBaseline = 'bottom';
+                    flowCtx.fillText(text, x, h - 10);
+                }
+
+                drawBottomLabel(xLLM, 'LLMs');
+                drawBottomLabel(xGuard, 'PROXY');
+                drawBottomLabel(xHarness, 'APP');
+                drawBottomLabel(xEnv, 'ENV');
+
+                drawBox(xEnv, cy, cw, cw, 'ENV', '#888');
+
+                drawBox(xHarness, cy, cw, cw, 'APP', '#888');
+
+                llmYs.forEach((y, i) => {
+                     drawBox(xLLM, y, cw, cw, `LLM ${i+1}`, '#fff');
+                });
+
+                flowCtx.fillStyle = '#0a0a0a';
+                flowCtx.beginPath();
+                flowCtx.arc(xGuard, cy, cw/2, 0, Math.PI*2);
+                flowCtx.fill();
+
+                if (!isGuardEnabled) {
+                    flowCtx.strokeStyle = '#333';
+                    flowCtx.lineWidth = 2;
+                    flowCtx.setLineDash([5, 5]);
+                    flowCtx.beginPath();
+                    flowCtx.moveTo(xGuard - cw / 2, cy);
+                    flowCtx.lineTo(xGuard + cw / 2, cy);
+                    flowCtx.stroke();
+                    flowCtx.setLineDash([]);
+                }
+
+                drawEye(xGuard, cy, cw/2 - 5, isGuardEnabled);
+
+                if (!isGuardEnabled) {
+                    flowCtx.strokeStyle = '#333';
+                    flowCtx.lineWidth = 2;
+                    flowCtx.setLineDash([5, 5]);
+                    llmYs.forEach(y => {
+                        flowCtx.beginPath();
+                        flowCtx.moveTo(xGuard, cy);
+                        flowCtx.lineTo(xLLM, y);
+                        flowCtx.stroke();
+                    });
+                    flowCtx.setLineDash([]);
+                }
+
+                spawnTimer += dt;
+
+                if (spawnTimer > nextSpawnTime) {
+                    spawnTimer = 0;
+
+                    if (Math.random() < 0.3) {
+                        nextSpawnTime = 0.1;
+                    } else {
+                        nextSpawnTime = 0.2 + Math.random() * 0.6;
+                    }
+
+                    const isPoison = Math.random() < 0.35;
+
+                    particles.push({
+                        id: Math.random(),
+                        x: xEnv,
+                        y: cy,
+                        type: 'request',
+                        payload: isPoison ? 'poison' : 'clean',
+                        color: isPoison ? '#f00' : '#4f4',
+                        size: 6,
+                        vx: -refSpeed,
+                        vy: 0,
+                        targetLLMIndex: -1,
+                        state: 'alive'
+                    });
+                }
+
+                particles.forEach(p => {
+                    if (p.state === 'dead') return;
+
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+
+                    if (p.vx < 0) {
+
+                        if (Math.abs(p.x - xGuard) < 10 && p.targetLLMIndex === -1) {
+                            p.x = xGuard;
+                            p.y = cy;
+
+                            let blocked = false;
+
+                            if (isGuardEnabled && p.payload === 'poison') {
+                                if (Math.random() < 0.5) {
+                                    p.state = 'dead';
+                                    blocked = true;
+                                    effects.push({
+                                        type: 'BLOCK',
+                                        x: xGuard,
+                                        y: cy,
+                                        life: 0.5
+                                    });
+                                } else {
+                                    p.payload = 'clean';
+                                    p.color = '#4f4';
+                                }
+                            }
+
+                            if (!blocked) {
+                                const targetIdx = Math.floor(Math.random() * 3);
+                                p.targetLLMIndex = targetIdx;
+                                const targetY = llmYs[targetIdx];
+
+                                const distRemaining = Math.abs(xLLM - xGuard);
+                                const timeRemaining = distRemaining / Math.abs(p.vx);
+
+                                if (timeRemaining > 0) {
+                                    p.vy = (targetY - p.y) / timeRemaining;
+                                }
+                            }
+                        }
+
+                        if (p.x <= xLLM) {
+                            p.state = 'dead';
+
+                            let isMalice = (p.payload === 'poison');
+                            let responseColor = isMalice ? '#b0f' : '#fff';
+
+                            const hitY = (p.targetLLMIndex >= 0) ? llmYs[p.targetLLMIndex] : cy;
+
+                            effects.push({
+                                type: 'FLASH',
+                                x: xLLM,
+                                y: hitY,
+                                color: responseColor,
+                                life: 0.3
+                            });
+
+                            const distToGuard = xGuard - xLLM;
+                            const timeToGuard = distToGuard / refSpeed;
+
+                            let vyToGuard = 0;
+                            if (timeToGuard > 0) {
+                                vyToGuard = (cy - hitY) / timeToGuard;
+                            }
+
+                            particles.push({
+                                id: Math.random(),
+                                x: xLLM,
+                                y: hitY,
+                                type: 'response',
+                                payload: isMalice ? 'malice' : 'clean',
+                                color: responseColor,
+                                size: 6,
+                                vx: refSpeed,
+                                vy: vyToGuard,
+                                state: 'alive'
+                            });
+                        }
+                    }
+                    else if (p.vx > 0) {
+                         if (p.x >= xGuard) {
+                             if (p.vy !== 0) {
+                                 p.x = xGuard;
+                                 p.y = cy;
+                                 p.vy = 0;
+                             } else {
+                                 p.y = cy;
+                             }
+                         }
+
+                         if (p.x >= xEnv) {
+                            p.state = 'dead';
+
+                            if (p.payload === 'malice') {
+                                effects.push({
+                                    type: 'BREACH',
+                                    x: xEnv,
+                                    y: cy,
+                                    life: 0.5
+                                });
+                            }
+                         }
+                    }
+
+                    if (p.state === 'alive') {
+                        flowCtx.fillStyle = p.color;
+                        flowCtx.beginPath();
+                        flowCtx.moveTo(p.x, p.y - p.size);
+                        flowCtx.lineTo(p.x + p.size, p.y);
+                        flowCtx.lineTo(p.x, p.y + p.size);
+                        flowCtx.lineTo(p.x - p.size, p.y);
+                        flowCtx.fill();
+                    }
+                });
+
+                effects.forEach(e => {
+                    e.life -= dt;
+                    if (e.type === 'BLOCK' || e.type === 'BREACH') {
+                        e.y -= 20 * dt;
+                    }
+                });
+                effects = effects.filter(e => e.life > 0);
+
+                effects.forEach(e => {
+                    const alpha = Math.max(0, e.life / 0.5);
+                    flowCtx.save();
+                    flowCtx.globalAlpha = alpha;
+
+                    if (e.type === 'BLOCK') {
+                        flowCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                        flowCtx.beginPath();
+                        flowCtx.arc(e.x, e.y, 20, 0, Math.PI*2);
+                        flowCtx.fill();
+                        flowCtx.fillStyle = '#f00';
+                        flowCtx.textAlign = 'center';
+                        flowCtx.font = '10px monospace';
+                        flowCtx.fillText('BLOCKED', e.x, e.y - 25);
+                    }
+                    else if (e.type === 'FLASH') {
+                        flowCtx.fillStyle = e.color;
+                        flowCtx.fillRect(e.x - cw/2, e.y - cw/2, cw, cw);
+                    }
+                    else if (e.type === 'BREACH') {
+                        flowCtx.fillStyle = 'rgba(180, 0, 255, 0.4)';
+                        flowCtx.beginPath();
+                        flowCtx.arc(e.x, e.y, 30, 0, Math.PI*2);
+                        flowCtx.fill();
+                        flowCtx.fillStyle = '#b0f';
+                        flowCtx.textAlign = 'center';
+                        flowCtx.fillText('!! BREACH !!', e.x, e.y - 35);
+                    }
+
+                    flowCtx.restore();
+                });
+
+                particles = particles.filter(p => p.state === 'alive');
+
+                requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        startFlowAnimation();
+
+        function startStackAnimation() {
+            const canvas = document.getElementById('stack-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let w, h;
+            function resize() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                w = canvas.width = rect.width;
+                h = canvas.height = rect.height;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            const lanesCount = 3;
+
+            const guardBlocks = [
+                { name: 'Max Tokens',       color: 'rgb(129, 199, 132)', lanes: [0, 1, 2], y: 0, height: 40 },
+                { name: 'PII Filter',       color: 'rgb(79, 195, 247)', lanes: [0],       y: 50, height: 90 },
+                { name: 'Content Filter',   color: 'rgb(255, 138, 101)', lanes: [1, 2],    y: 50, height: 40 },
+                { name: 'Input Inspection', color: 'rgb(186, 104, 200)', lanes: [1, 2],    y: 100, height: 40 },
+                { name: 'Keyword Filter',   color: 'rgb(255, 238, 88)',  lanes: [0, 1, 2], y: 150, height: 40 }
+            ];
+
+            let packets = [];
+            let particles = [];
+            let lastTime = 0;
+            let spawnTimer = 0;
+
+            function spawnPacket() {
+                 const lane = Math.floor(Math.random() * lanesCount);
+                 const isMalicious = Math.random() < 0.25;
+
+                 const relevantGuards = guardBlocks.filter(g => g.lanes.includes(lane));
+
+                 let stopBlockIndex = -1;
+
+                 if (isMalicious && relevantGuards.length > 0) {
+                     const randomGuard = relevantGuards[Math.floor(Math.random() * relevantGuards.length)];
+                     stopBlockIndex = guardBlocks.indexOf(randomGuard);
+                 }
+
+                 packets.push({
+                     x: 0,
+                     y: -30,
+                     lane: lane,
+                     speed: 100 + Math.random() * 80,
+                     isMalicious: isMalicious,
+                     stopBlockIndex: stopBlockIndex,
+                     state: 'moving',
+                     color: isMalicious ? '#ef5350' : '#66bb6a',
+                     width: 8,
+                     height: 8,
+                     analyzeTimer: 0,
+                     id: Math.random().toString(36).substr(2, 9)
+                 });
+            }
+
+            function spawnParticles(x, y, color, count) {
+                for(let i=0; i<count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 20 + Math.random() * 60;
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 1.0,
+                        color: color,
+                        size: 2 + Math.random() * 3
+                    });
+                }
+            }
+
+            function update(timestamp) {
+                if (!lastTime) lastTime = timestamp;
+                const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+                lastTime = timestamp;
+
+                ctx.clearRect(0, 0, w, h);
+
+                const totalContentHeight = 200;
+                const startY = (h - totalContentHeight) / 2;
+                const totalWidth = Math.min(600, w * 0.9);
+                const laneWidth = totalWidth / lanesCount;
+                const startX = (w - totalWidth) / 2;
+
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+
+                for (let i = 0; i < lanesCount; i++) {
+                    const lx = startX + i * laneWidth + laneWidth / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(lx, 0);
+                    ctx.lineTo(lx, h);
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]);
+
+                spawnTimer += dt;
+                if (spawnTimer > 0.4) {
+                    spawnPacket();
+                    spawnTimer = 0;
+                }
+
+                packets.forEach(p => {
+                    if (p.state === 'dead') return;
+
+                    const laneCenterX = startX + p.lane * laneWidth + laneWidth / 2;
+                    p.x = laneCenterX;
+
+                    if (p.state === 'moving' || p.state === 'passed') {
+                        p.y += p.speed * dt;
+                    }
+
+                    let activeGuardIndex = -1;
+
+                    for (let i = 0; i < guardBlocks.length; i++) {
+                        const g = guardBlocks[i];
+                        if (!g.lanes.includes(p.lane)) continue;
+
+                        const gy = startY + g.y;
+                        const gh = g.height;
+
+                        if (p.y >= gy && p.y <= gy + gh) {
+                            activeGuardIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (activeGuardIndex !== -1) {
+                         if (p.state === 'moving') {
+                             p.state = 'analyzing';
+                             p.speed = 20;
+                         }
+
+                         if (p.state === 'analyzing') {
+                             p.y += p.speed * dt;
+
+                             if (p.isMalicious && p.stopBlockIndex === activeGuardIndex) {
+                                 p.analyzeTimer += dt;
+                                 if (p.analyzeTimer > 0.5) {
+                                     p.state = 'rejected';
+                                     spawnParticles(p.x, p.y, '#f44336', 10);
+                                 }
+                             }
+                         }
+                    } else {
+                           if (p.state === 'analyzing') {
+                             p.state = 'moving';
+                             p.speed = 150;
+                         }
+                    }
+
+                    if (p.y > h + 20) p.state = 'dead';
+                });
+
+                guardBlocks.forEach((g, idx) => {
+                    const minLane = Math.min(...g.lanes);
+                    const maxLane = Math.max(...g.lanes);
+                    const laneSpan = maxLane - minLane + 1;
+
+                    const gx = startX + minLane * laneWidth + 4;
+                    const gy = startY + g.y;
+                    const gw = laneSpan * laneWidth - 8;
+                    const gh = g.height;
+
+                    const activePackets = packets.filter(p =>
+                        p.state === 'analyzing' &&
+                        g.lanes.includes(p.lane) &&
+                        p.y >= gy && p.y <= gy + gh
+                    );
+                    const isBusy = activePackets.length > 0;
+                    const isBlocking = activePackets.some(p => p.stopBlockIndex === idx);
+
+                    ctx.fillStyle = g.color.replace('rgb', 'rgba').replace(')', ', 0.1)');
+                    ctx.fillRect(gx, gy, gw, gh);
+
+                    ctx.strokeStyle = isBusy ? (isBlocking ? '#ef5350' : '#fff') : '#333';
+                    ctx.lineWidth = isBusy ? 2 : 1;
+                    ctx.strokeRect(gx, gy, gw, gh);
+
+                    if (!isBusy) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                        for(let i=4; i<gw; i+=10) ctx.fillRect(gx+i, gy, 1, gh);
+                    }
+
+                    if (isBusy) {
+                        ctx.fillStyle = g.color.replace('rgb', 'rgba').replace(')', ', 0.2)');
+                        ctx.fillRect(gx, gy, gw, gh);
+
+                        const scanY = gy + (Math.sin(timestamp * 5 + idx) * 0.5 + 0.5) * gh;
+                        ctx.beginPath();
+                        ctx.moveTo(gx, scanY);
+                        ctx.lineTo(gx + gw, scanY);
+                        ctx.strokeStyle = g.color;
+                        ctx.globalAlpha = 0.5;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        ctx.globalAlpha = 1;
+                    }
+
+                    ctx.fillStyle = isBusy ? '#fff' : '#888';
+                    ctx.font = '12px "Geist Mono", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(g.name, gx + gw/2, gy + gh/2);
+                });
+
+                packets.forEach(p => {
+                    if (p.state === 'dead' || p.state === 'rejected') return;
+
+                    ctx.fillStyle = p.isMalicious ? '#ef5350' : '#66bb6a';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = ctx.fillStyle;
+
+                    if (p.isMalicious) {
+                         const shake = (Math.random() - 0.5) * 3;
+                         ctx.fillRect(p.x - 3 + shake, p.y - 3, 6, 6);
+                    } else {
+                         ctx.beginPath();
+                         ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                         ctx.fill();
+                    }
+                    ctx.shadowBlur = 0;
+                });
+
+                particles.forEach(p => {
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.life -= dt * 2.5;
+
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = Math.max(0, p.life);
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                    ctx.globalAlpha = 1;
+                });
+                particles = particles.filter(p => p.life > 0);
+
+                requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        startStackAnimation();
+
+        function startFontToggle() {
+            const fonts = [
+                'var(--font-pixel-circle)',
+                'var(--font-pixel-grid)',
+                'var(--font-pixel-line)',
+                'var(--font-pixel-square)',
+                'var(--font-pixel-triangle)'
+            ];
+
+            const applyPerLetterFontToggle = (element) => {
+                if (!element) return;
+
+                const text = element.textContent || '';
+                const characters = Array.from(text);
+
+                element.textContent = '';
+
+                const glyphs = characters.map((character) => {
+                    const span = document.createElement('span');
+                    span.textContent = character === ' ' ? '\u00A0' : character;
+                    span.style.display = 'inline-block';
+                    element.appendChild(span);
+                    return span;
+                });
+
+                glyphs.forEach((glyph, glyphIndex) => {
+                    let fontIndex = glyphIndex % fonts.length;
+                    glyph.style.fontFamily = fonts[fontIndex];
+
+                    setInterval(() => {
+                        const step = 1 + Math.floor(Math.random() * 2);
+                        fontIndex = (fontIndex + step) % fonts.length;
+                        glyph.style.fontFamily = fonts[fontIndex];
+                    }, 1000);
+                });
+            };
+
+            applyPerLetterFontToggle(document.querySelector('#hero h1'));
+            applyPerLetterFontToggle(document.querySelector('#site-footer'));
+        }
+
+        startFontToggle();
+    </script>
+</body>
+</html>

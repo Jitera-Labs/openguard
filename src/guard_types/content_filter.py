@@ -1,14 +1,46 @@
 """Content filtering guard - blocks specific words/phrases."""
 
 import re
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
+
+from pydantic import BaseModel, Field
+
+from src.guard_meta import GuardMeta
 
 if TYPE_CHECKING:
     from src.chat import Chat
     from src.llm import LLM
 
 
-def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
+class Config(BaseModel):
+    """Configuration for content filter."""
+
+    blocked_words: List[str] = Field(
+        default_factory=list,
+        description="List of words or phrases to filter from content.",
+    )
+
+
+META = GuardMeta(
+    name="content_filter",
+    description="Filters blocked words from message content.",
+    config_schema=Config,
+    docs="""\
+Replaces occurrences of configured blocked words with '[FILTERED]' in message content.
+Supports both string content and multimodal list content.
+""",
+    examples=[
+        {
+            "name": "basic",
+            "config": {
+                "blocked_words": ["badword", "secret"],
+            },
+        }
+    ],
+)
+
+
+def apply(chat: "Chat", llm: "LLM", config: Dict[str, Any]) -> List[str]:
     """
     Filter blocked words from message content.
 
@@ -20,7 +52,8 @@ def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
     Returns:
         List of audit logs
     """
-    blocked_words = config.get("blocked_words", [])
+    cfg = Config.model_validate(config)
+    blocked_words = cfg.blocked_words
     if not blocked_words:
         return []
 
@@ -29,7 +62,7 @@ def apply(chat: "Chat", llm: "LLM", config: Dict) -> List[str]:
         (word, re.compile(re.escape(word), re.IGNORECASE)) for word in blocked_words
     ]
 
-    audit_logs = []
+    audit_logs: List[str] = []
 
     # Iterate over all messages in the chat
     # chat.plain() returns list of ChatNodes

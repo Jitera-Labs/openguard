@@ -1,0 +1,50 @@
+---
+title: Keyword Filter
+description: Matches specific keywords or regex patterns in user input and performs an action (block, sanitize, log).
+---
+
+Matches specific keywords or regex patterns in user input and performs an action (block, sanitize, log).
+
+The Keyword Filter guard scans messages for specific words, phrases, or regular expressions.
+It supports three modes:
+- **block**: Rejects the request if a keyword is found.
+- **sanitize**: Replaces found keywords with the configured replacement text.
+- **log**: Only logs the finding without altering the request or blocking it.
+
+Matching can be case-sensitive or insensitive, and you can require matching 'all' keywords instead of 'any'.
+
+## Configuration
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `keywords` | `array` | `[]` | List of keywords or regular expressions to match. |
+| `match_mode` | `string` | `"any"` | Whether to trigger on 'any' matched keyword or require 'all' to match. |
+| `case_sensitive` | `boolean` | `False` | Whether the matching should be case-sensitive. |
+| `action` | `string` | `"block"` | Action to take when triggered ('block', 'sanitize', 'log'). |
+| `replacement` | `string` | `"[REDACTED]"` | Text to replace matched keywords with when action is 'sanitize'. |
+| `use_regex` | `boolean` | `False` | Whether the keywords should be treated as regular expressions. |
+
+## Examples
+
+```yaml
+# Block Specific Words
+type: keyword_filter
+config:
+  keywords:
+  - secret
+  - confidential
+  match_mode: any
+  action: block
+```
+
+```yaml
+# Sanitize API Keys
+type: keyword_filter
+config:
+  keywords:
+  - sk-[a-zA-Z0-9]{48}
+  use_regex: true
+  action: sanitize
+  replacement: '[API_KEY_REDACTED]'
+```
+

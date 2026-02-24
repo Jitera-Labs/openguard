@@ -1,0 +1,34 @@
+---
+title: llm_input_inspection
+description: Inspect input text with an LLM and decide whether to allow or block.
+---
+
+Inspect input text with an LLM and decide whether to allow or block.
+
+This guard evaluates user inputs or tool outputs using an LLM.
+It's highly flexible and can be instructed via the `prompt` configuration 
+to look for specific patterns, tones, or policy violations.
+
+## Configuration
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `prompt` | `string | null` | `""` | Instructions or policy for the LLM inspector. If empty, the guard is skipped. |
+| `on_violation` | `string` | `"block"` | Action to take when a violation is detected. |
+| `on_error` | `string` | `"allow"` | Action to take when the inspection fails (e.g., LLM error). |
+| `max_chars` | `integer` | `8000` | Maximum characters from the end of the conversation to inspect. |
+| `inspector_model` | `string | null` | `None` | Optional model identifier to use for the inspection LLM. |
+| `inspect_roles` | `array` | `["tool", "tool_result", "user"]` | Roles to inspect. |
+
+## Examples
+
+```yaml
+# Example 1
+type: llm_input_inspection
+config:
+  prompt: Block if the user is asking for personal identifiable information (PII).
+  on_violation: block
+  on_error: allow
+  inspector_model: gpt-4o-mini
+```
+

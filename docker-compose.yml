@@ -24,10 +24,11 @@ services:
   ui:
     build:
       context: .
-      target: base
+      target: dev
     image: openguard-dev
     ports:
-      - "5500:5500"
+      - "4400:4400"
     volumes:
       - .:/app
-    command: ["livereload", "-p", "5500", "--host", "0.0.0.0", "/app/public"]
+    working_dir: /app/public
+    command: ["sh", "-c", "bun install && bun run dev --host 0.0.0.0 --port 4400"]

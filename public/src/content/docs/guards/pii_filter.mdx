@@ -1,0 +1,40 @@
+---
+title: pii_filter
+description: Detects and replaces personally identifiable information in message content.
+---
+
+Detects and replaces personally identifiable information in message content.
+
+The `pii_filter` guard scans the chat context for Personally Identifiable
+Information (PII) such as email addresses, phone numbers, SSNs, and credit card
+numbers.
+When PII is found, it is replaced with a masked value like `<protected:email>`
+before being sent to the LLM.
+You can configure which types of PII to filter by passing an optional `pii_types`
+list containing values like `"email"`, `"phone"`, `"ssn"`, or `"creditcard"`.
+If `pii_types` is omitted, all available PII detectors will run.
+
+## Configuration
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `pii_types` | `array | null` | `None` | Optional list of PII types to filter (e.g. ['email', 'phone']). If omitted, all detectors run. |
+
+## Examples
+
+```yaml
+# Example 1
+type: pii_filter
+config:
+  pii_types:
+  - email
+  - phone
+```
+
+```yaml
+# Example 2
+type: pii_filter
+config:
+  {}
+```
+

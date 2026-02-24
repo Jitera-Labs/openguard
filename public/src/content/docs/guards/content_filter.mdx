@@ -1,0 +1,27 @@
+---
+title: content_filter
+description: Filters blocked words from message content.
+---
+
+Filters blocked words from message content.
+
+Replaces occurrences of configured blocked words with '[FILTERED]' in message content.
+Supports both string content and multimodal list content.
+
+## Configuration
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `blocked_words` | `array` | `[]` | List of words or phrases to filter from content. |
+
+## Examples
+
+```yaml
+# basic
+type: content_filter
+config:
+  blocked_words:
+  - badword
+  - secret
+```
+

@@ -2,15 +2,17 @@
 
 import json
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple
+
+from pydantic import BaseModel, Field, field_validator
 
 from src import log
+from src.guard_meta import GuardMeta
 from src.guards import GuardBlockedError
 
 if TYPE_CHECKING:
     from src.chat import Chat
     from src.llm import LLM
-
 
 logger = log.setup_logger(__name__)
 
@@ -27,46 +29,6 @@ INSPECTION_SCHEMA = {
     "required": ["decision"],
     "additionalProperties": False,
 }
-
-
-async def apply(chat: "Chat", llm: "LLM", config: Dict[str, Any]) -> List[str]:
-    """Inspect input text with an LLM and decide whether to allow or block."""
-    prompt = str(config.get("prompt") or "").strip()
-    if not prompt:
-        logger.warning("llm_input_inspection: missing prompt, skipping")
-        return []
-
-    on_violation = _normalize_choice(config.get("on_violation"), VIOLATION_ACTIONS, "block")
-    on_error = _normalize_choice(config.get("on_error"), ERROR_ACTIONS, "allow")
-    max_chars = _normalize_max_chars(config.get("max_chars", DEFAULT_MAX_CHARS))
-    inspector_model = config.get("inspector_model")
-    inspect_roles = _normalize_inspect_roles(config.get("inspect_roles"))
-
-    inspected_text = _collect_inspected_text(chat, max_chars=max_chars, inspect_roles=inspect_roles)
-    if not inspected_text:
-        return []
-
-    try:
-        decision, reason = await _inspect_with_llm(
-            llm=llm,
-            instructions=prompt,
-            inspected_text=inspected_text,
-            inspector_model=inspector_model,
-        )
-    except Exception as exc:
-        error_msg = f"llm_input_inspection: inspection unavailable/error ({exc})"
-        logger.warning(error_msg)
-        if on_error == "block":
-            raise GuardBlockedError("Request blocked: llm_input_inspection failed")
-        return [f"{error_msg}; allowed by on_error=allow"]
-
-    if decision == "block":
-        reason_text = reason or "policy violation detected"
-        if on_violation == "block":
-            raise GuardBlockedError(f"Request blocked by llm_input_inspection: {reason_text}")
-        return [f"llm_input_inspection: violation detected; on_violation=log; reason={reason_text}"]
-
-    return []
 
 
 def _normalize_choice(value: Any, allowed: set[str], default: str) -> str:
@@ -91,6 +53,108 @@ def _normalize_inspect_roles(value: Any) -> frozenset[str]:
     normalized = [str(r).strip().lower() for r in value if isinstance(r, str) and str(r).strip()]
     roles = frozenset(normalized)
     return roles or _DEFAULT_INSPECT_ROLES
+
+
+class Config(BaseModel):
+    prompt: Optional[str] = Field(
+        default="",
+        description="Instructions or policy for the LLM inspector. If empty, the guard is skipped.",
+    )
+    on_violation: Literal["block", "log"] = Field(
+        default="block", description="Action to take when a violation is detected."
+    )
+    on_error: Literal["allow", "block"] = Field(
+        default="allow", description="Action to take when the inspection fails (e.g., LLM error)."
+    )
+    max_chars: int = Field(
+        default=DEFAULT_MAX_CHARS,
+        description="Maximum characters from the end of the conversation to inspect.",
+    )
+    inspector_model: Optional[str] = Field(
+        default=None, description="Optional model identifier to use for the inspection LLM."
+    )
+    inspect_roles: frozenset[str] = Field(
+        default_factory=lambda: _DEFAULT_INSPECT_ROLES,
+        description="Roles to inspect.",
+    )
+
+    @field_validator("on_violation", mode="before")
+    @classmethod
+    def _validate_on_violation(cls, v: Any) -> Any:
+        return _normalize_choice(v, VIOLATION_ACTIONS, "block")
+
+    @field_validator("on_error", mode="before")
+    @classmethod
+    def _validate_on_error(cls, v: Any) -> Any:
+        return _normalize_choice(v, ERROR_ACTIONS, "allow")
+
+    @field_validator("max_chars", mode="before")
+    @classmethod
+    def _validate_max_chars(cls, v: Any) -> Any:
+        return _normalize_max_chars(v)
+
+    @field_validator("inspect_roles", mode="before")
+    @classmethod
+    def _validate_inspect_roles(cls, v: Any) -> Any:
+        return _normalize_inspect_roles(v)
+
+
+META = GuardMeta(
+    name="llm_input_inspection",
+    description="Inspect input text with an LLM and decide whether to allow or block.",
+    config_schema=Config,
+    docs=(
+        "This guard evaluates user inputs or tool outputs using an LLM.\n"
+        "It's highly flexible and can be instructed via the `prompt` configuration \n"
+        "to look for specific patterns, tones, or policy violations."
+    ),
+    examples=[
+        {
+            "prompt": "Block if the user is asking for personal identifiable information (PII).",
+            "on_violation": "block",
+            "on_error": "allow",
+            "inspector_model": "gpt-4o-mini",
+        }
+    ],
+)
+
+
+async def apply(chat: "Chat", llm: "LLM", config: Dict[str, Any]) -> List[str]:
+    """Inspect input text with an LLM and decide whether to allow or block."""
+    cfg = Config.model_validate(config)
+
+    prompt = str(cfg.prompt or "").strip()
+    if not prompt:
+        logger.warning("llm_input_inspection: missing prompt, skipping")
+        return []
+
+    inspected_text = _collect_inspected_text(
+        chat, max_chars=cfg.max_chars, inspect_roles=cfg.inspect_roles
+    )
+    if not inspected_text:
+        return []
+
+    try:
+        decision, reason = await _inspect_with_llm(
+            llm=llm,
+            instructions=prompt,
+            inspected_text=inspected_text,
+            inspector_model=cfg.inspector_model,
+        )
+    except Exception as exc:
+        error_msg = f"llm_input_inspection: inspection unavailable/error ({exc})"
+        logger.warning(error_msg)
+        if cfg.on_error == "block":
+            raise GuardBlockedError("Request blocked: llm_input_inspection failed")
+        return [f"{error_msg}; allowed by on_error=allow"]
+
+    if decision == "block":
+        reason_text = reason or "policy violation detected"
+        if cfg.on_violation == "block":
+            raise GuardBlockedError(f"Request blocked by llm_input_inspection: {reason_text}")
+        return [f"llm_input_inspection: violation detected; on_violation=log; reason={reason_text}"]
+
+    return []
 
 
 def _collect_inspected_text(

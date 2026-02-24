@@ -55,7 +55,7 @@ format:
 	uv run ruff format .
 
 check: lint
-	uv run mypy src
+	uv run mypy src scripts
 
 test: test-unit test-integration
 
@@ -65,8 +65,14 @@ test-unit:
 test-integration:
 	httpyac http/tests/**/*.http --all
 
-cf-deploy:
-	wrangler pages deploy public --project-name openguard --branch main --commit-dirty=true
+docs-build:
+	cd public && bun run build
+
+docs-dev:
+	cd public && bun run dev
+
+cf-deploy: docs-build
+	wrangler pages deploy public/dist --project-name openguard --branch main --commit-dirty=true
 
 cf-whoami:
 	wrangler whoami
