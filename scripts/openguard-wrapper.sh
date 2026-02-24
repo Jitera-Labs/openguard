@@ -28,7 +28,7 @@ Examples:
 Environment:
   OPENGUARD_MOUNT_DIR    Host directory mounted into container as /workspace (default: current PWD)
   OPENGUARD_PORT         Host and container port to expose (default: 23294)
-  OPENGUARD_CONFIG       Config path inside /workspace (default: ./guards.yaml)
+  OPENGUARD_CONFIG       Config file path (default: /app/presets/agentic.yaml)
   OPENGUARD_DOCKER_IMAGE Docker image name (default: openguard-dev)
 EOF
   exit 0
@@ -77,12 +77,13 @@ exec docker run --rm ${TTY_FLAGS[@]+"${TTY_FLAGS[@]}"} \
   --pids-limit 256 \
   -e OPENGUARD_HOST="0.0.0.0" \
   -e OPENGUARD_PORT="$PORT" \
-  -e OPENGUARD_CONFIG="${OPENGUARD_CONFIG:-./guards.yaml}" \
+  -e OPENGUARD_CONFIG="${OPENGUARD_CONFIG:-/app/presets/agentic.yaml}" \
   -e OPENGUARD_OPENAI_URL_1="${OPENGUARD_OPENAI_URL_1:-http://host.docker.internal:11434/v1}" \
   -e OPENGUARD_OPENAI_KEY_1="${OPENGUARD_OPENAI_KEY_1:-}" \
   -e OPENGUARD_ANTHROPIC_URL_1="${OPENGUARD_ANTHROPIC_URL_1:-}" \
   -e OPENGUARD_ANTHROPIC_KEY_1="${OPENGUARD_ANTHROPIC_KEY_1:-}" \
   ${LAUNCH_MOUNTS[@]+"${LAUNCH_MOUNTS[@]}"} \
   -v "${WORKSPACE_DIR}:/workspace" \
+  -v "${REPO_ROOT}:/app" \
   -w /workspace \
   "$IMAGE" openguard "$@"
