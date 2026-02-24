@@ -1,4 +1,4 @@
-# Test 5: Combined Guards - PII filter + Content filter + Max tokens
+# OpenGuard Full Preset — exercises all guard types (used by integration tests)
 guards:
   - match:
       model:

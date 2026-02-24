@@ -1,4 +1,4 @@
-# OpenGuard Configuration for Agentic Coding Tools
+# OpenGuard Agentic Preset — protection for agentic coding tool traffic
 # ==========================================================
 # This configuration is tailored for coding agents to prevent:
 # 1. Secrets Leakage (API Keys, Credentials)
@@ -92,7 +92,7 @@ guards:
   - match:
       # Only run this expensive check on powerful models or specific agents
       model:
-        _iregex: "claude|gpt-4|llama"
+        _iregex: "claude|gpt-4|llama|glm"
     apply:
       - type: llm_input_inspection
         config:

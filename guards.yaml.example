@@ -4,7 +4,7 @@
 # The default configuration below is empty, allowing all traffic to pass through.
 #
 # Copy this file to guards.yaml and uncomment the example below to get started.
-# See `guards-test.yaml` for the configuration used in integration tests.
+# See `presets/full.yaml` for the configuration used in integration tests.
 
 guards: []
 
