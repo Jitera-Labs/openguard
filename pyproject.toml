@@ -66,6 +66,7 @@ include = [
     "/README.md",
     "/pyproject.toml",
     "/guards.yaml.example",
+    "/presets",
 ]
 
 [tool.ruff]
