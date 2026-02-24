@@ -40,6 +40,20 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
 
     flags = 0 if case_sensitive else re.IGNORECASE
 
+    if hasattr(llm, "stream_patterns"):
+        for kw in keywords:
+            raw_pattern = kw if use_regex else re.escape(kw)
+            try:
+                compiled = re.compile(raw_pattern, flags)
+                if action == "sanitize":
+                    llm.stream_patterns.append((compiled, replacement))
+                elif action == "block":
+                    if not hasattr(llm, "stream_blocks"):
+                        llm.stream_blocks = []
+                    llm.stream_blocks.append((compiled, kw))
+            except re.error:
+                continue
+
     def get_text_content(content: Any) -> str:
         if isinstance(content, str):
             return content
