@@ -143,3 +143,87 @@ class TestWildcardConfig:
 
         c = Config(f"{prefix}*", str, "http://default.test")
         assert c.value == ["http://default.test"]
+
+
+def _make_config(value: str):
+    """Create a Config[str] with a pre-set __value__, bypassing env resolution."""
+    from src.config import Config
+
+    c = Config.__new__(Config)
+    c.name = "OPENGUARD_CONFIG"
+    c.type = str
+    c.default = value
+    c.description = None
+    c.__value__ = value
+    return c
+
+
+def _clear_config_extras(monkeypatch):
+    """Remove all OPENGUARD_CONFIG_* env vars so tests start clean."""
+    for key in list(os.environ.keys()):
+        if key.startswith("OPENGUARD_CONFIG_"):
+            monkeypatch.delenv(key, raising=False)
+
+
+class TestGetConfigPaths:
+    """Tests for get_config_paths()."""
+
+    def test_single_path(self, monkeypatch):
+        """Single path returns a one-element list."""
+        import src.config as config
+
+        _clear_config_extras(monkeypatch)
+        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("./guards.yaml"))
+        assert config.get_config_paths() == ["./guards.yaml"]
+
+    def test_comma_separated(self, monkeypatch):
+        """Comma-separated value is split into individual paths."""
+        import src.config as config
+
+        _clear_config_extras(monkeypatch)
+        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml,b.yaml"))
+        assert config.get_config_paths() == ["a.yaml", "b.yaml"]
+
+    def test_comma_with_whitespace(self, monkeypatch):
+        """Whitespace around comma-separated entries is stripped."""
+        import src.config as config
+
+        _clear_config_extras(monkeypatch)
+        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config(" a.yaml , b.yaml "))
+        assert config.get_config_paths() == ["a.yaml", "b.yaml"]
+
+    def test_named_extras(self, monkeypatch):
+        """OPENGUARD_CONFIG_* env vars are appended after the base paths."""
+        import src.config as config
+
+        _clear_config_extras(monkeypatch)
+        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml"))
+        monkeypatch.setenv("OPENGUARD_CONFIG_EXTRA", "b.yaml")
+        assert config.get_config_paths() == ["a.yaml", "b.yaml"]
+
+    def test_named_extras_sorted(self, monkeypatch):
+        """OPENGUARD_CONFIG_* extras are merged in alphabetical key order."""
+        import src.config as config
+
+        _clear_config_extras(monkeypatch)
+        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml"))
+        monkeypatch.setenv("OPENGUARD_CONFIG_Z", "z.yaml")
+        monkeypatch.setenv("OPENGUARD_CONFIG_A", "aa.yaml")
+        assert config.get_config_paths() == ["a.yaml", "aa.yaml", "z.yaml"]
+
+    def test_deduplication(self, monkeypatch):
+        """Duplicate paths appear only once, first occurrence wins."""
+        import src.config as config
+
+        _clear_config_extras(monkeypatch)
+        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml"))
+        monkeypatch.setenv("OPENGUARD_CONFIG_DUP", "a.yaml")
+        assert config.get_config_paths() == ["a.yaml"]
+
+    def test_empty_segment_stripped(self, monkeypatch):
+        """Empty segments from double-commas are not included."""
+        import src.config as config
+
+        _clear_config_extras(monkeypatch)
+        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml,,b.yaml"))
+        assert config.get_config_paths() == ["a.yaml", "b.yaml"]
