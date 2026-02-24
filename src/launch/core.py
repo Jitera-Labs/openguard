@@ -122,7 +122,17 @@ def ensure_server_running(host: str, port: int) -> Optional[subprocess.Popen]:
 
     # Start the server
     server_process = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "src.main:app", "--host", host, "--port", str(port)],
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "src.main:app",
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--reload",
+        ],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,  # Capture stderr to show if startup fails
