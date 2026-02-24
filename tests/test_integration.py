@@ -416,15 +416,10 @@ def test_authentication_disabled(test_client, setup_mock_non_streaming):
 
 def test_authentication_enabled(test_client, setup_mock_non_streaming, monkeypatch):
     """Test authentication when API key is configured"""
-    # Enable authentication
-    monkeypatch.setenv("OPENGUARD_API_KEY", "test-key-123")
-
-    # Need to reload config to pick up new env var
-    import importlib
-
     from src import config
 
-    importlib.reload(config)
+    # Mock the value directly
+    monkeypatch.setattr(config.OPENGUARD_API_KEY, "__value__", "test-key-123")
 
     payload = {
         "model": "test-model",
@@ -449,13 +444,14 @@ def test_authentication_enabled(test_client, setup_mock_non_streaming, monkeypat
 
 def test_invalid_model(test_client, setup_mock_downstream, monkeypatch):
     """Test error handling for unknown model"""
-    # Force multiple URLs to disable fallback logic
-    monkeypatch.setenv("OPENGUARD_OPENAI_URL_SECONDARY", "http://secondary.test")
-    import importlib
-
     from src import config
 
-    importlib.reload(config)
+    # Force multiple URLs to disable fallback logic
+    monkeypatch.setattr(
+        config.OPENGUARD_OPENAI_URLS,
+        "__value__",
+        ["http://downstream.test", "http://secondary.test"],
+    )
 
     payload = {
         "model": "nonexistent-model",

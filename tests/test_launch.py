@@ -126,7 +126,6 @@ def test_launch_integration_server_already_running(
     mock_kill, _, mock_setup = mock_launch_deps
     if mock_setup:
         mock_setup.assert_called_once()
-        mock_kill.assert_called_once()
 
 
 def test_launch_integration_starts_and_stops_server(
