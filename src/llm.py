@@ -23,6 +23,46 @@ logger = log.setup_logger(__name__)
 BOOST_PARAM_PREFIX = "@boost_"
 
 
+class StreamRedactor:
+    def __init__(self, patterns, blocks=None, window_size=40):
+        self.patterns = patterns
+        self.blocks = blocks or []
+        self.window_size = window_size
+        self.buffer = ""
+
+    def push(self, text: str) -> str:
+        from src.guards import GuardBlockedError
+
+        self.buffer += text
+        for pattern, kw in self.blocks:
+            if pattern.search(self.buffer):
+                raise GuardBlockedError(
+                    f"Request blocked: found keyword '{kw}' in streaming response"
+                )
+        for pattern, repl in self.patterns:
+            self.buffer = pattern.sub(repl, self.buffer)
+        if len(self.buffer) > self.window_size:
+            emit_len = len(self.buffer) - self.window_size
+            emit_str = self.buffer[:emit_len]
+            self.buffer = self.buffer[emit_len:]
+            return emit_str
+        return ""
+
+    def flush(self) -> str:
+        from src.guards import GuardBlockedError
+
+        for pattern, kw in self.blocks:
+            if pattern.search(self.buffer):
+                raise GuardBlockedError(
+                    f"Request blocked: found keyword '{kw}' in streaming response"
+                )
+        for pattern, repl in self.patterns:
+            self.buffer = pattern.sub(repl, self.buffer)
+        emit_str = self.buffer
+        self.buffer = ""
+        return emit_str
+
+
 class LLM(AsyncEventEmitter):
     url: str
     headers: dict
@@ -45,17 +85,17 @@ class LLM(AsyncEventEmitter):
         super().__init__()
 
         self.id = str(uuid.uuid4())
-        self.url = kwargs.get("url")
+        self.url = kwargs.get("url") or ""
         self.headers = kwargs.get("headers", {})
         self.query_params = kwargs.get("query_params", {})
 
-        self.model = kwargs.get("model")
+        self.model = kwargs.get("model") or ""
         self.split_params(kwargs.get("params", {}))
 
         self.chat = self.resolve_chat(**kwargs)
         self.messages = self.chat.history()
 
-        self.module = kwargs.get("module")
+        self.module = kwargs.get("module") or ""
         self.provider = kwargs.get("provider", "openai")
         self.raw_payload = kwargs.get("raw_payload")
 
@@ -64,7 +104,8 @@ class LLM(AsyncEventEmitter):
         self.is_streaming = False
         self.is_final_stream = False
 
-        self.cpl_id = 0
+        self.stream_patterns = []
+        self.stream_blocks = []
 
     @property
     def chat_completion_endpoint(self):
@@ -613,6 +654,19 @@ class LLM(AsyncEventEmitter):
 
                             if line == "data: [DONE]":
                                 end_of_stream = True
+                                if hasattr(self, "_stream_redactor"):
+                                    flushed = self._stream_redactor.flush()
+                                    if flushed:
+                                        current_stream_content += flushed
+                                        result += flushed
+                                        if should_emit:
+                                            await self.emit_chunk(
+                                                {
+                                                    "choices": [
+                                                        {"delta": {"content": flushed}, "index": 0}
+                                                    ]
+                                                }
+                                            )
                                 continue
 
                             if not line.startswith("data:"):
@@ -623,6 +677,7 @@ class LLM(AsyncEventEmitter):
 
                                 # Safely check finish_reason
                                 choices = parsed.get("choices", [])
+                                finish_reason = None
                                 if choices:
                                     finish_reason = choices[0].get("finish_reason")
                                     if finish_reason == "tool_calls":
@@ -630,9 +685,48 @@ class LLM(AsyncEventEmitter):
 
                                 # Extract content for regular text responses
                                 content = self.get_chunk_content(parsed)
+
                                 if content:
+                                    if not hasattr(self, "_stream_redactor") and (
+                                        self.stream_patterns or self.stream_blocks
+                                    ):
+                                        self._stream_redactor = StreamRedactor(
+                                            self.stream_patterns, self.stream_blocks
+                                        )
+
+                                    if hasattr(self, "_stream_redactor"):
+                                        emitted = self._stream_redactor.push(content)
+                                        content = emitted
+
                                     current_stream_content += content
                                     result += content
+
+                                    # Override content in parsed chunk
+                                    if (
+                                        "choices" in parsed
+                                        and parsed["choices"]
+                                        and "delta" in parsed["choices"][0]
+                                    ):
+                                        if "content" in parsed["choices"][0]["delta"]:
+                                            parsed["choices"][0]["delta"]["content"] = content
+
+                                if finish_reason and hasattr(self, "_stream_redactor"):
+                                    flushed = self._stream_redactor.flush()
+                                    if flushed:
+                                        current_stream_content += flushed
+                                        result += flushed
+                                        if (
+                                            "choices" in parsed
+                                            and parsed["choices"]
+                                            and "delta" in parsed["choices"][0]
+                                        ):
+                                            # Append to whatever is there
+                                            existing = parsed["choices"][0]["delta"].get(
+                                                "content", ""
+                                            )
+                                            parsed["choices"][0]["delta"]["content"] = (
+                                                existing + flushed
+                                            )
 
                                 # Process tool call chunks
                                 if self.is_tool_call(parsed):
