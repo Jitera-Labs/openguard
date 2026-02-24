@@ -231,8 +231,32 @@ OPENGUARD_CONFIG = Config[str](
     name="OPENGUARD_CONFIG",
     type=str,
     default="./guards.yaml",
-    description="Path to guards configuration file.",
+    description="Comma-separated list of guard config file paths, merged in order.",
 )
+
+
+def get_config_paths() -> List[str]:
+    """Return the ordered list of config file paths from all config sources.
+
+    Sources (in order):
+    1. OPENGUARD_CONFIG (comma-separated, or single path)
+    2. OPENGUARD_CONFIG_<NAME> env vars, sorted by NAME alphabetically
+    """
+    paths: List[str] = [p.strip() for p in OPENGUARD_CONFIG.value.split(",") if p.strip()]
+
+    prefix = "OPENGUARD_CONFIG_"
+    extra_keys = sorted(key for key in os.environ if key.startswith(prefix))
+    for key in extra_keys:
+        value = os.environ[key].strip()
+        if value:
+            paths.append(value)
+
+    # Deduplicate while preserving order
+    seen: Dict[str, None] = {}
+    for path in paths:
+        seen[path] = None
+    return list(seen)
+
 
 OPENGUARD_OPENAI_URLS = Config[str](
     name="OPENGUARD_OPENAI_URL_*",
