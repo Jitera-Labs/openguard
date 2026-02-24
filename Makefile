@@ -5,7 +5,7 @@ dev:
 	docker compose up --build
 
 dev-test:
-	OPENGUARD_CONFIG=/app/guards-test.yaml docker compose up --build
+	OPENGUARD_CONFIG=/app/presets/full.yaml docker compose up --build
 
 dev-ollama:
 	@harbor ollama --version || true
