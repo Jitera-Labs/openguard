@@ -1,7 +1,10 @@
+from typing import List, Optional
+
 import typer
 import uvicorn
 
 from src import config
+from src import guards as guards_module
 from src import log as log_module
 from src.guards import get_guards
 from src.launch.setup import setup_opencode as launch_setup_opencode
@@ -10,6 +13,12 @@ from src.launch.setup import setup_opencode as launch_setup_opencode
 logger = log_module.setup_logger(__name__)
 
 app = typer.Typer(no_args_is_help=False)
+
+
+def _apply_config_paths(paths: List[str]) -> None:
+    """Override the resolved config value and reset the guards cache."""
+    config.OPENGUARD_CONFIG.__value__ = ",".join(paths)
+    guards_module._guards_cache = None
 
 
 def _run_server():
@@ -34,8 +43,14 @@ def install_opencode():
 
 
 @app.command()
-def serve():
+def serve(
+    config_paths: Optional[List[str]] = typer.Option(
+        None, "--config", help="Guard config file path (can be repeated)."
+    ),
+):
     """Start the OpenGuard server."""
+    if config_paths:
+        _apply_config_paths(config_paths)
     _run_server()
 
 
@@ -49,11 +64,18 @@ def install(service: str):
 
 
 @app.callback(invoke_without_command=True)
-def main(ctx: typer.Context):
+def main(
+    ctx: typer.Context,
+    config_paths: Optional[List[str]] = typer.Option(
+        None, "--config", help="Guard config file path (can be repeated)."
+    ),
+):
     """
     OpenGuard CLI - Guarding proxy for AI.
     """
     if ctx.invoked_subcommand is None:
+        if config_paths:
+            _apply_config_paths(config_paths)
         _run_server()
 
 
