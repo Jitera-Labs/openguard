@@ -7,7 +7,7 @@ import yaml
 from pydantic import BaseModel, Field
 
 from src import log
-from src.config import OPENGUARD_CONFIG
+from src.config import get_config_paths
 
 logger = log.setup_logger(__name__)
 
@@ -89,12 +89,13 @@ def get_guards() -> List[GuardRule]:
     global _guards_cache
 
     if _guards_cache is None:
-        config_path = OPENGUARD_CONFIG.value
-        try:
-            config = load_guards_config(config_path)
-            _guards_cache = config.guards
-        except FileNotFoundError:
-            logger.warning(f"No guards config found at {config_path}, using empty guards list")
-            _guards_cache = []
+        merged: List[GuardRule] = []
+        for config_path in get_config_paths():
+            try:
+                config = load_guards_config(config_path)
+                merged.extend(config.guards)
+            except FileNotFoundError:
+                logger.warning(f"No guards config found at {config_path}, skipping")
+        _guards_cache = merged
 
     return _guards_cache
