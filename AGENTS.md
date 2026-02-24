@@ -63,7 +63,7 @@ Behavior:
 Common usage:
 ```bash
 openguard
-OPENGUARD_CONFIG=./guards-test.yaml openguard
+OPENGUARD_CONFIG=./presets/full.yaml openguard
 OPENGUARD_MOUNT_DIR=/path/to/project openguard
 ```
 
@@ -75,7 +75,7 @@ make dev
 By default, `guards.yaml` is empty, allowing all traffic to pass through. This is useful for initial exploration and development without interference.
 
 ### Test Mode (Strict)
-To run the service with the integration test configuration (`guards-test.yaml`):
+To run the service with the integration test configuration (`presets/full.yaml`):
 ```bash
 make dev-test
 ```
@@ -84,7 +84,7 @@ This configuration includes specific guards required for the integration test su
 ## Integration Tests with Httpyac
 
 We use `httpyac` (CLI) to run integration tests against the running service.
-Tests are located in the `./http/tests/` directory and rely on specific guard configurations found in `guards-test.yaml`.
+Tests are located in the `./http/tests/` directory and rely on specific guard configurations found in `presets/full.yaml`.
 
 To run the tests:
 1. Start the service in **Test Mode**:
