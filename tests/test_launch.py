@@ -225,10 +225,10 @@ def test_launch_claude_env_strategy(mock_launch_deps, mock_subprocess_run, mock_
     assert env["ANTHROPIC_API_KEY"] == "sk-openguard-placeholder"
 
 
-def test_launch_codex_arg_strategy(mock_launch_deps, mock_subprocess_run, mock_socket):
+def test_launch_codex_env_strategy(mock_launch_deps, mock_subprocess_run, mock_socket):
     """
-    Test CliArgStrategy with 'codex' integration.
-    Verifies that CLI arguments are appended.
+    Test EnvVarStrategy with 'codex' integration.
+    Verifies that environment variables are injected (not CLI args).
     """
     # Ensure server is seen as running
     mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 0
@@ -243,19 +243,17 @@ def test_launch_codex_arg_strategy(mock_launch_deps, mock_subprocess_run, mock_s
     mock_subprocess_run.assert_called_once()
     args, kwargs = mock_subprocess_run.call_args
     command = args[0]
+    env = kwargs.get("env")
 
-    # Verify command structure
+    # Command is just ["codex"] — no injected CLI args
     assert command[0] == "codex"
+    assert "--api-base" not in command
+    assert "--api-key" not in command
 
-    # Verify injected arguments
-    assert "--api-base" in command
-    assert OPENGUARD_URL in command
-    assert "--api-key" in command
-    assert "sk-openguard-placeholder" in command
-
-    # Verify order (basic check)
-    base_idx = command.index("--api-base")
-    assert command[base_idx + 1] == OPENGUARD_URL
+    # Verify environment variables
+    assert env is not None
+    assert env["OPENAI_BASE_URL"] == OPENGUARD_URL
+    assert env["OPENAI_API_KEY"] == "sk-openguard-placeholder"
 
 
 def test_launch_integration_not_found(mock_launch_deps, mock_subprocess_run):
@@ -282,7 +280,7 @@ def test_launch_with_extra_args(mock_launch_deps, mock_subprocess_run, mock_sock
     args, _ = mock_subprocess_run.call_args
     command = args[0]
 
-    # "codex" + injected args + extra args
+    # "codex" + extra args (no injected CLI args with ENV strategy)
     assert command[-2:] == extra_args
 
 

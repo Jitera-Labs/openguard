@@ -57,14 +57,12 @@ INTEGRATIONS: Dict[str, Integration] = {
         default_command="codex",
         strategies=[
             StrategyConfig(
-                type=LaunchStrategy.ARG,
+                type=LaunchStrategy.ENV,
                 params={
-                    "args": [
-                        "--api-base",
-                        OPENGUARD_URL,
-                        "--api-key",
-                        "sk-openguard-placeholder",
-                    ]
+                    "env_vars": {
+                        "OPENAI_BASE_URL": OPENGUARD_URL,
+                        "OPENAI_API_KEY": "sk-openguard-placeholder",
+                    }
                 },
             )
         ],

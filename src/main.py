@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from src import config, llm, mapper
 from src import log as log_module
+from src import responses as responses_module
 from src.chat import Chat
 from src.guard_engine import apply_guards, log_audit
 from src.guards import GuardBlockedError, get_guards
@@ -690,6 +691,178 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
             )
         logger.error(f"Error in chat completion: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/v1/responses")
+async def responses_endpoint(request: Request, authorized: bool = Depends(verify_auth)):
+    """OpenAI Responses API endpoint with guard application and translation fallback."""
+    body_bytes = await request.body()
+    if not body_bytes:
+        raise HTTPException(status_code=400, detail="Request body is required")
+
+    try:
+        payload = json.loads(body_bytes)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON in request body")
+
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Request body must be a JSON object")
+
+    # Determine the upstream URL to decide passthrough vs translation
+    try:
+        route_config = mapper.resolve_provider_route(
+            provider="openai",
+            endpoint_path="/responses",
+            body=payload,
+            headers=request.headers,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    upstream_url = route_config.get("url", "")
+
+    if responses_module.upstream_supports_responses_api(upstream_url):
+        # Native passthrough — forward directly to /responses
+        return await _forward_provider_request(
+            request,
+            provider="openai",
+            endpoint_path="/responses",
+            body_bytes=body_bytes,
+            payload=payload,
+        )
+
+    # Translation path: Responses API → Chat Completions → guards → forward → translate back
+    try:
+        cc_payload = responses_module.responses_to_chat_completions(payload)
+    except Exception as e:
+        logger.error(f"Failed to translate Responses API request: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail="Invalid Responses API request format")
+
+    messages = cc_payload.get("messages", [])
+    if not isinstance(messages, list) or len(messages) == 0:
+        raise HTTPException(status_code=400, detail="Request must contain at least one message")
+
+    # Build Chat and apply guards
+    try:
+        Chat.from_payload(cc_payload)
+    except Exception as e:
+        logger.error(f"Failed to build Chat from translated payload: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail="Invalid request format")
+
+    try:
+        proxy_config = mapper.resolve_request_config(cc_payload)
+    except (ValueError, HTTPException):
+        raise
+
+    llm_instance = llm.LLM(
+        url=proxy_config["url"],
+        headers=proxy_config["headers"],
+        model=cc_payload.get("model"),
+        params=proxy_config["params"],
+        messages=cc_payload.get("messages"),
+    )
+
+    try:
+        guards = get_guards()
+        _, audit_logs = await apply_guards(llm_instance.chat, llm_instance, guards)
+        log_audit(audit_logs)
+    except GuardBlockedError as e:
+        return JSONResponse(
+            status_code=403,
+            content={"error": {"message": str(e), "type": "guard_block", "code": 403}},
+        )
+
+    is_streaming = payload.get("stream", False)
+
+    if is_streaming:
+
+        async def _stream_responses():
+            raw_stream = await llm_instance.serve()
+            async for chunk in responses_module.translate_streaming_response(raw_stream, payload):
+                yield chunk.encode("utf-8") if isinstance(chunk, str) else chunk
+
+        return StreamingResponse(_stream_responses(), media_type="text/event-stream")
+
+    # Non-streaming: collect Chat Completions response then translate
+    full_content = ""
+    tool_calls_pending: dict = {}
+    final_data: dict | None = None
+    finish_reason: str | None = None
+
+    async for chunk in await llm_instance.serve():
+        if not isinstance(chunk, str):
+            chunk = chunk.decode("utf-8") if isinstance(chunk, bytes) else str(chunk)
+
+        if not chunk.startswith("data: "):
+            try:
+                err = json.loads(chunk)
+                if "error" in err:
+                    code = int(err["error"].get("code", 500))
+                    return JSONResponse(content=err, status_code=code)
+            except (json.JSONDecodeError, ValueError):
+                pass
+            continue
+
+        line = chunk.strip()
+        if line == "data: [DONE]":
+            continue
+
+        try:
+            if len(line) > 6:
+                data = json.loads(line[6:])
+                final_data = data
+                choices = data.get("choices", [])
+                if choices:
+                    delta = choices[0].get("delta", {})
+                    if delta.get("content"):
+                        full_content += delta["content"]
+                    for tc in delta.get("tool_calls", []):
+                        idx = tc.get("index")
+                        if idx is None:
+                            continue
+                        if idx not in tool_calls_pending:
+                            tool_calls_pending[idx] = tc
+                        else:
+                            cur = tool_calls_pending[idx]
+                            if "function" in tc:
+                                cur.setdefault("function", {})
+                                if tc["function"].get("name"):
+                                    cur["function"]["name"] = tc["function"]["name"]
+                                if tc["function"].get("arguments"):
+                                    cur["function"].setdefault("arguments", "")
+                                    cur["function"]["arguments"] += tc["function"]["arguments"]
+                            if tc.get("id"):
+                                cur["id"] = tc["id"]
+                            if tc.get("type"):
+                                cur["type"] = tc["type"]
+                    if choices[0].get("finish_reason"):
+                        finish_reason = choices[0]["finish_reason"]
+        except json.JSONDecodeError:
+            continue
+
+    if not final_data:
+        raise HTTPException(status_code=500, detail="Empty response from downstream")
+
+    # Reconstruct a complete CC response object for translation
+    tool_calls_list = [tool_calls_pending[i] for i in sorted(tool_calls_pending)]
+    message: dict = {"role": "assistant", "content": full_content if full_content else None}
+    if tool_calls_list:
+        message["tool_calls"] = tool_calls_list
+
+    cc_response = {
+        **final_data,
+        "object": "chat.completion",
+        "choices": [
+            {
+                **(final_data.get("choices", [{}])[0] if final_data.get("choices") else {}),
+                "message": message,
+                "finish_reason": finish_reason or ("tool_calls" if tool_calls_list else "stop"),
+            }
+        ],
+    }
+
+    responses_response = responses_module.chat_completions_to_responses(cc_response, payload)
+    return JSONResponse(content=responses_response, status_code=200)
 
 
 def main():
