@@ -614,7 +614,7 @@ def test_downstream_timeout_handling(test_client, setup_mock_downstream):
         }
 
         response = test_client.post("/v1/chat/completions", json=payload)
-        assert response.status_code == 500
+        assert response.status_code == 504
 
 
 def test_models_endpoint_requires_auth_when_enabled(
