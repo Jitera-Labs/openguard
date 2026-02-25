@@ -20,6 +20,7 @@ from src.llm_registry import llm_registry
 
 logger = log.setup_logger(__name__)
 
+# Legacy prefix from previous "Boost" product; used to separate internal params from LLM params.
 BOOST_PARAM_PREFIX = "@boost_"
 
 
@@ -103,6 +104,7 @@ class LLM(AsyncEventEmitter):
         self.queues = []
         self.is_streaming = False
         self.is_final_stream = False
+        self.cpl_id = 0
 
         self.stream_patterns = []
         self.stream_blocks = []
@@ -131,14 +133,24 @@ class LLM(AsyncEventEmitter):
         return f"chatcmpl-{self.cpl_id}"
 
     def get_response_content(self, params: dict, response: dict):
-        content = response["choices"][0]["message"]["content"]
+        choices = response.get("choices") if isinstance(response, dict) else None
+        if not isinstance(choices, list) or not choices:
+            logger.warning(f"Malformed response: missing choices: {str(response)[:200]}")
+            return ""
+        message = choices[0].get("message", {}) if isinstance(choices[0], dict) else {}
+        content = message.get("content", "")
+        if content is None:
+            content = ""
 
         if "response_format" in params and "type" in params["response_format"]:
             if (
                 params["response_format"]["type"] == "json_schema"
                 or params["response_format"]["type"] == "json"
             ):
-                return json.loads(content)
+                try:
+                    return json.loads(content)
+                except (json.JSONDecodeError, TypeError):
+                    return content
 
         return content
 
@@ -472,18 +484,6 @@ class LLM(AsyncEventEmitter):
             finally:
                 await self.emit_done()
 
-            # logger.debug(f"Applying '{self.module}' to '{self.model}'")
-            # try:
-            #   self.chat.llm = self
-            #   await mod.apply(chat=self.chat, llm=self)
-            # except Exception as e:
-            #   logger.error(f"Failed to apply module '{self.module}': {e}")
-            #   for line in traceback.format_tb(e.__traceback__):
-            #     logger.error(line)
-
-            # logger.debug(f"'{self.module}' application complete for '{self.model}'")
-            # await self.emit_done()
-
         task = asyncio.create_task(apply_mod())
         task.add_done_callback(
             lambda t: (
@@ -599,222 +599,216 @@ class LLM(AsyncEventEmitter):
         ) as client:
             current_stream_content = ""
 
-            while True:
-                # Assistant must remember what it said so far
-                if current_stream_content and current_stream_content != "":
-                    if chat.tail.role == "assistant":
-                        chat.tail.content += current_stream_content
-                    else:
-                        chat.assistant(current_stream_content)
+            # Assistant must remember what it said so far
+            if current_stream_content and current_stream_content != "":
+                if chat.tail.role == "assistant":
+                    chat.tail.content += current_stream_content
+                else:
+                    chat.assistant(current_stream_content)
 
-                body = {
-                    "model": model,
-                    "messages": chat.history(),
-                    **params,
-                    "stream": True,
-                    "stream_options": {
-                        "include_usage": True,
-                    },
-                }
+            body = {
+                "model": model,
+                "messages": chat.history(),
+                **params,
+                "stream": True,
+                "stream_options": {
+                    "include_usage": True,
+                },
+            }
 
-                logger.info(body)
+            logger.debug(body)
 
-                # Flag to determine if we need to execute tool calls
-                end_of_stream = False
-                current_stream_content = ""
-                # Track tool call IDs in order of appearance
-                tool_call_order = []
+            # Flag to determine if we need to execute tool calls
+            end_of_stream = False
+            current_stream_content = ""
+            # Track tool call IDs in order of appearance
+            tool_call_order = []
 
-                async with client.stream(
-                    "POST",
-                    f"{url}/chat/completions",
-                    headers=headers,
-                    params=query_params,
-                    json=body,
-                ) as response:
-                    if response.status_code >= 400:
-                        body = await response.aread()
-                        logger.error(
-                            f"Chat completion error {response.status_code}: {body.decode('utf-8')}"
-                        )
-                        # Ensure we raise an error that will be caught by the serving loop
-                        response.raise_for_status()
+            async with client.stream(
+                "POST",
+                f"{url}/chat/completions",
+                headers=headers,
+                params=query_params,
+                json=body,
+            ) as response:
+                if response.status_code >= 400:
+                    body = await response.aread()
+                    logger.error(
+                        f"Chat completion error {response.status_code}: {body.decode('utf-8')}"
+                    )
+                    # Ensure we raise an error that will be caught by the serving loop
+                    response.raise_for_status()
 
-                    buffer = b""
+                buffer = b""
 
-                    async for chunk in response.aiter_bytes():
-                        buffer += chunk
+                async for chunk in response.aiter_bytes():
+                    buffer += chunk
 
-                        while b"\n" in buffer:
-                            line, buffer = buffer.split(b"\n", 1)
-                            line = line.decode("utf-8").strip()
+                    while b"\n" in buffer:
+                        line, buffer = buffer.split(b"\n", 1)
+                        line = line.decode("utf-8").strip()
 
-                            if not line or line.startswith(":"):
-                                continue
+                        if not line or line.startswith(":"):
+                            continue
 
-                            if line == "data: [DONE]":
-                                end_of_stream = True
-                                if hasattr(self, "_stream_redactor"):
-                                    flushed = self._stream_redactor.flush()
-                                    if flushed:
-                                        current_stream_content += flushed
-                                        result += flushed
-                                        if should_emit:
-                                            await self.emit_chunk(
-                                                {
-                                                    "choices": [
-                                                        {"delta": {"content": flushed}, "index": 0}
-                                                    ]
-                                                }
-                                            )
-                                continue
-
-                            if not line.startswith("data:"):
-                                continue
-
-                            try:
-                                parsed = self.parse_chunk(line)
-
-                                # Safely check finish_reason
-                                choices = parsed.get("choices", [])
-                                finish_reason = None
-                                if choices:
-                                    finish_reason = choices[0].get("finish_reason")
-                                    if finish_reason == "tool_calls":
-                                        end_of_stream = True
-
-                                # Extract content for regular text responses
-                                content = self.get_chunk_content(parsed)
-
-                                if content:
-                                    if not hasattr(self, "_stream_redactor") and (
-                                        self.stream_patterns or self.stream_blocks
-                                    ):
-                                        self._stream_redactor = StreamRedactor(
-                                            self.stream_patterns, self.stream_blocks
+                        if line == "data: [DONE]":
+                            end_of_stream = True
+                            if hasattr(self, "_stream_redactor"):
+                                flushed = self._stream_redactor.flush()
+                                if flushed:
+                                    current_stream_content += flushed
+                                    result += flushed
+                                    if should_emit:
+                                        await self.emit_chunk(
+                                            {
+                                                "choices": [
+                                                    {"delta": {"content": flushed}, "index": 0}
+                                                ]
+                                            }
                                         )
+                            continue
 
-                                    if hasattr(self, "_stream_redactor"):
-                                        emitted = self._stream_redactor.push(content)
-                                        content = emitted
+                        if not line.startswith("data:"):
+                            continue
 
-                                    current_stream_content += content
-                                    result += content
+                        try:
+                            parsed = self.parse_chunk(line)
 
-                                    # Override content in parsed chunk
+                            # Safely check finish_reason
+                            choices = parsed.get("choices", [])
+                            finish_reason = None
+                            if choices:
+                                finish_reason = choices[0].get("finish_reason")
+                                if finish_reason == "tool_calls":
+                                    end_of_stream = True
+
+                            # Extract content for regular text responses
+                            content = self.get_chunk_content(parsed)
+
+                            if content:
+                                if not hasattr(self, "_stream_redactor") and (
+                                    self.stream_patterns or self.stream_blocks
+                                ):
+                                    self._stream_redactor = StreamRedactor(
+                                        self.stream_patterns, self.stream_blocks
+                                    )
+
+                                if hasattr(self, "_stream_redactor"):
+                                    emitted = self._stream_redactor.push(content)
+                                    content = emitted
+
+                                current_stream_content += content
+                                result += content
+
+                                # Override content in parsed chunk
+                                if (
+                                    "choices" in parsed
+                                    and parsed["choices"]
+                                    and "delta" in parsed["choices"][0]
+                                ):
+                                    if "content" in parsed["choices"][0]["delta"]:
+                                        parsed["choices"][0]["delta"]["content"] = content
+
+                            if finish_reason and hasattr(self, "_stream_redactor"):
+                                flushed = self._stream_redactor.flush()
+                                if flushed:
+                                    current_stream_content += flushed
+                                    result += flushed
                                     if (
                                         "choices" in parsed
                                         and parsed["choices"]
                                         and "delta" in parsed["choices"][0]
                                     ):
-                                        if "content" in parsed["choices"][0]["delta"]:
-                                            parsed["choices"][0]["delta"]["content"] = content
-
-                                if finish_reason and hasattr(self, "_stream_redactor"):
-                                    flushed = self._stream_redactor.flush()
-                                    if flushed:
-                                        current_stream_content += flushed
-                                        result += flushed
-                                        if (
-                                            "choices" in parsed
-                                            and parsed["choices"]
-                                            and "delta" in parsed["choices"][0]
-                                        ):
-                                            # Append to whatever is there
-                                            existing = parsed["choices"][0]["delta"].get(
-                                                "content", ""
-                                            )
-                                            parsed["choices"][0]["delta"]["content"] = (
-                                                existing + flushed
-                                            )
-
-                                # Process tool call chunks
-                                if self.is_tool_call(parsed):
-                                    # Extract tool call data safely
-                                    choices = parsed.get("choices", [])
-                                    if not choices:
-                                        continue
-
-                                    delta = choices[0].get("delta", {})
-                                    tool_calls_data = delta.get("tool_calls", [])
-
-                                    if not tool_calls_data:
-                                        continue
-
-                                    tool_call = tool_calls_data[0]
-                                    tool_id = tool_call.get("id")
-                                    index = tool_call.get("index", 0)
-
-                                    # Store the first tool call ID we see
-                                    if tool_id and not first_tool_call_id:
-                                        first_tool_call_id = tool_id
-
-                                    # Use tool_id as primary key if available, fall back to index
-                                    # This handles Ollama bug where multiple calls
-                                    # have same index but different ids
-                                    if tool_id:
-                                        key = tool_id
-                                    else:
-                                        # For streaming chunks without id,
-                                        # find existing call by index
-                                        # or use index as key for truly streamed arguments
-                                        key = f"idx_{index}"
-                                        for (
-                                            existing_key,
-                                            existing_call,
-                                        ) in pending_tool_calls.items():
-                                            if existing_call.get("_index") == index:
-                                                key = existing_key
-                                                break
-
-                                    # Initialize tool call if new
-                                    if key not in pending_tool_calls:
-                                        pending_tool_calls[key] = {
-                                            "id": tool_id or first_tool_call_id,
-                                            "function": {
-                                                "name": tool_call.get("function", {}).get("name"),
-                                                "arguments": "",
-                                            },
-                                            "type": tool_call.get("type") or "function",
-                                            "_index": index,
-                                        }
-                                        tool_call_order.append(key)
-
-                                    # Update arguments
-                                    function_args = tool_call.get("function", {}).get("arguments")
-                                    if key in pending_tool_calls and function_args is not None:
-                                        pending_tool_calls[key]["function"]["arguments"] += (
-                                            function_args
+                                        # Append to whatever is there
+                                        existing = parsed["choices"][0]["delta"].get("content", "")
+                                        parsed["choices"][0]["delta"]["content"] = (
+                                            existing + flushed
                                         )
 
-                                    logger.debug(f"Tool call chunk: {parsed}")
+                            # Process tool call chunks
+                            if self.is_tool_call(parsed):
+                                # Extract tool call data safely
+                                choices = parsed.get("choices", [])
+                                if not choices:
+                                    continue
+
+                                delta = choices[0].get("delta", {})
+                                tool_calls_data = delta.get("tool_calls", [])
+
+                                if not tool_calls_data:
+                                    continue
+
+                                tool_call = tool_calls_data[0]
+                                tool_id = tool_call.get("id")
+                                index = tool_call.get("index", 0)
+
+                                # Store the first tool call ID we see
+                                if tool_id and not first_tool_call_id:
+                                    first_tool_call_id = tool_id
+
+                                # Use tool_id as primary key if available, fall back to index
+                                # This handles Ollama bug where multiple calls
+                                # have same index but different ids
+                                if tool_id:
+                                    key = tool_id
                                 else:
-                                    if should_emit:
-                                        await self.emit_chunk(parsed)
+                                    # For streaming chunks without id,
+                                    # find existing call by index
+                                    # or use index as key for truly streamed arguments
+                                    key = f"idx_{index}"
+                                    for (
+                                        existing_key,
+                                        existing_call,
+                                    ) in pending_tool_calls.items():
+                                        if existing_call.get("_index") == index:
+                                            key = existing_key
+                                            break
 
-                            except json.JSONDecodeError:
-                                logger.error(f'Failed to parse chunk: "{line}"')
-                            except Exception as e:
-                                logger.error(f"Error processing chunk: {str(e)}")
-                                for line in traceback.format_tb(e.__traceback__):
-                                    logger.error(line)
+                                # Initialize tool call if new
+                                if key not in pending_tool_calls:
+                                    pending_tool_calls[key] = {
+                                        "id": tool_id or first_tool_call_id,
+                                        "function": {
+                                            "name": tool_call.get("function", {}).get("name"),
+                                            "arguments": "",
+                                        },
+                                        "type": tool_call.get("type") or "function",
+                                        "_index": index,
+                                    }
+                                    tool_call_order.append(key)
 
-                # After stream ends, check if we need to execute tool calls
-                if pending_tool_calls and (end_of_stream or not current_stream_content):
-                    for key in tool_call_order:
-                        tool_call = pending_tool_calls.get(key)
-                        if not tool_call:
-                            continue
-                        # Remove internal tracking field before use
-                        tool_call.pop("_index", None)
+                                # Update arguments
+                                function_args = tool_call.get("function", {}).get("arguments")
+                                if key in pending_tool_calls and function_args is not None:
+                                    pending_tool_calls[key]["function"]["arguments"] += (
+                                        function_args
+                                    )
 
-                        logger.info(f"Passing back to API client: {tool_call}")
-                        await self.emit_chunk(self.chunk_from_tool_call(tool_call))
+                                logger.debug(f"Tool call chunk: {parsed}")
+                            else:
+                                if should_emit:
+                                    await self.emit_chunk(parsed)
 
-                    return result
+                        except json.JSONDecodeError:
+                            logger.error(f'Failed to parse chunk: "{line}"')
+                        except Exception as e:
+                            logger.error(f"Error processing chunk: {str(e)}")
+                            for line in traceback.format_tb(e.__traceback__):
+                                logger.error(line)
 
-                # If no tool calls or content was streamed, we're done
-                break
+            # After stream ends, check if we need to execute tool calls
+            if pending_tool_calls and (end_of_stream or not current_stream_content):
+                for key in tool_call_order:
+                    tool_call = pending_tool_calls.get(key)
+                    if not tool_call:
+                        continue
+                    # Remove internal tracking field before use
+                    tool_call.pop("_index", None)
+
+                    logger.info(f"Passing back to API client: {tool_call}")
+                    await self.emit_chunk(self.chunk_from_tool_call(tool_call))
+
+                return result
 
         return result
 
@@ -871,13 +865,6 @@ class LLM(AsyncEventEmitter):
             **self.params,
             **kwargs.get("params", {}),
         }
-
-        # local_tools = tools.registry.collect_tool_defs()
-        local_tools = []
-
-        if local_tools:
-            params["tools"] = params.get("tools", [])
-            params["tools"].extend(local_tools)
 
         if kwargs.get("schema"):
             params["response_format"] = {
