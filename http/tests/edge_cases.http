@@ -109,7 +109,7 @@ POST {{host}}/v1/chat/completions
 
 ### StreamString: `stream: "true"`
 # Case: `stream` must be a boolean.
-# Actual Behavior: The server returns 200 and streams a downstream error event because the proxy logic starts before strict validation of this field completes/propagates in a way that blocks the header.
+# Expected: 400 Bad Request (validation rejects non-boolean stream values)
 POST {{host}}/v1/chat/completions
 ...defaultHeaders
 {
@@ -120,7 +120,7 @@ POST {{host}}/v1/chat/completions
   "stream": "true"
 }
 
-?? status == 200
+?? status == 400
 
 ### EmptyMessages: `messages: []`
 # Case: `messages` array should not be empty.
