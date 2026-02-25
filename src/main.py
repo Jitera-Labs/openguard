@@ -353,8 +353,27 @@ async def _proxy_anthropic_messages_with_guards(request: Request):
         if key not in param_keys_excluded:
             forwarded_payload[key] = value
 
+    _PRESERVED_FIELDS = {
+        "messages",
+        "system",
+        "tools",
+        "stream",
+        "temperature",
+        "top_p",
+        "top_k",
+        "model",
+        "max_tokens",
+        "stop_sequences",
+        "metadata",
+    }
+
     for key in list(forwarded_payload.keys()):
-        if key not in param_keys_excluded and key in payload and key not in llm_instance.params:
+        if (
+            key not in param_keys_excluded
+            and key in payload
+            and key not in llm_instance.params
+            and key not in _PRESERVED_FIELDS
+        ):
             del forwarded_payload[key]
 
     forwarded_body = json.dumps(forwarded_payload).encode("utf-8")
@@ -455,13 +474,15 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
             raise HTTPException(status_code=400, detail="'max_tokens' must be integer")
         if "temperature" in payload and not isinstance(payload["temperature"], (int, float)):
             raise HTTPException(status_code=400, detail="'temperature' must be number")
+        if "stream" in payload and not isinstance(payload["stream"], bool):
+            raise HTTPException(status_code=400, detail="'stream' must be boolean")
 
         # Resolve backend
         try:
             proxy_config = mapper.resolve_request_config(payload)
         except ValueError as e:
             logger.error(f"Failed to resolve backend: {e}")
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=404, detail=str(e))
 
         # Create LLM proxy instance
         llm_instance = llm.LLM(
@@ -616,7 +637,16 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
 
                 return JSONResponse(content=response_obj, status_code=200)
             else:
-                raise HTTPException(status_code=500, detail="Empty response from downstream")
+                return JSONResponse(
+                    status_code=500,
+                    content={
+                        "error": {
+                            "message": "Empty response from downstream",
+                            "type": "server_error",
+                            "code": 500,
+                        }
+                    },
+                )
 
     except GuardBlockedError as e:
         return JSONResponse(
@@ -751,7 +781,7 @@ async def responses_endpoint(request: Request, authorized: bool = Depends(verify
 
     try:
         proxy_config = mapper.resolve_request_config(cc_payload)
-    except (ValueError, HTTPException):
+    except ValueError:
         raise
 
     llm_instance = llm.LLM(
