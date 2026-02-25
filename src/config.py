@@ -341,7 +341,7 @@ OPENGUARD_LOG_LEVEL = Config[str](
 OPENGUARD_CORS_ORIGINS = Config[StrList](
     name="OPENGUARD_CORS_ORIGINS",
     type=StrList,
-    default="*",
+    default="",
     description="Semicolon-separated list of allowed CORS origins.",
 )
 
@@ -353,21 +353,21 @@ MODEL_FILTER = Config[ConfigDict](
 )
 
 INTERMEDIATE_OUTPUT = Config[bool](
-    name="BOOST_INTERMEDIATE_OUTPUT",
+    name="BOOST_INTERMEDIATE_OUTPUT",  # Legacy "Boost" name — kept for env var compatibility
     type=bool,
     default="false",
     description="Stream intermediate reasoning steps to the client.",
 )
 
 EXTRA_LLM_PARAMS = Config[ConfigDict](
-    name="BOOST_EXTRA_LLM_PARAMS",
+    name="BOOST_EXTRA_LLM_PARAMS",  # Legacy "Boost" product name — kept for env var compatibility
     type=ConfigDict,
     default="",
     description="Extra parameters to inject into every LLM request.",
 )
 
 BOOST_PUBLIC_URL = Config[str](
-    name="BOOST_PUBLIC_URL",
+    name="BOOST_PUBLIC_URL",  # Legacy "Boost" product name — kept for env var compatibility
     type=str,
     default="http://localhost:23294",
     description="Public URL for Boost artifacts.",
