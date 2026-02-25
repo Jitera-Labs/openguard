@@ -6,7 +6,7 @@ from typing import List, Tuple
 
 from src import log
 from src.chat import Chat
-from src.guards import GuardRule
+from src.guards import GuardBlockedError, GuardRule
 from src.llm import LLM
 from src.selection import match_filter
 
@@ -45,7 +45,7 @@ async def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[C
             matches = match_filter(match_context, guard.match)
         except Exception as e:
             logger.error(f"Error matching guard {guard_idx}: {e}")
-            matches = False
+            raise
 
         if not matches:
             continue
@@ -80,7 +80,7 @@ async def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[C
             except AttributeError:
                 logger.error(f"Guard type '{action_type}' does not have an 'apply' function")
             except Exception as e:
-                if type(e).__name__ == "GuardBlockedError":
+                if isinstance(e, GuardBlockedError):
                     # Re-raise using the current class to survive module reloads.
                     # importlib.import_module returns the cached (potentially reloaded)
                     # module, so the class identity matches what callers expect.
