@@ -2,10 +2,10 @@ build:
 	docker compose build openguard
 
 dev:
-	docker compose up --build
+	docker compose up
 
 dev-test:
-	OPENGUARD_CONFIG=/app/presets/full.yaml docker compose up --build
+	OPENGUARD_CONFIG=/app/presets/full.yaml docker compose up
 
 dev-ollama:
 	@harbor ollama --version || true
@@ -13,10 +13,10 @@ dev-ollama:
 	OPENGUARD_OPENAI_KEY_1="sk-ollama" \
 	OPENGUARD_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
 	OPENGUARD_ANTHROPIC_KEY_1="sk-ollama" \
-	docker compose up --build
+	docker compose up
 
 start:
-	docker compose up --build -d
+	docker compose up -d
 
 start-ollama:
 	@harbor ollama --version || true
@@ -24,7 +24,7 @@ start-ollama:
 	OPENGUARD_OPENAI_KEY_1="sk-ollama" \
 	OPENGUARD_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
 	OPENGUARD_ANTHROPIC_KEY_1="sk-ollama" \
-	docker compose up --build -d
+	docker compose up -d
 
 stop:
 	docker compose down

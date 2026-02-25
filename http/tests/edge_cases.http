@@ -177,3 +177,61 @@ POST {{host}}/v1/chat/completions
 }
 
 ?? status == 200
+
+### ResponsesMissingBody: Empty body for /v1/responses
+# Case: Request body is required.
+# Expected: 400 Bad Request
+POST {{host}}/v1/responses
+...defaultHeaders
+
+?? status == 400
+
+### ResponsesInvalidBody: Invalid JSON body for /v1/responses
+# Case: Body must be valid JSON.
+# Expected: 400 Bad Request
+POST {{host}}/v1/responses
+...defaultHeaders
+
+this-is-not-json
+
+?? status == 400
+
+### ResponsesMissingTranslatableInput: Missing required input/instructions
+# Case: Responses payload translates to zero messages.
+# Expected: 400 Bad Request
+POST {{host}}/v1/responses
+...defaultHeaders
+{
+  "model": "{{model}}"
+}
+
+?? status == 400
+
+### ResponsesUnknownModel: `model: "unknown-model-xyz"`
+# Case: Model is unknown to downstream backend.
+# Expected: explicit downstream error envelope/status (400/404/422)
+POST {{host}}/v1/responses
+...defaultHeaders
+{
+  "model": "unknown-model-xyz",
+  "input": "Hello"
+}
+
+{{
+  test('/v1/responses unknown model should return explicit error for unsupported model', () => {
+    const status = response.statusCode || response.status;
+    const body = response.parsedBody;
+
+    if (status === 400 || status === 404 || status === 422) {
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+      const hasFastAPIError = body && typeof body.detail === 'string';
+
+      if (!hasOpenAIError && !hasFastAPIError) {
+        throw new Error('Expected explicit error envelope for /v1/responses unknown model');
+      }
+      return;
+    }
+
+    throw new Error(`Unexpected status for /v1/responses unknown model: ${status}`);
+  });
+}}

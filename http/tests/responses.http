@@ -1,0 +1,623 @@
+# @import ../variables.http
+# @import ../helpers.http
+
+### 1. Responses Basic Input (non-stream)
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": "What is the capital of France? Answer with one word.",
+  "max_output_tokens": 12
+}
+
+?? status == 200
+{{
+  test('Responses /v1/responses basic non-stream should return response envelope and output items', () => {
+    const body = response.parsedBody;
+
+    expect(body.object).toBe('response', 'Expected Responses object envelope');
+    expect(typeof body.id).toBe('string', 'Expected response id string');
+    expect(Array.isArray(body.output)).toBeTruthy('Expected output array');
+    expect(body.output.length > 0).toBeTruthy('Expected non-empty output array');
+
+    const hasAssistantMessage = body.output.some(item =>
+      item && item.type === 'message' && item.role === 'assistant' && Array.isArray(item.content)
+    );
+    expect(hasAssistantMessage).toBeTruthy('Expected assistant message output item');
+  });
+}}
+
+### 2. Responses Instructions + Input
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "instructions": "Answer in exactly one lowercase word.",
+  "input": "What is the capital of France?"
+}
+
+?? status == 200
+{{
+  test('Responses /v1/responses should accept instructions with input', () => {
+    const body = response.parsedBody;
+
+    expect(body.object).toBe('response', 'Expected Responses object envelope');
+    expect(Array.isArray(body.output)).toBeTruthy('Expected output array');
+    expect(body.output.length > 0).toBeTruthy('Expected output entries');
+  });
+}}
+
+### 3. Responses Message Array Input Parts
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": [
+    {
+      "type": "message",
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Respond with one short sentence about Paris."
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Responses /v1/responses should accept message-array content parts', () => {
+    const body = response.parsedBody;
+
+    expect(body.object).toBe('response', 'Expected Responses object envelope');
+    expect(Array.isArray(body.output)).toBeTruthy('Expected output array');
+    expect(body.output.length > 0).toBeTruthy('Expected non-empty output array');
+  });
+}}
+
+### 4. Responses Streaming SSE Completion
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": "What is the capital of France? Answer with one word.",
+  "stream": true,
+  "max_output_tokens": 12
+}
+
+?? status == 200
+{{
+  test('Responses /v1/responses stream should emit completion lifecycle events', () => {
+    const payloads = parseSseJsonPayloads(response.body);
+
+    expect(payloads.length > 0).toBeTruthy('Expected non-empty SSE payloads');
+
+    const hasCreated = payloads.some(evt => evt && evt.type === 'response.created');
+    const hasTextDelta = payloads.some(evt => evt && evt.type === 'response.output_text.delta');
+    const hasCompleted = payloads.some(evt => evt && evt.type === 'response.completed');
+
+    expect(hasCreated).toBeTruthy('Expected response.created event');
+    expect(hasTextDelta).toBeTruthy('Expected response.output_text.delta event');
+    expect(hasCompleted).toBeTruthy('Expected response.completed event');
+  });
+}}
+
+### 5. Responses Function Tools (non-stream)
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": "Call calculate_sum with a=2 and b=3. Return only a function call.",
+  "tools": [
+    {
+      "type": "function",
+      "name": "calculate_sum",
+      "description": "Calculate sum of two numbers",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "a": { "type": "number" },
+          "b": { "type": "number" }
+        },
+        "required": ["a", "b"],
+        "additionalProperties": false
+      },
+      "strict": true
+    }
+  ],
+  "tool_choice": {
+    "type": "function",
+    "name": "calculate_sum"
+  }
+}
+
+{{
+  test('Responses /v1/responses tool calling non-stream should return function_call or explicit capability error', () => {
+    const status = response.statusCode || response.status;
+    const body = response.parsedBody;
+
+    if (status === 200) {
+      expect(body.object).toBe('response', 'Expected Responses object envelope');
+      expect(Array.isArray(body.output)).toBeTruthy('Expected output array');
+      expect(typeof body.status).toBe('string', 'Expected response status string');
+      expect(body.status === 'completed' || body.status === 'incomplete').toBeTruthy(
+        'Expected response status to be completed or incomplete'
+      );
+
+      if (body.status === 'incomplete') {
+        expect(body.incomplete_details && typeof body.incomplete_details.reason === 'string').toBeTruthy(
+          'Expected incomplete_details.reason when status is incomplete'
+        );
+      }
+
+      const functionCall = (body.output || []).find(
+        item => item && item.type === 'function_call' && item.name === 'calculate_sum'
+      );
+      const assistantMessage = (body.output || []).find(
+        item => item && item.type === 'message' && item.role === 'assistant' && Array.isArray(item.content)
+      );
+
+      expect(Boolean(functionCall) || Boolean(assistantMessage)).toBeTruthy(
+        'Expected calculate_sum function_call output item or assistant message fallback'
+      );
+
+      if (functionCall) {
+        expect(typeof functionCall.arguments).toBe('string', 'Expected function_call arguments as string');
+      }
+      return;
+    }
+
+    if (status === 400 || status === 404 || status === 422) {
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+      const hasFastAPIError = body && (
+        typeof body.detail === 'string' ||
+        (Array.isArray(body.detail) && body.detail.length > 0) ||
+        (body.detail && typeof body.detail === 'object')
+      );
+      const detailText = typeof body?.detail === 'string'
+        ? body.detail
+        : body?.detail
+          ? JSON.stringify(body.detail)
+          : '';
+      const errorText = [body?.error?.message, detailText]
+        .filter(part => typeof part === 'string' && part.length > 0)
+        .join(' ')
+        .toLowerCase();
+      const indicatesUnsupportedCapability = /(unsupported|not supported|does not support|tool|function|schema|format|feature|model)/i.test(errorText);
+      expect(hasOpenAIError || hasFastAPIError).toBeTruthy(
+        'Expected explicit error envelope for unsupported Responses tool calling'
+      );
+      expect(indicatesUnsupportedCapability).toBeTruthy(
+        'Expected capability-specific error details for unsupported Responses tool calling'
+      );
+      return;
+    }
+
+    throw new Error(`Unexpected status for Responses tool calling non-stream: ${status}`);
+  });
+}}
+
+### 6. Responses Function Tools (stream)
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": "Call calculate_sum with a=2 and b=3. Return only a function call.",
+  "stream": true,
+  "tools": [
+    {
+      "type": "function",
+      "name": "calculate_sum",
+      "description": "Calculate sum of two numbers",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "a": { "type": "number" },
+          "b": { "type": "number" }
+        },
+        "required": ["a", "b"],
+        "additionalProperties": false
+      },
+      "strict": true
+    }
+  ],
+  "tool_choice": {
+    "type": "function",
+    "name": "calculate_sum"
+  }
+}
+
+{{
+  test('Responses /v1/responses tool calling stream should emit function_call done events or explicit capability error', () => {
+    const status = response.statusCode || response.status;
+
+    if (status === 200) {
+      const payloads = parseSseJsonPayloads(response.body);
+      expect(payloads.length > 0).toBeTruthy('Expected non-empty Responses streaming payloads');
+
+      const hasFunctionCallDone = payloads.some(evt =>
+        evt &&
+        evt.type === 'response.output_item.done' &&
+        evt.item &&
+        evt.item.type === 'function_call' &&
+        evt.item.name === 'calculate_sum'
+      );
+      const hasAssistantMessageDone = payloads.some(evt =>
+        evt &&
+        evt.type === 'response.output_item.done' &&
+        evt.item &&
+        evt.item.type === 'message' &&
+        evt.item.role === 'assistant'
+      );
+      const hasCompleted = payloads.some(evt => evt && evt.type === 'response.completed');
+
+      expect(hasFunctionCallDone || hasAssistantMessageDone).toBeTruthy(
+        'Expected function_call done event or assistant message fallback in Responses stream'
+      );
+      expect(hasCompleted).toBeTruthy('Expected response.completed event');
+      return;
+    }
+
+    if (status === 400 || status === 404 || status === 422) {
+      const body = response.parsedBody;
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+      const hasFastAPIError = body && (
+        typeof body.detail === 'string' ||
+        (Array.isArray(body.detail) && body.detail.length > 0) ||
+        (body.detail && typeof body.detail === 'object')
+      );
+      const detailText = typeof body?.detail === 'string'
+        ? body.detail
+        : body?.detail
+          ? JSON.stringify(body.detail)
+          : '';
+      const errorText = [body?.error?.message, detailText]
+        .filter(part => typeof part === 'string' && part.length > 0)
+        .join(' ')
+        .toLowerCase();
+      const indicatesUnsupportedCapability = /(unsupported|not supported|does not support|tool|function|schema|format|feature|model)/i.test(errorText);
+      expect(hasOpenAIError || hasFastAPIError).toBeTruthy(
+        'Expected explicit error envelope for unsupported Responses streaming tool calling'
+      );
+      expect(indicatesUnsupportedCapability).toBeTruthy(
+        'Expected capability-specific error details for unsupported Responses streaming tool calling'
+      );
+      return;
+    }
+
+    throw new Error(`Unexpected status for Responses tool calling stream: ${status}`);
+  });
+}}
+
+### 7. Responses Continuation via function_call_output
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": [
+    {
+      "type": "function_call",
+      "call_id": "call_1",
+      "name": "calculate_sum",
+      "arguments": "{\"a\":2,\"b\":3}"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_1",
+      "output": "5"
+    },
+    {
+      "type": "message",
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Using that tool result, answer in one short sentence."
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 200
+{{
+  test('Responses /v1/responses should continue conversation with function_call_output input', () => {
+    const body = response.parsedBody;
+
+    expect(body.object).toBe('response', 'Expected Responses object envelope');
+    expect(Array.isArray(body.output)).toBeTruthy('Expected output array');
+
+    const assistantMessage = (body.output || []).find(item => item && item.type === 'message');
+    expect(Boolean(assistantMessage)).toBeTruthy('Expected assistant message output item after continuation');
+  });
+}}
+
+### 8. Responses Structured Output JSON Schema (non-stream)
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": "Return exactly one JSON object with keys country and language for Paris. Output JSON only.",
+  "temperature": 0,
+  "text": {
+    "format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "CountryInfoSchema",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "country": { "type": "string" },
+            "language": { "type": "string" }
+          },
+          "required": ["country", "language"],
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}
+
+{{
+  test('Responses /v1/responses structured output non-stream should return schema JSON or explicit capability error', () => {
+    const status = response.statusCode || response.status;
+    const body = response.parsedBody;
+
+    if (status === 200) {
+      expect(body.object).toBe('response', 'Expected Responses object envelope');
+      expect(Array.isArray(body.output)).toBeTruthy('Expected output array');
+
+      const text = (body.output || [])
+        .filter(item => item && item.type === 'message' && Array.isArray(item.content))
+        .flatMap(item => item.content)
+        .filter(part => part && part.type === 'output_text' && typeof part.text === 'string')
+        .map(part => part.text)
+        .join('')
+        .trim();
+
+      expect(text.length > 0).toBeTruthy('Expected non-empty structured text payload');
+
+      const parsed = JSON.parse(extractJSONObjectText(text));
+      const isObject = parsed && typeof parsed === 'object' && !Array.isArray(parsed);
+      expect(isObject).toBeTruthy('Expected structured output payload to be JSON object');
+      expect(typeof parsed.country).toBe('string', 'Expected structured output field country as string');
+      expect(typeof parsed.language).toBe('string', 'Expected structured output field language as string');
+      return;
+    }
+
+    if (status === 400 || status === 404 || status === 422) {
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+      const hasFastAPIError = body && (
+        typeof body.detail === 'string' ||
+        (Array.isArray(body.detail) && body.detail.length > 0) ||
+        (body.detail && typeof body.detail === 'object')
+      );
+      const detailText = typeof body?.detail === 'string'
+        ? body.detail
+        : body?.detail
+          ? JSON.stringify(body.detail)
+          : '';
+      const errorText = [body?.error?.message, detailText]
+        .filter(part => typeof part === 'string' && part.length > 0)
+        .join(' ')
+        .toLowerCase();
+      const indicatesUnsupportedCapability = /(unsupported|not supported|does not support|tool|function|schema|format|feature|model)/i.test(errorText);
+      expect(hasOpenAIError || hasFastAPIError).toBeTruthy(
+        'Expected explicit error envelope for unsupported Responses structured outputs'
+      );
+      expect(indicatesUnsupportedCapability).toBeTruthy(
+        'Expected capability-specific error details for unsupported Responses structured outputs'
+      );
+      return;
+    }
+
+    throw new Error(`Unexpected status for Responses structured outputs non-stream: ${status}`);
+  });
+}}
+
+### 9. Responses Structured Output JSON Schema (stream)
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": "Return exactly one JSON object with keys country and language for Paris. Output JSON only.",
+  "temperature": 0,
+  "stream": true,
+  "text": {
+    "format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "CountryInfoSchema",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "country": { "type": "string" },
+            "language": { "type": "string" }
+          },
+          "required": ["country", "language"],
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}
+
+{{
+  test('Responses /v1/responses structured output stream should emit schema JSON deltas or explicit capability error', () => {
+    const status = response.statusCode || response.status;
+
+    if (status === 200) {
+      const payloads = parseSseJsonPayloads(response.body);
+      expect(payloads.length > 0).toBeTruthy('Expected non-empty Responses streaming payloads');
+
+      const text = payloads
+        .filter(evt => evt && evt.type === 'response.output_text.delta' && typeof evt.delta === 'string')
+        .map(evt => evt.delta)
+        .join('')
+        .trim();
+
+      expect(text.length > 0).toBeTruthy('Expected structured streaming text deltas');
+
+      const parsed = JSON.parse(extractJSONObjectText(text));
+      const isObject = parsed && typeof parsed === 'object' && !Array.isArray(parsed);
+      expect(isObject).toBeTruthy('Expected structured streaming payload to be JSON object');
+      expect(typeof parsed.country).toBe('string', 'Expected structured streaming field country as string');
+      expect(typeof parsed.language).toBe('string', 'Expected structured streaming field language as string');
+      return;
+    }
+
+    if (status === 400 || status === 404 || status === 422) {
+      const body = response.parsedBody;
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+      const hasFastAPIError = body && (
+        typeof body.detail === 'string' ||
+        (Array.isArray(body.detail) && body.detail.length > 0) ||
+        (body.detail && typeof body.detail === 'object')
+      );
+      const detailText = typeof body?.detail === 'string'
+        ? body.detail
+        : body?.detail
+          ? JSON.stringify(body.detail)
+          : '';
+      const errorText = [body?.error?.message, detailText]
+        .filter(part => typeof part === 'string' && part.length > 0)
+        .join(' ')
+        .toLowerCase();
+      const indicatesUnsupportedCapability = /(unsupported|not supported|does not support|tool|function|schema|format|feature|model)/i.test(errorText);
+      expect(hasOpenAIError || hasFastAPIError).toBeTruthy(
+        'Expected explicit error envelope for unsupported Responses structured streaming outputs'
+      );
+      expect(indicatesUnsupportedCapability).toBeTruthy(
+        'Expected capability-specific error details for unsupported Responses structured streaming outputs'
+      );
+      return;
+    }
+
+    throw new Error(`Unexpected status for Responses structured outputs stream: ${status}`);
+  });
+}}
+
+### 10. Responses max_output_tokens Behavior
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": "Write a long explanation of why Paris is famous.",
+  "max_output_tokens": 1
+}
+
+?? status == 200
+{{
+  test('Responses /v1/responses max_output_tokens should preserve response shape and incomplete semantics when applicable', () => {
+    const body = response.parsedBody;
+
+    expect(body.object).toBe('response', 'Expected Responses object envelope');
+    expect(typeof body.status).toBe('string', 'Expected response status string');
+    expect(Array.isArray(body.output)).toBeTruthy('Expected output array');
+
+    if (body.status === 'incomplete') {
+      expect(body.incomplete_details).toBeDefined('Expected incomplete_details when status is incomplete');
+      expect(body.incomplete_details.reason).toBe('max_output_tokens', 'Expected incomplete reason max_output_tokens');
+    }
+  });
+}}
+
+### 11. Responses Guard Rejection Path
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "user": "keyword-block",
+  "input": "This request contains forbidden content and should be blocked."
+}
+
+{{
+  test('Responses /v1/responses guard test should return rejection envelope when enabled or allow response when guards are permissive', () => {
+    const status = response.statusCode || response.status;
+    const body = response.parsedBody;
+
+    if (status === 403) {
+      expect(body.error).toBeDefined('Expected error envelope on blocked response');
+      expect(body.error.type).toBe('guard_block', 'Expected guard_block error type');
+      expect(body.error.message).toInclude('forbidden', 'Expected forbidden keyword in blocked message');
+      return;
+    }
+
+    if (status === 200) {
+      expect(body.object).toBe('response', 'Expected Responses object envelope for permissive guard config');
+      expect(Array.isArray(body.output)).toBeTruthy('Expected output array for permissive guard config');
+      return;
+    }
+
+    throw new Error(`Unexpected status for Responses guard path: ${status}`);
+  });
+}}
+
+### 12. Responses Pass-through Fields Smoke
+POST {{host}}/v1/responses
+...defaultHeaders
+
+{
+  "model": "{{model}}",
+  "input": "Reply with one short sentence about Paris.",
+  "metadata": {
+    "suite": "responses-http",
+    "case": "passthrough-smoke"
+  },
+  "store": false,
+  "parallel_tool_calls": true
+}
+
+{{
+  test('Responses /v1/responses should accept pass-through fields or return explicit capability error', () => {
+    const status = response.statusCode || response.status;
+    const body = response.parsedBody;
+
+    if (status === 200) {
+      expect(body.object).toBe('response', 'Expected Responses object envelope');
+      expect(Array.isArray(body.output)).toBeTruthy('Expected output array');
+      return;
+    }
+
+    if (status === 400 || status === 404 || status === 422) {
+      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
+      const hasFastAPIError = body && (
+        typeof body.detail === 'string' ||
+        (Array.isArray(body.detail) && body.detail.length > 0) ||
+        (body.detail && typeof body.detail === 'object')
+      );
+      const detailText = typeof body?.detail === 'string'
+        ? body.detail
+        : body?.detail
+          ? JSON.stringify(body.detail)
+          : '';
+      const errorText = [body?.error?.message, detailText]
+        .filter(part => typeof part === 'string' && part.length > 0)
+        .join(' ')
+        .toLowerCase();
+      const indicatesUnsupportedCapability = /(unsupported|not supported|does not support|tool|function|schema|format|feature|model)/i.test(errorText);
+      expect(hasOpenAIError || hasFastAPIError).toBeTruthy(
+        'Expected explicit error envelope for unsupported pass-through fields'
+      );
+      expect(indicatesUnsupportedCapability).toBeTruthy(
+        'Expected capability-specific error details for unsupported pass-through fields'
+      );
+      return;
+    }
+
+    throw new Error(`Unexpected status for Responses pass-through fields: ${status}`);
+  });
+}}
