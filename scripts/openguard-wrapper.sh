@@ -53,7 +53,8 @@ LAUNCH_MOUNTS=()
 SECURITY_CAPS=(--cap-drop ALL)
 
 if [[ "${1:-}" == "launch" ]]; then
-  SECURITY_CAPS=()  # launch needs host file access — use default Docker caps
+  # launch mounts host config dirs for credential discovery, but does NOT
+  # need elevated capabilities — keep --cap-drop ALL.
   for dir in "$HOME/.config" "$HOME/.local/share"; do
     mkdir -p "$dir"
     LAUNCH_MOUNTS+=(-v "$dir:/root${dir#"$HOME"}")
