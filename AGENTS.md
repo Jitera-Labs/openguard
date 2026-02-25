@@ -76,3 +76,7 @@ Git search results are signals, not proof. An empty grep does not mean code does
 ## Modifying Files
 
 Use dedicated file editing commands exclusively. Never use `cat`, `echo`, `git checkout`, or similar to write or reset files.
+
+## Special note for Gemini LLMs
+
+If you're a Gemini LLM and you're seeing this, do not ever use python or other scripts to create or modify files. This is strictly prohibited, you're not allowed to do this. There's no circumstance under which using scripting to modify files is acceptable. Additionally, if you're prompted that you must use subagents - you must use subagents, it's non-negotiable. Furthermore, never use terminal commands like `cat` or `grep` to read or search files. Always use the proper built-in tools (`read_file`, `grep_search`, etc.) to inspect file contents.

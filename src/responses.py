@@ -87,17 +87,28 @@ def responses_to_chat_completions(payload: dict) -> dict:
                 # type == "message" or no type — passthrough role/content
                 role = item.get("role", "user")
                 content = item.get("content", "")
-                # content may be a list of content parts; flatten text parts to string
+                # content may be a list of content parts; map to Chat Completions format
                 if isinstance(content, list):
-                    text_parts = []
+                    cc_content: list[dict] = []
                     for part in content:
-                        if isinstance(part, dict) and part.get("type") == "input_text":
-                            text_parts.append(part.get("text", ""))
-                        elif isinstance(part, dict) and part.get("type") == "text":
-                            text_parts.append(part.get("text", ""))
+                        if isinstance(part, dict):
+                            part_type = part.get("type")
+                            if part_type in ("input_text", "text"):
+                                cc_content.append({"type": "text", "text": part.get("text", "")})
+                            elif part_type == "input_image":
+                                img_part: dict = {"type": "image_url"}
+                                if "image_url" in part:
+                                    img_part["image_url"] = part["image_url"]
+                                elif "file_id" in part:
+                                    # Pass file_id through, though standard CC uses image_url
+                                    img_part["image_url"] = {"url": part["file_id"]}
+                                cc_content.append(img_part)
+                            else:
+                                # Pass through other types
+                                cc_content.append(part)
                         elif isinstance(part, str):
-                            text_parts.append(part)
-                    content = "\n".join(text_parts)
+                            cc_content.append({"type": "text", "text": part})
+                    content = cc_content  # type: ignore
                 messages.append({"role": role, "content": content})
 
     result: dict = {"messages": messages}
@@ -112,9 +123,26 @@ def responses_to_chat_completions(payload: dict) -> dict:
         ("presence_penalty", "presence_penalty"),
         ("seed", "seed"),
         ("user", "user"),
+        ("tool_choice", "tool_choice"),
+        ("parallel_tool_calls", "parallel_tool_calls"),
+        ("metadata", "metadata"),
+        ("store", "store"),
+        ("stream_options", "stream_options"),
+        ("service_tier", "service_tier"),
+        ("top_logprobs", "top_logprobs"),
     ]:
         if src in payload:
             result[dst] = payload[src]
+
+    # text -> response_format
+    if "text" in payload and isinstance(payload["text"], dict):
+        if "format" in payload["text"]:
+            result["response_format"] = payload["text"]["format"]
+
+    # reasoning -> reasoning_effort
+    if "reasoning" in payload and isinstance(payload["reasoning"], dict):
+        if "effort" in payload["reasoning"]:
+            result["reasoning_effort"] = payload["reasoning"]["effort"]
 
     # max_output_tokens → max_tokens
     if "max_output_tokens" in payload:
@@ -131,16 +159,20 @@ def responses_to_chat_completions(payload: dict) -> dict:
             if tool_type in _BUILTIN_TOOL_TYPES:
                 continue
             # Wrap in Chat Completions externally-tagged format
-            cc_tools.append(
-                {
-                    "type": "function",
-                    "function": {
-                        "name": tool.get("name", ""),
-                        "description": tool.get("description", ""),
-                        "parameters": tool.get("parameters", {}),
-                    },
-                }
-            )
+            fn_data = tool.get("function", tool)
+            cc_tool: dict = {
+                "type": "function",
+                "function": {
+                    "name": fn_data.get("name", ""),
+                    "description": fn_data.get("description", ""),
+                    "parameters": fn_data.get("parameters", {}),
+                },
+            }
+            if "strict" in fn_data:
+                cc_tool["function"]["strict"] = fn_data["strict"]
+            elif "strict" in tool:
+                cc_tool["function"]["strict"] = tool["strict"]
+            cc_tools.append(cc_tool)
         if cc_tools:
             result["tools"] = cc_tools
 
@@ -158,7 +190,14 @@ def chat_completions_to_responses(cc_response: dict, original_request: dict) -> 
     message = choice.get("message", {})
     finish_reason = choice.get("finish_reason", "stop")
 
-    status = "failed" if finish_reason == "content_filter" else "completed"
+    status = "completed"
+    incomplete_details = None
+    if finish_reason == "content_filter":
+        status = "incomplete"
+        incomplete_details = {"reason": "content_filter"}
+    elif finish_reason == "length":
+        status = "incomplete"
+        incomplete_details = {"reason": "max_output_tokens"}
 
     output: list[dict] = []
 
@@ -197,7 +236,12 @@ def chat_completions_to_responses(cc_response: dict, original_request: dict) -> 
         "total_tokens": cc_usage.get("total_tokens", 0),
     }
 
-    return {
+    if "prompt_tokens_details" in cc_usage:
+        usage["input_tokens_details"] = cc_usage["prompt_tokens_details"]
+    if "completion_tokens_details" in cc_usage:
+        usage["output_tokens_details"] = cc_usage["completion_tokens_details"]
+
+    resp = {
         "id": resp_id,
         "object": "response",
         "created_at": created_at,
@@ -206,6 +250,9 @@ def chat_completions_to_responses(cc_response: dict, original_request: dict) -> 
         "output": output,
         "usage": usage,
     }
+    if incomplete_details:
+        resp["incomplete_details"] = incomplete_details
+    return resp
 
 
 async def translate_streaming_response(
@@ -223,6 +270,8 @@ async def translate_streaming_response(
     output_item_index = 0
     item_started = False
     accumulated_text = ""
+    accumulated_tool_calls: dict[int, dict] = {}
+    final_usage = None
 
     async for raw_chunk in stream:
         chunk_text = raw_chunk.decode("utf-8") if isinstance(raw_chunk, bytes) else raw_chunk
@@ -234,48 +283,76 @@ async def translate_streaming_response(
 
             if line == "data: [DONE]":
                 # Emit done events
+                output_items = []
                 if item_started:
-                    yield _sse_event(
-                        "response.output_text.done",
-                        {
-                            "type": "response.output_text.done",
-                            "output_index": output_item_index,
-                            "content_index": 0,
-                            "text": accumulated_text,
-                        },
-                    )
-                    yield _sse_event(
-                        "response.output_item.done",
-                        {
-                            "type": "response.output_item.done",
-                            "output_index": output_item_index,
-                            "item": {
+                    if accumulated_text:
+                        yield _sse_event(
+                            "response.output_text.done",
+                            {
+                                "type": "response.output_text.done",
+                                "output_index": output_item_index,
+                                "content_index": 0,
+                                "text": accumulated_text,
+                            },
+                        )
+                        output_items.append(
+                            {
                                 "type": "message",
                                 "id": f"msg_{resp_id}",
                                 "status": "completed",
                                 "role": "assistant",
                                 "content": [{"type": "output_text", "text": accumulated_text}],
+                            }
+                        )
+                        yield _sse_event(
+                            "response.output_item.done",
+                            {
+                                "type": "response.output_item.done",
+                                "output_index": output_item_index,
+                                "item": output_items[-1],
                             },
-                        },
-                    )
+                        )
+                        output_item_index += 1
+
+                    for tc_idx, tc in sorted(accumulated_tool_calls.items()):
+                        tc_item = {
+                            "type": "function_call",
+                            "id": f"fc_{tc.get('id', '')}",
+                            "call_id": tc.get("id", ""),
+                            "name": tc.get("name", ""),
+                            "arguments": tc.get("arguments", ""),
+                        }
+                        output_items.append(tc_item)
+                        yield _sse_event(
+                            "response.output_item.done",
+                            {
+                                "type": "response.output_item.done",
+                                "output_index": output_item_index,
+                                "item": tc_item,
+                            },
+                        )
+                        output_item_index += 1
+
                 completed_response = {
                     "id": resp_id,
                     "object": "response",
                     "created_at": created_at,
                     "model": model,
                     "status": "completed",
-                    "output": [
-                        {
-                            "type": "message",
-                            "id": f"msg_{resp_id}",
-                            "status": "completed",
-                            "role": "assistant",
-                            "content": [{"type": "output_text", "text": accumulated_text}],
-                        }
-                    ]
-                    if item_started
-                    else [],
+                    "output": output_items,
                 }
+                if final_usage:
+                    usage = {
+                        "input_tokens": final_usage.get("prompt_tokens", 0),
+                        "output_tokens": final_usage.get("completion_tokens", 0),
+                        "total_tokens": final_usage.get("total_tokens", 0),
+                    }
+                    if "prompt_tokens_details" in final_usage:
+                        usage["input_tokens_details"] = final_usage["prompt_tokens_details"]
+                    if "completion_tokens_details" in final_usage:
+                        usage["output_tokens_details"] = final_usage["completion_tokens_details"]
+                    completed_response["usage"] = usage
+
                 yield _sse_event(
                     "response.completed",
                     {"type": "response.completed", "response": completed_response},
@@ -314,9 +391,12 @@ async def translate_streaming_response(
 
             choices = data.get("choices", [])
             if not choices:
+                if "usage" in data:
+                    final_usage = data["usage"]
                 continue
             delta = choices[0].get("delta", {})
             content_delta = delta.get("content")
+            tool_calls_delta = delta.get("tool_calls")
 
             if content_delta is not None:
                 if not item_started:
@@ -357,6 +437,27 @@ async def translate_streaming_response(
                         "delta": content_delta,
                     },
                 )
+
+            if tool_calls_delta:
+                if not item_started:
+                    item_started = True
+                for tc in tool_calls_delta:
+                    idx = tc.get("index", 0)
+                    if idx not in accumulated_tool_calls:
+                        accumulated_tool_calls[idx] = {
+                            "id": tc.get("id", ""),
+                            "name": tc.get("function", {}).get("name", ""),
+                            "arguments": tc.get("function", {}).get("arguments", ""),
+                        }
+                    else:
+                        if "id" in tc and tc["id"]:
+                            accumulated_tool_calls[idx]["id"] = tc["id"]
+                        if "function" in tc:
+                            fn = tc["function"]
+                            if "name" in fn and fn["name"]:
+                                accumulated_tool_calls[idx]["name"] += fn["name"]
+                            if "arguments" in fn and fn["arguments"]:
+                                accumulated_tool_calls[idx]["arguments"] += fn["arguments"]
 
 
 def _sse_event(event_name: str, data: dict) -> str:

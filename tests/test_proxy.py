@@ -30,8 +30,6 @@ async def test_resolve_request_config_unknown_model(monkeypatch):
     """Test that resolve_request_config raises HTTPException for unknown model."""
     import importlib
 
-    from fastapi import HTTPException
-
     from src import config
 
     # Ensure multiple URLs are configured so fallback logic doesn't trigger
@@ -47,7 +45,7 @@ async def test_resolve_request_config_unknown_model(monkeypatch):
     }
 
     try:
-        with pytest.raises(HTTPException, match="Unknown model"):
+        with pytest.raises(ValueError, match="Unknown model"):
             mapper.resolve_request_config(payload)
     finally:
         # Restore config to avoid side effects

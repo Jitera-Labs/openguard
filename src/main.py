@@ -482,6 +482,8 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
             proxy_config = mapper.resolve_request_config(payload)
         except ValueError as e:
             logger.error(f"Failed to resolve backend: {e}")
+            if "without a model specifier" in str(e):
+                raise HTTPException(status_code=400, detail=str(e))
             raise HTTPException(status_code=404, detail=str(e))
 
         # Create LLM proxy instance
@@ -720,7 +722,16 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                 content={"error": {"message": str(e), "type": "guard_block", "code": 403}},
             )
         logger.error(f"Error in chat completion: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "message": "Internal server error",
+                    "type": "server_error",
+                    "code": 500,
+                }
+            },
+        )
 
 
 @app.post("/v1/responses")

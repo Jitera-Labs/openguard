@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from src.guards import GuardBlockedError
+import src.guards
 from src.llm import StreamRedactor
 
 
@@ -44,7 +44,8 @@ def test_stream_redactor_blocking():
     assert redactor.push("the se") == "e is t"
 
     with pytest.raises(
-        GuardBlockedError, match="Request blocked: found keyword 'secret_key' in streaming response"
+        src.guards.GuardBlockedError,
+        match="Request blocked: found keyword 'secret_key' in streaming response",
     ):
         redactor.push("cret_key: 123")
 
@@ -59,7 +60,8 @@ def test_stream_redactor_flush_blocking():
     assert redactor.push("This contains badw") == ""
 
     with pytest.raises(
-        GuardBlockedError, match="Request blocked: found keyword 'badword' in streaming response"
+        src.guards.GuardBlockedError,
+        match="Request blocked: found keyword 'badword' in streaming response",
     ):
         redactor.push("ord")
 
