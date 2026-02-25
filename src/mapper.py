@@ -3,12 +3,11 @@ from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional
 import httpx
 from asyncache import cached
 from cachetools import TTLCache
-from fastapi import HTTPException
 
 from . import config, log
 
 if TYPE_CHECKING:
-    from . import llm
+    pass
 
 logger = log.setup_logger(__name__)
 
@@ -22,6 +21,7 @@ MODEL_TO_BACKEND: Dict[str, Dict[str, str]] = {"openai": {}, "anthropic": {}}
 async def list_downstream(provider: str = "openai"):
     logger.debug(f"Listing downstream models for provider '{provider}'")
 
+    MODEL_TO_BACKEND[provider] = {}  # Clear stale entries for this provider
     all_models = []
 
     for backend in get_provider_backends(provider):
@@ -243,10 +243,7 @@ def resolve_request_config(body: Dict) -> Dict:
         else:
             # Check if we should raise HTTPException or ValueError based on contract
             # Standard behavior here seems to ideally be 400/404
-            raise HTTPException(
-                status_code=404,
-                detail=f"Unknown model: '{model}'",
-            )
+            raise ValueError(f"Unknown model: '{model}'")
 
     # Find key for backend
     urls = _as_list(config.OPENGUARD_OPENAI_URLS.value)
@@ -273,25 +270,3 @@ def resolve_request_config(body: Dict) -> Dict:
         proxy_config["headers"]["Authorization"] = f"Bearer {proxy_key}"
 
     return proxy_config
-
-
-def is_title_generation_task(llm: "llm.LLM"):
-    # TODO: Better way to identify?
-    return llm.chat.has_substring("3-5 word title")
-
-
-DIRECT_TASK_PROMPTS = [
-    # Open WebUI prompts related to system tasks
-    "Generate a concise, 3-5 word title",
-    "Based on the chat history, determine whether a search is necessary",
-    "Generate 1-3 broad tags categorizing",
-    "You are an autocompletion system. Continue the text in `<text>` based on the "
-    "**completion type**",
-    "determine the necessity of generating search queries",
-    # Custom for the test
-    "[{DIRECT}]",
-]
-
-
-def is_direct_task(llm: "llm.LLM"):
-    return any(llm.chat.has_substring(prompt) for prompt in DIRECT_TASK_PROMPTS)
