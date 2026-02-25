@@ -51,9 +51,13 @@ def select_match(chat: "Chat", **kwargs):
         nodes = [node for node in nodes if node.role == role]
 
     if substring:
-        nodes = [node for node in nodes if substring in node.content]
+        nodes = [
+            node for node in nodes if isinstance(node.content, str) and substring in node.content
+        ]
 
     if index is not None:
+        if not nodes:
+            return []
         nodes = [nodes[index]]
 
     return nodes
@@ -94,11 +98,16 @@ selection_strategies = {
 
 
 def apply_strategy(chat: "Chat", strategy: str, params: dict):
-    return selection_strategies[strategy](chat, **params)  # type: ignore
+    fn = selection_strategies.get(strategy)
+    if fn is None:
+        raise ValueError(
+            f"Unknown strategy '{strategy}'. Valid strategies: {list(selection_strategies.keys())}"
+        )
+    return fn(chat, **params)  # type: ignore
 
 
 def match_regex(value, regex):
-    return bool(re.match(regex, value))
+    return bool(re.search(regex, value))
 
 
 def match_substring(value, substring):
