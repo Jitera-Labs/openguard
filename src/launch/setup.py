@@ -206,7 +206,7 @@ def setup_opencode() -> None:
 
         # Add openguard credential to auth.json if missing
         if "openguard" not in auth_data:
-            auth_data["openguard"] = {"type": "api", "key": "sk-openguard"}
+            auth_data["openguard"] = {"type": "api", "key": "sk-openguard-placeholder"}
             with _secure_open(str(auth_path)) as f:
                 json.dump(auth_data, f, indent=2)
             logger.info("Added 'openguard' credentials to auth.json")
@@ -281,7 +281,7 @@ def setup_opencode() -> None:
 
     # 6. Write back opencode.json
     try:
-        with open(config_path, "w") as f:
+        with _secure_open(str(config_path)) as f:
             json.dump(config_data, f, indent=2)
         logger.info(f"Updated {config_path} with OpenGuard provider")
     except Exception as e:
