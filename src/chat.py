@@ -118,7 +118,9 @@ class Chat:
         return Chat.from_conversation(self.history())
 
     def has_substring(self, substring):
-        return any(substring in msg.content for msg in self.plain())
+        return any(
+            isinstance(msg.content, str) and substring in msg.content for msg in self.plain()
+        )
 
     def match(self, **kwargs):
         return selection.match(self, **kwargs)
@@ -130,7 +132,10 @@ class Chat:
         return candidates[0]
 
     def add_message(self, role, content):
-        logger.debug(f"Chat message: {role}: {content[:50]}")
+        logger.debug(
+            f"Chat message: {role}: "
+            f"{content[:50] if isinstance(content, str) else str(content)[:50]}"
+        )
 
         child = self.__create_node(role=role, content=content)
         if self.tail:
