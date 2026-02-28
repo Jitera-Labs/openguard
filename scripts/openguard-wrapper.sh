@@ -100,6 +100,25 @@ if [[ "${1:-}" == "launch" ]]; then
     fi
     LAUNCH_MOUNTS+=(-v "$SEED_DIR/share:/opencode-seed/share:ro")
     echo "[wrapper] Seeded ~/.local/share/opencode/auth.json -> $SEED_DIR/share/ (read-only mount)" >&2
+
+  elif [[ "${2:-}" == "codex" ]]; then
+    SEED_DIR=$(mktemp -d /tmp/.openguard-codex-XXXXXX)
+    mkdir -p "$SEED_DIR/codex"
+
+    # Seed ~/.codex (auth.json, config.toml, themes/ if present)
+    if [[ -d "$HOME/.codex" ]]; then
+      for item in auth.json config.toml; do
+        if [[ -f "$HOME/.codex/$item" ]]; then
+          cp "$HOME/.codex/$item" "$SEED_DIR/codex/$item" 2>/dev/null || true
+        fi
+      done
+      if [[ -d "$HOME/.codex/themes" ]]; then
+        cp -r "$HOME/.codex/themes" "$SEED_DIR/codex/themes" 2>/dev/null || true
+      fi
+    fi
+    chmod -R a+rX "$SEED_DIR/codex" 2>/dev/null || true
+    LAUNCH_MOUNTS+=(-v "$SEED_DIR/codex:/codex-seed:ro")
+    echo "[wrapper] Seeded ~/.codex -> $SEED_DIR/codex (world-readable, read-only mount)" >&2
   fi
 fi
 

@@ -75,6 +75,123 @@ def setup_claude() -> None:
     _log("done. inspect: cat /tmp/claude-setup.log")
 
 
+def setup_codex() -> None:
+    """Seed /root/.codex from read-only host mount and patch config.toml for OpenGuard.
+
+    The wrapper mounts ~/.codex as /codex-seed:ro (auth.json, config.toml, themes/).
+    This function copies everything into the writable /root tmpfs, fixes permissions,
+    and optionally patches config.toml to add/override the openguard model provider
+    with the correct base_url pointing at the local OpenGuard proxy.
+    """
+    log_path = "/tmp/codex-setup.log"
+
+    def _log(msg: str) -> None:
+        print(f"[setup_codex] {msg}", file=sys.stderr, flush=True)
+        with open(log_path, "a") as f:
+            f.write(f"[setup_codex] {msg}\n")
+
+    seed = Path("/codex-seed")
+    dest = Path("/root/.codex")
+
+    _log(f"seed exists={seed.exists()} dest exists={dest.exists()}")
+
+    if not seed.exists():
+        _log("WARNING: seed not found at /codex-seed — skipping copy")
+        logger.warning("Codex seed not found at /codex-seed — skipping copy")
+        # Still create dest so codex doesn't complain about missing config dir
+        dest.mkdir(parents=True, exist_ok=True)
+    else:
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(seed, dest, symlinks=True, ignore_dangling_symlinks=True)
+        _log("copied /codex-seed -> /root/.codex")
+
+        # Fix permissions: seed was chmod a+rX (read-only), make writable
+        for dirpath, dirs, files in os.walk(dest):
+            for d in dirs:
+                p = os.path.join(dirpath, d)
+                if not os.path.islink(p):
+                    os.chmod(p, 0o755)
+            for f in files:
+                p = os.path.join(dirpath, f)
+                if not os.path.islink(p):
+                    os.chmod(p, 0o644)
+        _log("fixed permissions on /root/.codex (owner-writable)")
+
+    # Patch config.toml to add/override the openguard model provider
+    config_path = dest / "config.toml"
+    base_url = f"http://{config.OPENGUARD_HOST.value}:{config.OPENGUARD_PORT.value}"
+    _patch_codex_config(config_path, base_url, _log)
+
+    _log("done. inspect: cat /tmp/codex-setup.log")
+
+
+def _patch_codex_config(config_path: Path, base_url: str, _log: Any) -> None:
+    """Add or override [model_providers.openguard] in codex config.toml.
+
+    Sets model_provider = "openguard" so codex routes through the local proxy.
+    Uses simple text manipulation since no TOML writer is available in stdlib.
+    """
+    import re
+    import tomllib
+
+    content = ""
+    parsed: Dict[str, Any] = {}
+    if config_path.exists():
+        content = config_path.read_text()
+        try:
+            parsed = tomllib.loads(content)
+        except Exception as e:
+            _log(f"WARNING: could not parse config.toml: {e} — will append provider block")
+
+    provider_block = (
+        '\n[model_providers.openguard]\n'
+        'name = "OpenGuard Proxy"\n'
+        f'base_url = "{base_url}"\n'
+        'env_key = "OPENAI_API_KEY"\n'
+    )
+
+    # Check if [model_providers.openguard] already exists
+    existing_providers = parsed.get("model_providers", {})
+    if "openguard" in existing_providers:
+        # Replace the existing section using regex
+        # Match [model_providers.openguard] through to the next section or EOF
+        pattern = r'\[model_providers\.openguard\][^\[]*'
+        content = re.sub(pattern, provider_block.lstrip() + '\n', content)
+        _log("replaced existing [model_providers.openguard] section")
+    else:
+        content = content.rstrip() + '\n' + provider_block
+        _log("appended [model_providers.openguard] section")
+
+    # Set model_provider = "openguard" at top level
+    if re.search(r'^model_provider\s*=', content, re.MULTILINE):
+        content = re.sub(
+            r'^model_provider\s*=\s*.*$',
+            'model_provider = "openguard"',
+            content,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        _log("updated model_provider = \"openguard\"")
+    else:
+        # Insert after model line if present, otherwise prepend
+        if re.search(r'^model\s*=', content, re.MULTILINE):
+            content = re.sub(
+                r'^(model\s*=\s*.*?)$',
+                r'\1\nmodel_provider = "openguard"',
+                content,
+                count=1,
+                flags=re.MULTILINE,
+            )
+        else:
+            content = 'model_provider = "openguard"\n' + content
+        _log("added model_provider = \"openguard\"")
+
+    config_path.write_text(content)
+    os.chmod(str(config_path), 0o644)
+    _log(f"wrote patched config.toml to {config_path}")
+
+
 @contextlib.contextmanager
 def _secure_open(path: str) -> Iterator[Any]:
     """Open a file for writing with 0o600 permissions (owner read/write only).

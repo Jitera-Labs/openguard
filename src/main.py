@@ -735,6 +735,7 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
 
 
 @app.post("/v1/responses")
+@app.post("/responses")
 async def responses_endpoint(request: Request, authorized: bool = Depends(verify_auth)):
     """OpenAI Responses API endpoint with guard application and translation fallback."""
     body_bytes = await request.body()

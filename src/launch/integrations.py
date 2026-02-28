@@ -2,7 +2,7 @@ from typing import Dict
 
 from src.config import OPENGUARD_PORT
 
-from .setup import setup_claude, setup_opencode
+from .setup import setup_claude, setup_codex, setup_opencode
 from .types import Integration, LaunchStrategy, StrategyConfig
 
 # Standard OpenGuard port from configuration
@@ -59,12 +59,13 @@ INTEGRATIONS: Dict[str, Integration] = {
     "codex": Integration(
         name="codex",
         default_command="codex",
+        setup_callback=setup_codex,
         strategies=[
             StrategyConfig(
                 type=LaunchStrategy.ENV,
                 params={
                     "env_vars": {
-                        "OPENAI_BASE_URL": OPENGUARD_URL,
+                        "OPENAI_BASE_URL": f"{OPENGUARD_URL}/v1",
                         "OPENAI_API_KEY": "sk-openguard-placeholder",
                     }
                 },
