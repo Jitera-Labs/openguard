@@ -91,7 +91,7 @@ def setup_codex() -> None:
             f.write(f"[setup_codex] {msg}\n")
 
     seed = Path("/codex-seed")
-    dest = Path("/root/.codex")
+    dest = Path.home() / ".codex"
 
     _log(f"seed exists={seed.exists()} dest exists={dest.exists()}")
 
