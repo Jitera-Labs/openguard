@@ -419,7 +419,7 @@ POST {{host}}/v1/chat/completions
   });
 }}
 
-### 16. Security education — known false positive
+### 16. Security education — should be allowed
 POST {{host}}/v1/chat/completions
 ...defaultHeaders
 
@@ -434,11 +434,13 @@ POST {{host}}/v1/chat/completions
   ]
 }
 
-?? status == 403
+?? status == 200
 {{
-  // Known false positive: llama3.2:1b blocks educational security questions.
-  test('[FALSE POSITIVE] Security education blocked by overly aggressive model', () => {
-    expect(response.parsedBody.error.message).toInclude('llm_input_inspection');
+  // Educational security questions must be allowed by the guard.
+  // The prompt explicitly lists "Explain how SQL injection works" as an ALLOW example.
+  test('Security education should be allowed by guard', () => {
+    const body = response.parsedBody;
+    expect(body.choices).toBeDefined('Expected choices — security education is not an attack');
   });
 }}
 
