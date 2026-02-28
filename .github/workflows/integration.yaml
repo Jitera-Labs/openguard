@@ -46,30 +46,54 @@ jobs:
           # Use stream=false to wait for completion
           curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.2:1b", "stream": false}'
 
-      - name: Start OpenGuard Service
-        env:
-          OPENGUARD_OPENAI_URL_1: "http://localhost:11434/v1"
-          OPENGUARD_OPENAI_KEY_1: "sk-ollama"
-          # Ensure we match variables.http port
-          OPENGUARD_PORT: "23294"
-          OPENGUARD_CONFIG: "presets/full.yaml"
-        run: |
-          # Run in background
-          uv run uvicorn src.main:app --host 0.0.0.0 --port 23294 > openguard.log 2>&1 &
-
-          echo "Waiting for OpenGuard to be healthy..."
-          timeout 30s bash -c 'until curl -s http://localhost:23294/health > /dev/null; do sleep 1; done'
-
       - name: Install httpyac
         run: |
           sudo npm install -g httpyac --unsafe-perm=true
 
-      - name: Run Integration Tests
+      # ── Phase 1: full.yaml ─────────────────────────────────────────────────
+      - name: "[Phase 1] Start OpenGuard with full.yaml"
+        env:
+          OPENGUARD_OPENAI_URL_1: "http://localhost:11434/v1"
+          OPENGUARD_OPENAI_KEY_1: "sk-ollama"
+          OPENGUARD_PORT: "23294"
+          OPENGUARD_CONFIG: "presets/full.yaml"
         run: |
-          # Run all http files under http/tests
-          httpyac http/tests/**/*.http --all --output short
+          uv run uvicorn src.main:app --host 0.0.0.0 --port 23294 > openguard-phase1.log 2>&1 &
+          echo "Waiting for OpenGuard (phase 1) to be healthy..."
+          timeout 30s bash -c 'until curl -s http://localhost:23294/health > /dev/null; do sleep 1; done'
+
+      - name: "[Phase 1] Run tests (all except agentic_llm_inspection)"
+        run: |
+          # Exclude agentic_llm_inspection.http — it requires agentic.yaml (phase 2)
+          find http/tests -name "*.http" ! -name "agentic_llm_inspection.http" | sort | \
+            xargs httpyac --all --output short
+
+      - name: "[Phase 1] Stop OpenGuard"
+        if: always()
+        run: |
+          pkill -f "uvicorn src.main" || true
+          sleep 2
+
+      # ── Phase 2: agentic.yaml ──────────────────────────────────────────────
+      - name: "[Phase 2] Start OpenGuard with agentic.yaml"
+        env:
+          OPENGUARD_OPENAI_URL_1: "http://localhost:11434/v1"
+          OPENGUARD_OPENAI_KEY_1: "sk-ollama"
+          OPENGUARD_PORT: "23294"
+          OPENGUARD_CONFIG: "presets/agentic.yaml"
+        run: |
+          uv run uvicorn src.main:app --host 0.0.0.0 --port 23294 > openguard-phase2.log 2>&1 &
+          echo "Waiting for OpenGuard (phase 2) to be healthy..."
+          timeout 30s bash -c 'until curl -s http://localhost:23294/health > /dev/null; do sleep 1; done'
+
+      - name: "[Phase 2] Run agentic_llm_inspection tests"
+        run: |
+          httpyac http/tests/guards/agentic_llm_inspection.http --all --output short
 
       - name: Show logs on failure
         if: failure()
         run: |
-          cat openguard.log
+          echo "=== Phase 1 logs ==="
+          cat openguard-phase1.log || true
+          echo "=== Phase 2 logs ==="
+          cat openguard-phase2.log || true

@@ -14,11 +14,17 @@ if TYPE_CHECKING:
 
 # PII regex patterns — tightened to reduce false positives
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
-# Phone: requires separator between groups to reduce false positives on plain digit sequences
-PHONE_PATTERN = re.compile(r"\b(?:\+?1[-.\s]?)?" r"(?:\(\d{3}\)|\d{3})" r"[-.\s]\d{3}[-.\s]\d{4}\b")
+# Phone: separator-based format OR 10 continuous digits (no separator)
+PHONE_PATTERN = re.compile(
+    r"\b(?:\+?1[-.\s]?)?(?:\(\d{3}\)|\d{3})[-.\s]\d{3}[-.\s]\d{4}\b"
+    r"|\b\d{10}\b"
+)
 SSN_PATTERN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
-# Credit card: requires separators between all groups to reduce false positives
-CREDITCARD_PATTERN = re.compile(r"\b\d{4}[\s-]\d{4}[\s-]\d{4}[\s-]\d{4}\b")
+# Credit card: separator-based format OR 16 continuous digits (no separator)
+CREDITCARD_PATTERN = re.compile(
+    r"\b\d{4}[\s-]\d{4}[\s-]\d{4}[\s-]\d{4}\b"
+    r"|\b\d{16}\b"
+)
 
 PII_PATTERNS = {
     "email": (EMAIL_PATTERN, "<protected:email>"),
