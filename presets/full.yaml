@@ -216,3 +216,30 @@ guards:
       - type: content_filter
         config:
           blocked_words: ["alphasecret"]
+
+  # Agentic dangerous command blocking (used by agentic_dangerous_cmds tests)
+  - match:
+      model:
+        _ilike: "%llama3.2%"
+    apply:
+      - type: keyword_filter
+        config:
+          match_mode: "any"
+          action: "block"
+          case_sensitive: false
+          use_regex: true
+          keywords:
+            # Dangerous recursive removal targeting critical paths
+            - 'rm\s+(-[a-zA-Z]*[rf]\s*-[a-zA-Z]*[rf]|[a-zA-Z]*-[rf]{2}[a-zA-Z]*)\s+(?:/|/etc|/usr|/boot|/var|/home|~|\.)(?:\s|$)'
+            # Sensitive file access
+            - '(?:cat|grep|more|less|head|tail|awk|sed|vi|vim|nano)\s+(?:.*(?:/etc/shadow|/etc/passwd|/root|/\.ssh|id_rsa|id_ecdsa|id_ed25519|\.env|bash_history|zsh_history))'
+            # Network exfiltration & reverse shells
+            - '(?:curl|wget)\s+.*(?:\|\s*(?:bash|sh|python|perl|ruby|php)|-O\s+-|>\s*/dev/null|>\s*&)'
+            - '(?:nc|netcat|ncat)\s+(?:-e|--exec|-c)'
+            - 'bash\s+-i\s*>&'
+            - '/dev/(?:tcp|udp)/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d+'
+            # Overly permissive chmod
+            - 'chmod\s+(-R\s+)?(?:777|666|a\+rwx|u\+rwx,g\+rwx,o\+rwx)'
+            # Encoded payloads
+            - '(?:base64\s+-d|openssl\s+enc\s+-d)'
+            - 'eval\s*\(.*\)'

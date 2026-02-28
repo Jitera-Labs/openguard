@@ -145,7 +145,7 @@ def _patch_codex_config(config_path: Path, base_url: str, _log: Any) -> None:
             _log(f"WARNING: could not parse config.toml: {e} — will append provider block")
 
     provider_block = (
-        '\n[model_providers.openguard]\n'
+        "\n[model_providers.openguard]\n"
         'name = "OpenGuard Proxy"\n'
         f'base_url = "{base_url}"\n'
         'env_key = "OPENAI_API_KEY"\n'
@@ -156,28 +156,28 @@ def _patch_codex_config(config_path: Path, base_url: str, _log: Any) -> None:
     if "openguard" in existing_providers:
         # Replace the existing section using regex
         # Match [model_providers.openguard] through to the next section or EOF
-        pattern = r'\[model_providers\.openguard\][^\[]*'
-        content = re.sub(pattern, provider_block.lstrip() + '\n', content)
+        pattern = r"\[model_providers\.openguard\][^\[]*"
+        content = re.sub(pattern, provider_block.lstrip() + "\n", content)
         _log("replaced existing [model_providers.openguard] section")
     else:
-        content = content.rstrip() + '\n' + provider_block
+        content = content.rstrip() + "\n" + provider_block
         _log("appended [model_providers.openguard] section")
 
     # Set model_provider = "openguard" at top level
-    if re.search(r'^model_provider\s*=', content, re.MULTILINE):
+    if re.search(r"^model_provider\s*=", content, re.MULTILINE):
         content = re.sub(
-            r'^model_provider\s*=\s*.*$',
+            r"^model_provider\s*=\s*.*$",
             'model_provider = "openguard"',
             content,
             count=1,
             flags=re.MULTILINE,
         )
-        _log("updated model_provider = \"openguard\"")
+        _log('updated model_provider = "openguard"')
     else:
         # Insert after model line if present, otherwise prepend
-        if re.search(r'^model\s*=', content, re.MULTILINE):
+        if re.search(r"^model\s*=", content, re.MULTILINE):
             content = re.sub(
-                r'^(model\s*=\s*.*?)$',
+                r"^(model\s*=\s*.*?)$",
                 r'\1\nmodel_provider = "openguard"',
                 content,
                 count=1,
@@ -185,7 +185,7 @@ def _patch_codex_config(config_path: Path, base_url: str, _log: Any) -> None:
             )
         else:
             content = 'model_provider = "openguard"\n' + content
-        _log("added model_provider = \"openguard\"")
+        _log('added model_provider = "openguard"')
 
     config_path.write_text(content)
     os.chmod(str(config_path), 0o644)
