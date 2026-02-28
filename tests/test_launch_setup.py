@@ -33,6 +33,7 @@ def test_discover_models_empty_when_no_global_config():
 
 
 # Mocking the file system interactions for setup_opencode
+@patch("launch.setup._seed_opencode_dirs")
 @patch("launch.setup.Path")
 @patch("launch.setup.shutil.copy2")
 @patch("launch.setup._secure_open")
@@ -50,6 +51,7 @@ def test_setup_opencode_flow(
     mock_secure_open,
     mock_copy2,
     mock_path_cls,
+    mock_seed_dirs,
 ):
     # --- Setup Mocks ---
 
@@ -158,9 +160,10 @@ def test_setup_opencode_flow(
     assert opencode_dump_call["model"].startswith("openguard:")
 
 
+@patch("launch.setup._seed_opencode_dirs")
 @patch("launch.setup.Path")
 @patch("builtins.print")
-def test_setup_opencode_missing_auth(mock_print, mock_path_cls):
+def test_setup_opencode_missing_auth(mock_print, mock_path_cls, mock_seed_dirs):
     # If auth.json is missing, it should just return early (logging warning)
     mock_home = MagicMock()
     mock_path_cls.home.return_value = mock_home

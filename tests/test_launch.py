@@ -222,7 +222,7 @@ def test_launch_claude_env_strategy(mock_launch_deps, mock_subprocess_run, mock_
     # Verify environment variables
     assert env is not None
     assert env["ANTHROPIC_BASE_URL"] == OPENGUARD_URL
-    assert env["ANTHROPIC_API_KEY"] == "sk-openguard-placeholder"
+    # Claude Code manages its own credentials; OpenGuard only redirects the base URL
 
 
 def test_launch_codex_env_strategy(mock_launch_deps, mock_subprocess_run, mock_socket):
@@ -252,7 +252,8 @@ def test_launch_codex_env_strategy(mock_launch_deps, mock_subprocess_run, mock_s
 
     # Verify environment variables
     assert env is not None
-    assert env["OPENAI_BASE_URL"] == OPENGUARD_URL
+    # OpenAI-compatible clients expect the /v1 suffix on the base URL
+    assert env["OPENAI_BASE_URL"] == f"{OPENGUARD_URL}/v1"
     assert env["OPENAI_API_KEY"] == "sk-openguard-placeholder"
 
 
