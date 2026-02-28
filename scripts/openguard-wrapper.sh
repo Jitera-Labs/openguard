@@ -54,38 +54,52 @@ fi
 
 LAUNCH_MOUNTS=()
 SECURITY_CAPS=(--cap-drop ALL)
-CLAUDE_SEED=""
-trap 'rm -rf "${CLAUDE_SEED}"' EXIT
+SEED_DIR=""
+trap 'rm -rf "${SEED_DIR}"' EXIT
 
 if [[ "${1:-}" == "launch" ]]; then
   echo "[wrapper] Setting up launch mounts for: ${2:-<none>}" >&2
-  # Mount host config dirs for integrations that need persistent config
-  # (e.g. opencode writes ~/.config/opencode/opencode.json).
-  # Skip for claude: it uses a :ro seed mount + tmpfs copy instead (see setup.py).
-  if [[ "${2:-}" != "claude" ]]; then
-    for dir in "$HOME/.config" "$HOME/.local/share"; do
-      mkdir -p "$dir"
-      LAUNCH_MOUNTS+=(-v "$dir:/root${dir#"$HOME"}")
-      echo "[wrapper] Mounting $dir -> /root${dir#"$HOME"}" >&2
-    done
-  fi
+
+  # All integrations use the seed pattern: copy host config to a world-readable
+  # temp dir, mount read-only, then copy into the writable /root tmpfs at startup.
+  # Direct bind-mounts fail because --cap-drop ALL removes CAP_DAC_OVERRIDE,
+  # so container root cannot write to files owned by host UID 1000.
+
   if [[ "${2:-}" == "claude" ]]; then
-    # The container runs with --cap-drop ALL (no CAP_DAC_OVERRIDE), so container
-    # root cannot read mode-600 files owned by the host user (UID 1000).
-    # Solution: copy ~/.claude to a host temp dir as the host user (who *can*
-    # read them), chmod world-readable, then mount that as the seed.
-    CLAUDE_SEED=$(mktemp -d /tmp/.openguard-claude-XXXXXX)
-    mkdir -p "$CLAUDE_SEED/claude"
-    cp -r "$HOME/.claude/." "$CLAUDE_SEED/claude/" 2>/dev/null || true
-    chmod -R a+rX "$CLAUDE_SEED/claude" 2>/dev/null || true
-    LAUNCH_MOUNTS+=(-v "$CLAUDE_SEED/claude:/claude-seed:ro")
-    echo "[wrapper] Seeded ~/.claude -> $CLAUDE_SEED/claude (world-readable, read-only mount)" >&2
+    SEED_DIR=$(mktemp -d /tmp/.openguard-claude-XXXXXX)
+    mkdir -p "$SEED_DIR/claude"
+    cp -r "$HOME/.claude/." "$SEED_DIR/claude/" 2>/dev/null || true
+    chmod -R a+rX "$SEED_DIR/claude" 2>/dev/null || true
+    LAUNCH_MOUNTS+=(-v "$SEED_DIR/claude:/claude-seed:ro")
+    echo "[wrapper] Seeded ~/.claude -> $SEED_DIR/claude (world-readable, read-only mount)" >&2
     if [[ -f "$HOME/.claude.json" ]]; then
-      cp "$HOME/.claude.json" "$CLAUDE_SEED/claude.json"
-      chmod a+r "$CLAUDE_SEED/claude.json"
-      LAUNCH_MOUNTS+=(-v "$CLAUDE_SEED/claude.json:/claude-seed.json:ro")
-      echo "[wrapper] Seeded ~/.claude.json -> $CLAUDE_SEED/claude.json (world-readable, read-only mount)" >&2
+      cp "$HOME/.claude.json" "$SEED_DIR/claude.json"
+      chmod a+r "$SEED_DIR/claude.json"
+      LAUNCH_MOUNTS+=(-v "$SEED_DIR/claude.json:/claude-seed.json:ro")
+      echo "[wrapper] Seeded ~/.claude.json -> $SEED_DIR/claude.json (world-readable, read-only mount)" >&2
     fi
+
+  elif [[ "${2:-}" == "opencode" ]]; then
+    SEED_DIR=$(mktemp -d /tmp/.openguard-opencode-XXXXXX)
+
+    # Seed ~/.config/opencode
+    mkdir -p "$SEED_DIR/config"
+    if [[ -d "$HOME/.config/opencode" ]]; then
+      cp -r "$HOME/.config/opencode/." "$SEED_DIR/config/" 2>/dev/null || true
+    fi
+    chmod -R a+rX "$SEED_DIR/config" 2>/dev/null || true
+    LAUNCH_MOUNTS+=(-v "$SEED_DIR/config:/opencode-seed/config:ro")
+    echo "[wrapper] Seeded ~/.config/opencode -> $SEED_DIR/config (read-only mount)" >&2
+
+    # Seed ~/.local/share/opencode — only auth.json (the rest is large data:
+    # snapshots ~73GB, database ~330MB, logs, etc. that we don't need).
+    mkdir -p "$SEED_DIR/share"
+    if [[ -f "$HOME/.local/share/opencode/auth.json" ]]; then
+      cp "$HOME/.local/share/opencode/auth.json" "$SEED_DIR/share/auth.json" 2>/dev/null || true
+      chmod a+r "$SEED_DIR/share/auth.json" 2>/dev/null || true
+    fi
+    LAUNCH_MOUNTS+=(-v "$SEED_DIR/share:/opencode-seed/share:ro")
+    echo "[wrapper] Seeded ~/.local/share/opencode/auth.json -> $SEED_DIR/share/ (read-only mount)" >&2
   fi
 fi
 

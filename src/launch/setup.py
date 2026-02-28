@@ -123,10 +123,47 @@ def _discover_models(
     return discovered
 
 
+def _seed_opencode_dirs() -> None:
+    """Copy read-only seed mounts into the writable /root tmpfs.
+
+    The wrapper mounts host ~/.config/opencode and ~/.local/share/opencode as
+    /opencode-seed/config:ro and /opencode-seed/share:ro.  This function copies
+    them into the writable tmpfs paths so setup_opencode() and opencode itself
+    can write freely.
+    """
+    seeds = [
+        (Path("/opencode-seed/config"), Path.home() / ".config" / "opencode"),
+        (Path("/opencode-seed/share"), Path.home() / ".local" / "share" / "opencode"),
+    ]
+    for seed, dest in seeds:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if seed.exists():
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(seed, dest, symlinks=True, ignore_dangling_symlinks=True)
+            # Fix permissions: seed was chmod a+rX (read-only), make writable
+            for dirpath, dirs, files in os.walk(dest):
+                for d in dirs:
+                    p = os.path.join(dirpath, d)
+                    if not os.path.islink(p):
+                        os.chmod(p, 0o755)
+                for f in files:
+                    p = os.path.join(dirpath, f)
+                    if not os.path.islink(p):
+                        os.chmod(p, 0o644)
+            logger.info(f"Copied seed {seed} -> {dest}")
+        else:
+            dest.mkdir(parents=True, exist_ok=True)
+            logger.info(f"No seed at {seed}, created empty {dest}")
+
+
 def setup_opencode() -> None:
     """Configure OpenCode to use the local OpenGuard instance."""
     logger.info("Installing OpenGuard configuration for OpenCode...")
     print("Installing OpenGuard configuration for OpenCode...", file=sys.stderr)
+
+    # 0. Copy read-only seed mounts into writable tmpfs
+    _seed_opencode_dirs()
 
     # 1. Read ~/.local/share/opencode/auth.json
     auth_path = Path.home() / ".local/share/opencode/auth.json"
