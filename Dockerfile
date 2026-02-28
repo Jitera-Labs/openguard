@@ -22,6 +22,10 @@ FROM base AS dev
 
 USER root
 
+# In dev, the repo is bind-mounted at /app.  Ensure the live source tree
+# takes precedence over the stale site-packages copy baked into the image.
+ENV PYTHONPATH=/app
+
 # Dev/test Python dependencies (pytest, ruff, mypy, livereload)
 RUN uv pip install --system --no-cache -r pyproject.toml --extra dev
 

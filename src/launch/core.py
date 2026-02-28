@@ -15,6 +15,13 @@ from .strategies import CliArgStrategy, ConfigFileStrategy, EnvVarStrategy, Stra
 from .types import LaunchStrategy
 
 
+def _dbg(msg: str) -> None:
+    """Timestamped debug print to stderr; controlled by OPENGUARD_DEBUG env var."""
+    if os.environ.get("OPENGUARD_DEBUG"):
+        ts = time.strftime("%H:%M:%S")
+        print(f"[launch {ts}] {msg}", file=sys.stderr, flush=True)
+
+
 def get_strategy_implementation(strategy_type: LaunchStrategy) -> Type[Strategy]:
     if strategy_type == LaunchStrategy.ENV:
         return EnvVarStrategy
@@ -119,6 +126,7 @@ def ensure_server_running(host: str, port: int) -> Optional[subprocess.Popen]:
             return None
 
     print(f"Starting OpenGuard server at http://{host}:{port}...", file=sys.stderr)
+    _dbg(f"ensure_server_running: spawning uvicorn on {host}:{port}")
 
     # Start the server
     server_process = subprocess.Popen(
@@ -131,7 +139,6 @@ def ensure_server_running(host: str, port: int) -> Optional[subprocess.Popen]:
             host,
             "--port",
             str(port),
-            "--reload",
         ],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
@@ -145,8 +152,11 @@ def ensure_server_running(host: str, port: int) -> Optional[subprocess.Popen]:
             # Process exited prematurely
             stdout, stderr = server_process.communicate()
             print(f"Server failed to start:\n{stderr.decode()}", file=sys.stderr)
+            _dbg("ensure_server_running: server exited prematurely")
             return None
 
+        elapsed = time.time() - start_time
+        _dbg(f"ensure_server_running: waiting for port {port} ({elapsed:.1f}s elapsed)")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if s.connect_ex((host, port)) == 0:
                 print("Server started successfully.", file=sys.stderr)
@@ -158,7 +168,7 @@ def ensure_server_running(host: str, port: int) -> Optional[subprocess.Popen]:
                 ).start()
                 return server_process
         time.sleep(0.5)
-
+    _dbg("ensure_server_running: timed out waiting for port")
     print("Timeout waiting for server to start.", file=sys.stderr)
     server_process.terminate()
     return None
@@ -168,6 +178,7 @@ def launch_integration(name: str, args: List[str]) -> int:
     """
     Launch an integration with the given name and arguments.
     """
+    _dbg(f"launch_integration: name={name!r} args={args!r}")
     try:
         from .integrations import INTEGRATIONS
     except ImportError:
@@ -191,14 +202,13 @@ def launch_integration(name: str, args: List[str]) -> int:
             integration.setup_callback()
         except Exception as e:
             print(f"Error running setup for {name}: {e}", file=sys.stderr)
-            # Decide if we should continue or exit.
-            # Usually setup failure is critical for first run, but maybe not subsequent?
-            # Let's verify with user intent, but for now continue with warning.
 
     # Ensure server is running
     host = OPENGUARD_HOST.value
     port = OPENGUARD_PORT.value
+    _dbg(f"launch_integration: calling ensure_server_running({host!r}, {port!r})")
     server_process = ensure_server_running(host, port)
+    _dbg(f"launch_integration: ensure_server_running returned proc={server_process is not None}")
 
     # dynamically update configuration if needed
     if name == "opencode":
@@ -226,7 +236,6 @@ def launch_integration(name: str, args: List[str]) -> int:
 
     try:
         # Prepare command and environment
-        # Start with the default command from integration
         command = [integration.default_command]
 
         env = os.environ.copy()
@@ -248,6 +257,11 @@ def launch_integration(name: str, args: List[str]) -> int:
 
         # Execute
         try:
+            _dbg(f"launch_integration: executing command={command!r}")
+            _dbg(
+                f"launch_integration: ANTHROPIC_BASE_URL={env.get('ANTHROPIC_BASE_URL')!r}"
+                f" CLAUDE_CONFIG_DIR={env.get('CLAUDE_CONFIG_DIR')!r}"
+            )
             # Use subprocess.run to execute the integration command
             result = subprocess.run(command, env=env)
             return result.returncode

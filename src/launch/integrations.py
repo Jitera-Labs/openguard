@@ -2,7 +2,7 @@ from typing import Dict
 
 from src.config import OPENGUARD_PORT
 
-from .setup import setup_opencode
+from .setup import setup_claude, setup_opencode
 from .types import Integration, LaunchStrategy, StrategyConfig
 
 # Standard OpenGuard port from configuration
@@ -40,13 +40,17 @@ INTEGRATIONS: Dict[str, Integration] = {
     "claude": Integration(
         name="claude",
         default_command="claude",
+        setup_callback=setup_claude,
         strategies=[
             StrategyConfig(
                 type=LaunchStrategy.ENV,
                 params={
                     "env_vars": {
+                        # Only redirect the base URL.  Claude Code manages its own
+                        # credentials (OAuth token or ANTHROPIC_API_KEY from the user's
+                        # shell) and attaches them to every request.  OpenGuard forwards
+                        # those headers verbatim to api.anthropic.com.
                         "ANTHROPIC_BASE_URL": OPENGUARD_URL,
-                        "ANTHROPIC_API_KEY": "sk-openguard-placeholder",
                     }
                 },
             )

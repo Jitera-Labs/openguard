@@ -14,6 +14,67 @@ from src import log as log_module
 logger = log_module.setup_logger(__name__)
 
 
+def setup_claude() -> None:
+    """Seed /root/.claude and /root/.claude.json from read-only host mounts.
+
+    The wrapper mounts ~/.claude as /claude-seed:ro and ~/.claude.json as
+    /claude-seed.json:ro so the container can never corrupt host ownership.
+    This function copies both into the writable /root tmpfs before claude
+    starts, giving it a complete, writable config identical to the host.
+    """
+    log_path = "/tmp/claude-setup.log"
+
+    def _log(msg: str) -> None:
+        print(f"[setup_claude] {msg}", file=sys.stderr, flush=True)
+        with open(log_path, "a") as f:
+            f.write(f"[setup_claude] {msg}\n")
+
+    seed = Path("/claude-seed")
+    dest = Path("/root/.claude")
+
+    _log(f"seed exists={seed.exists()} dest exists={dest.exists()}")
+
+    if not seed.exists():
+        _log("ERROR: seed not found at /claude-seed — skipping copy")
+        logger.warning("Claude seed not found at /claude-seed — skipping copy")
+        return
+    if dest.exists():
+        shutil.rmtree(dest)
+    # symlinks=True: ~/.claude often contains symlinks (debug/latest, skills/*).
+    # Copying them as symlinks avoids ENOENT when targets don't exist in the
+    # container.  ignore_dangling_symlinks silences any remaining edge cases.
+    shutil.copytree(seed, dest, symlinks=True, ignore_dangling_symlinks=True)
+    _log("copied /claude-seed -> /root/.claude")
+
+    # The seed files were chmod a+rX (world-readable but not writable) by the
+    # wrapper so the container could read them without CAP_DAC_OVERRIDE.
+    # copytree preserves those permissions, leaving the copies read-only.
+    # Claude Code needs to write to its config dir (update tokens, state, etc.),
+    # so make the writable tmpfs copies owner-writable.
+    for dirpath, dirs, files in os.walk(dest):
+        for d in dirs:
+            p = os.path.join(dirpath, d)
+            if not os.path.islink(p):
+                os.chmod(p, 0o755)
+        for f in files:
+            p = os.path.join(dirpath, f)
+            if not os.path.islink(p):
+                os.chmod(p, 0o644)
+    _log("fixed permissions on /root/.claude (owner-writable)")
+    _log(f"  .credentials.json exists={Path('/root/.claude/.credentials.json').exists()}")
+
+    seed_json = Path("/claude-seed.json")
+    _log(f"seed_json exists={seed_json.exists()}")
+    if seed_json.exists():
+        shutil.copy2(seed_json, Path("/root/.claude.json"))
+        os.chmod("/root/.claude.json", 0o644)
+        _log("copied /claude-seed.json -> /root/.claude.json")
+    else:
+        _log("WARNING: /claude-seed.json not found — skipping ~/.claude.json copy")
+
+    _log("done. inspect: cat /tmp/claude-setup.log")
+
+
 @contextlib.contextmanager
 def _secure_open(path: str) -> Iterator[Any]:
     """Open a file for writing with 0o600 permissions (owner read/write only).

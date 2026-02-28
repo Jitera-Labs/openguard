@@ -72,6 +72,14 @@ def get_provider_backends(provider: str):
     if provider_normalized == "anthropic":
         urls = _as_list(config.OPENGUARD_ANTHROPIC_URLS.value)
         keys = _as_list(config.OPENGUARD_ANTHROPIC_KEYS.value)
+
+        if not urls:
+            # No explicit backend configured — default to Anthropic's public API with no
+            # downstream key.  With an empty key, _build_forward_headers forwards the
+            # incoming Authorization/x-api-key header verbatim, which supports both OAuth
+            # subscription tokens and direct API keys without any credential management.
+            urls = ["https://api.anthropic.com"]
+            keys = [""]
     else:
         urls = _as_list(config.OPENGUARD_OPENAI_URLS.value)
         keys = _as_list(config.OPENGUARD_OPENAI_KEYS.value)
