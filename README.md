@@ -1,4 +1,4 @@
-![Splash image](./public/splash.png)
+![Splash image](./public/public/splash.png)
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-black?logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-Framework-black?logo=fastapi&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Ready-black?logo=docker&logoColor=white) ![OpenAI Compatible](https://img.shields.io/badge/OpenAI-Compatible-black?logo=openai&logoColor=white) ![Anthropic Compatible](https://img.shields.io/badge/Anthropic-Compatible-black?logo=anthropic&logoColor=white) [![PyPI](https://img.shields.io/pypi/v/openguard?color=black&labelColor=black&logo=pypi&logoColor=white)](https://pypi.org/project/openguard/)
 [![Visitors](https://api.visitorbadge.io/api/combined?path=https%3A%2F%2Fgithub.com%2FJitera-Labs%2Fopenguard&labelColor=%23000000&countColor=%23ffffff&style=flat)](https://visitorbadge.io/status?path=https%3A%2F%2Fgithub.com%2FJitera-Labs%2Fopenguard)
