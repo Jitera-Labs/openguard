@@ -1,5 +1,32 @@
 # OpenGuard Full Preset — exercises all guard types (used by integration tests)
 guards:
+  # Secrets detection runs FIRST — must see original messages before any PII redaction
+  # (pii_filter would otherwise redact Slack token segments and GitHub PATs before we can block them)
+  - match:
+      model:
+        _ilike: "%"
+    apply:
+      - type: keyword_filter
+        config:
+          match_mode: "any"
+          action: "block"
+          case_sensitive: true
+          use_regex: true
+          keywords:
+            # AWS Access Key ID — requires non-alphanumeric boundaries to avoid matching inside longer strings
+            - '(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}(?![A-Za-z0-9])'
+            # AWS Secret Access Key (40-char base64-like string)
+            - '(?<![A-Za-z0-9/+=])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])'
+            # Private Key headers
+            - '-----BEGIN PRIVATE KEY-----'
+            - '-----BEGIN RSA PRIVATE KEY-----'
+            # GitHub Personal Access Token (ghp_ + 36 alphanumeric chars)
+            - 'ghp_[a-zA-Z0-9]{36}'
+            # Slack tokens (bot, app, user, refresh, legacy)
+            - 'xox[baprs]-([0-9a-zA-Z]{10,48})'
+            # Generic 20-char uppercase-alphanumeric secret (requires non-alphanumeric boundaries)
+            - '(?<![A-Za-z0-9])[A-Z][0-9A-Z]{19}(?![A-Za-z0-9])'
+
   - match:
       model:
         _ilike: "%llama3.2%"
@@ -245,29 +272,3 @@ guards:
             - 'eval\s*\(.*\)'
             # Fork bomb
             - ':\(\)\{\s*:\|:&\s*\};:'
-
-  # Secrets detection (used by agentic_secrets tests and agentic_combined scenarios)
-  - match:
-      model:
-        _ilike: "%"
-    apply:
-      - type: keyword_filter
-        config:
-          match_mode: "any"
-          action: "block"
-          case_sensitive: true
-          use_regex: true
-          keywords:
-            # AWS Access Key ID — requires non-alphanumeric boundaries to avoid matching inside longer strings
-            - '(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}(?![A-Za-z0-9])'
-            # AWS Secret Access Key (40-char base64-like string)
-            - '(?<![A-Za-z0-9/+=])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])'
-            # Private Key headers
-            - '-----BEGIN PRIVATE KEY-----'
-            - '-----BEGIN RSA PRIVATE KEY-----'
-            # GitHub Personal Access Token (ghp_ + 36 alphanumeric chars)
-            - 'ghp_[a-zA-Z0-9]{36}'
-            # Slack tokens (bot, app, user, refresh, legacy)
-            - 'xox[baprs]-([0-9a-zA-Z]{10,48})'
-            # Generic 20-char uppercase-alphanumeric secret (requires non-alphanumeric boundaries)
-            - '(?<![A-Za-z0-9])[A-Z][0-9A-Z]{19}(?![A-Za-z0-9])'

@@ -14,10 +14,11 @@ if TYPE_CHECKING:
 
 # PII regex patterns — tightened to reduce false positives
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
-# Phone: separator-based format OR 10 continuous digits (no separator)
+# Phone: separator-based format OR standalone 10-digit (no hyphen adjacent — avoids matching
+# segments inside Slack/API tokens like xoxb-1234567890-xxx)
 PHONE_PATTERN = re.compile(
     r"\b(?:\+?1[-.\s]?)?(?:\(\d{3}\)|\d{3})[-.\s]\d{3}[-.\s]\d{4}\b"
-    r"|\b\d{10}\b"
+    r"|(?<!-)\b\d{10}\b(?!-)"
 )
 SSN_PATTERN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 # Credit card: separator-based format OR 16 continuous digits (no separator)
