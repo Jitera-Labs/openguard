@@ -41,6 +41,14 @@ class Config(BaseModel):
         default=False,
         description="Whether the keywords should be treated as regular expressions.",
     )
+    scan_input_only: bool = Field(
+        default=False,
+        description=(
+            "When True, keywords are only matched against the request input. "
+            "Stream output scanning (stream_blocks) is skipped. "
+            "Use this for broad patterns that would cause false positives on model output."
+        ),
+    )
 
 
 META = GuardMeta(
@@ -104,7 +112,7 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
 
     flags = 0 if cfg.case_sensitive else re.IGNORECASE
 
-    if hasattr(llm, "stream_patterns"):
+    if hasattr(llm, "stream_blocks") and not cfg.scan_input_only:
         for kw in cfg.keywords:
             raw_pattern = kw if cfg.use_regex else re.escape(kw)
             try:

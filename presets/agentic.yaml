@@ -20,6 +20,7 @@ guards:
           action: "block"
           case_sensitive: true
           use_regex: true
+          scan_input_only: true
           # Regex patterns for common secrets
           keywords:
             # AWS Access Key ID — requires non-alphanumeric boundaries
@@ -59,6 +60,7 @@ guards:
           action: "block" # Or "log" if you want to inspect first
           case_sensitive: false
           use_regex: true
+          scan_input_only: true
           keywords:
             # 1. Dangerous Destruction (Recursive Force Removal on Critical Paths)
             # Detects 'rm -rf' (and variations like -fr, -r -f) targeting /, /etc, /usr, /boot, /var, /home, ~, .

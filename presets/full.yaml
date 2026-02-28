@@ -2,6 +2,8 @@
 guards:
   # Secrets detection runs FIRST — must see original messages before any PII redaction
   # (pii_filter would otherwise redact Slack token segments and GitHub PATs before we can block them)
+  # scan_input_only: true prevents broad patterns from being registered as stream_blocks,
+  # which would cause "incorrect header check" errors when they match in LLM streaming output.
   - match:
       model:
         _ilike: "%"
@@ -12,6 +14,7 @@ guards:
           action: "block"
           case_sensitive: true
           use_regex: true
+          scan_input_only: true
           keywords:
             # AWS Access Key ID — requires non-alphanumeric boundaries to avoid matching inside longer strings
             - '(?<![A-Za-z0-9])AKIA[0-9A-Z]{16}(?![A-Za-z0-9])'
@@ -255,6 +258,7 @@ guards:
           action: "block"
           case_sensitive: false
           use_regex: true
+          scan_input_only: true
           keywords:
             # Dangerous recursive removal targeting critical paths
             - 'rm\s+(-[a-zA-Z]*[rf]\s*-[a-zA-Z]*[rf]|[a-zA-Z]*-[rf]{2}[a-zA-Z]*)\s+(?:/|/etc|/usr|/boot|/var|/home|~|\.)(?:\s|$)'
