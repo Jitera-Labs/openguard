@@ -72,6 +72,7 @@ include = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = [".agents"]
 
 [tool.ruff.lint]
 # E: pycodestyle, F: pyflakes, I: isort
