@@ -34,4 +34,4 @@ services:
       - .:/app
     # bun install runs on every start; it is fast when node_modules is up-to-date (no-op install).
     # Moving this to a build step would require rebuilding the image on every dependency change.
-    command: ["sh", "-c", "bun install && bun run dev --host 0.0.0.0 --port 4400"]
+    command: ["sh", "-c", "cd /app/public && bun install && bun run dev --host 0.0.0.0 --port 4400"]
