@@ -23,6 +23,7 @@ Matching can be case-sensitive or insensitive, and you can require matching 'all
 | `action` | `string` | `"block"` | Action to take when triggered ('block', 'sanitize', 'log'). |
 | `replacement` | `string` | `"[REDACTED]"` | Text to replace matched keywords with when action is 'sanitize'. |
 | `use_regex` | `boolean` | `False` | Whether the keywords should be treated as regular expressions. |
+| `scan_input_only` | `boolean` | `False` | When True, keywords are only matched against the request input. Stream output scanning (stream_blocks) is skipped. Use this for broad patterns that would cause false positives on model output. |
 
 ## Examples
 
