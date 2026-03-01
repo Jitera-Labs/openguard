@@ -46,6 +46,15 @@ uninstall-global-openguard:
 	@rm -f "$(HOME)/.local/bin/openguard"
 	@echo "Removed $(HOME)/.local/bin/openguard"
 
+check-release:
+	@echo "==> Checking for uncommitted changes..."
+	@git diff --quiet && git diff --cached --quiet || (echo "ERROR: Working tree is dirty. Commit or stash changes first." && exit 1)
+	@echo "==> Running static checks..."
+	$(MAKE) check
+	@echo "==> Running unit tests..."
+	$(MAKE) test-unit
+	@echo "==> Release checks passed."
+
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
