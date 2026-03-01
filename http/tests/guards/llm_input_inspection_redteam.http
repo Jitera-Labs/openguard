@@ -227,11 +227,11 @@ POST {{host}}/v1/chat/completions
   // [[OG_BLOCK]] is in the third user message — guard should detect it.
   // llama3.2:1b may miss it in multi-message context (known model limitation).
   test('Third message with marker should survive tail truncation of three-message input', () => {
-    if (response.statusCode == 403) {
-      const err = response.parsedBody.error;
-      expect(err && err.message).toInclude('llm_input_inspection', 'Expected llm_input_inspection block');
+    const err = response.parsedBody.error;
+    if (err) {
+      expect(err.message).toInclude('llm_input_inspection', 'Expected llm_input_inspection block');
     }
-    expect(response.statusCode == 200 || response.statusCode == 403).toBeTruthy('Expected status 200 or 403, got ' + response.statusCode);
+    expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block response, got: ' + JSON.stringify(err));
   });
 }}
 
@@ -404,11 +404,11 @@ POST {{host}}/v1/chat/completions
   // [[OG_BLOCK]] buried in multilingual content — guard should detect it.
   // llama3.2:1b may miss markers in mixed-language/multi-script inputs (known limitation).
   test('Mixed language content with buried marker should be blocked', () => {
-    if (response.statusCode == 403) {
-      const err = response.parsedBody.error;
-      expect(err && err.message).toInclude('llm_input_inspection', 'Expected llm_input_inspection block');
+    const err = response.parsedBody.error;
+    if (err) {
+      expect(err.message).toInclude('llm_input_inspection', 'Expected llm_input_inspection block');
     }
-    expect(response.statusCode == 200 || response.statusCode == 403).toBeTruthy('Expected status 200 or 403, got ' + response.statusCode);
+    expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block response, got: ' + JSON.stringify(err));
   });
 }}
 
