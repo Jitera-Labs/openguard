@@ -1,11 +1,9 @@
-// @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import starlightThemeBlack from 'starlight-theme-black';
 
-// https://astro.build/config
 export default defineConfig({
-	site: 'https://openguard.ai',
+	site: 'https://openguard.sh',
 	integrations: [
 		starlight({
 			title: 'OpenGuard',
