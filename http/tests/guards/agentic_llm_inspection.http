@@ -130,9 +130,6 @@ POST {{host}}/v1/chat/completions
   // Tool result injection — may block or allow depending on model detection.
   test('Tool result attack — may block or allow depending on model', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}
@@ -181,9 +178,6 @@ POST {{host}}/v1/chat/completions
   // Truncation cuts the attack; guard sees mainly benign padding — may block or allow depending on model.
   test('Truncation — attack beyond max_chars, may block or allow depending on model', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}

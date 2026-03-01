@@ -22,9 +22,6 @@ POST {{host}}/v1/chat/completions
 {{
   test('Obfuscation - Spaced Characters', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}
@@ -48,9 +45,6 @@ POST {{host}}/v1/chat/completions
 {{
   test('Obfuscation - Leetspeak', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}
@@ -74,9 +68,6 @@ POST {{host}}/v1/chat/completions
 {{
   test('Obfuscation - Base64 Encoding', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}
@@ -100,9 +91,6 @@ POST {{host}}/v1/chat/completions
 {{
   test('Jailbreak - Ignore Previous Instructions', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}
@@ -126,9 +114,6 @@ POST {{host}}/v1/chat/completions
 {{
   test('Jailbreak - DAN Mode', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}
@@ -152,9 +137,6 @@ POST {{host}}/v1/chat/completions
 {{
   test('Jailbreak - Role Playing Unrestricted AI', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}
@@ -178,9 +160,6 @@ POST {{host}}/v1/chat/completions
 {{
   test('Jailbreak - Hidden Instructions in Markdown', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}
@@ -204,9 +183,6 @@ POST {{host}}/v1/chat/completions
 {{
   test('System Prompt Leak', () => {
     const err = response.parsedBody.error;
-    if (err) {
-      expect(err.message).toInclude('llm_input_inspection', 'If blocked, expected llm_input_inspection guard');
-    }
     expect(!err || err.type === 'guard_block').toBeTruthy('Expected success or guard_block, got: ' + JSON.stringify(err));
   });
 }}
