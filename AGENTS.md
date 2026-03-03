@@ -52,6 +52,10 @@ OPENGUARD_MOUNT_DIR=/path/to/project openguard
 
 `make dev-test` — runs with `presets/full.yaml` (guards required for integration tests).
 
+### Launching dev server
+
+User can already be running dev server on their machine when you're done. Do not waste time trying to launch a server.
+
 ## Integration Tests (httpyac)
 
 Tests live in `./http/tests/` and require `presets/full.yaml` guard config.
