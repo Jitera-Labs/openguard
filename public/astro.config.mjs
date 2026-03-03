@@ -8,6 +8,7 @@ export default defineConfig({
 		starlight({
 			title: 'OpenGuard',
 			disable404Route: true,
+			customCss: ['./src/styles/custom.css'],
 			plugins: [
 				starlightThemeBlack({
 					navLinks: [
@@ -18,9 +19,11 @@ export default defineConfig({
 			],
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/Jitera-Labs/openguard' }],
 			sidebar: [
+				{ label: 'Getting Started', slug: 'docs/getting-started' },
+				{ label: 'Configuration', slug: 'docs/configuration' },
 				{
 					label: 'Guards',
-					autogenerate: { directory: 'guards' },
+					autogenerate: { directory: 'docs/guards' },
 				},
 			],
 		}),

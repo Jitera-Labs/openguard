@@ -97,7 +97,7 @@ def main() -> None:
     # Use relative path based on the root of the project
     # The root is one level up from scripts
     root_dir = Path(__file__).resolve().parent.parent
-    output_dir = root_dir / "public" / "src" / "content" / "docs" / "guards"
+    output_dir = root_dir / "public" / "src" / "content" / "docs" / "docs" / "guards"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     package = src.guard_types

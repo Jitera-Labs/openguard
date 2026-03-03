@@ -1,0 +1,13 @@
+/* Bridge docs styling to match the landing page aesthetic */
+
+:root:root {
+	--sl-font: 'Geist Mono', monospace;
+	--sl-font-mono: 'Geist Mono', monospace;
+}
+
+:root[data-theme='dark'] {
+	--background: #0a0a0a;
+	--foreground: #ededed;
+	--card: #111111;
+	--card-foreground: #ededed;
+}

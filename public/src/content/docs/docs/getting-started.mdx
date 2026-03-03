@@ -1,0 +1,77 @@
+---
+title: Getting Started
+description: Install and run OpenGuard in under a minute.
+---
+
+OpenGuard is a transparent security proxy for LLM applications. It sits between your app and any OpenAI-compatible or Anthropic API, running configurable guards on every request.
+
+## Install
+
+The fastest way to run OpenGuard:
+
+```bash
+# via uvx (no install needed)
+uvx openguard serve
+
+# or via Docker
+docker run -p 23294:23294 ghcr.io/Jitera-Labs/openguard:main
+```
+
+## Point your SDK at OpenGuard
+
+```python
+# OpenAI
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:23294/v1", api_key="your-key")
+
+# Anthropic
+import anthropic
+client = anthropic.Anthropic(base_url="http://localhost:23294", api_key="your-key")
+```
+
+## Add guards
+
+Create a `guards.yaml` in your working directory:
+
+```yaml
+guards:
+  - match:
+      model:
+        _ilike: "%"
+    apply:
+      - type: pii_filter
+        config: {}
+      - type: keyword_filter
+        config:
+          keywords: ["secret", "confidential"]
+          action: block
+```
+
+Then start OpenGuard with your config:
+
+```bash
+uvx openguard serve --config guards.yaml
+```
+
+Every request now passes through PII redaction and keyword blocking before reaching the downstream LLM.
+
+## Launch integrations
+
+OpenGuard can wrap popular coding agents directly:
+
+```bash
+uvx openguard launch claude
+uvx openguard launch opencode
+uvx openguard launch codex
+```
+
+## Environment variables
+
+Set your provider API keys:
+
+```bash
+export OPENGUARD_OPENAI_KEY_1="sk-..."
+export OPENGUARD_ANTHROPIC_KEY_1="sk-ant-..."
+```
+
+See [Configuration](/docs/configuration/) for the full reference.

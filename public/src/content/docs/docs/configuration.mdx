@@ -1,0 +1,107 @@
+---
+title: Configuration
+description: Guards config format, environment variables, and match filters.
+---
+
+## Guards config file
+
+OpenGuard loads guard rules from a YAML file (default: `./guards.yaml`). Override with:
+
+```bash
+OPENGUARD_CONFIG=path/to/config.yaml uvx openguard serve
+# or multiple files, merged in order:
+OPENGUARD_CONFIG=base.yaml,overrides.yaml uvx openguard serve
+```
+
+### Structure
+
+```yaml
+guards:
+  - match: <filter>
+    apply:
+      - type: <guard_type>
+        config: { ... }
+```
+
+Each rule has a `match` filter and an ordered list of guards to `apply`. Rules are evaluated sequentially — multiple rules can match the same request, and all matching guards run in order.
+
+## Match filters
+
+Filters use a Hasura-style query syntax evaluated against the request context. Available fields: `model`, `user`, `provider`, and any other request parameters.
+
+### Operators
+
+| Operator | Description |
+|---|---|
+| `_eq`, `_neq` | Equality |
+| `_gt`, `_lt`, `_gte`, `_lte` | Comparison |
+| `_in`, `_nin` | Array membership |
+| `_is_null` | Null check |
+| `_like`, `_ilike` | SQL-style wildcard (`%`) matching |
+| `_regex`, `_iregex` | Regex matching |
+| `_and`, `_or`, `_not` | Logical composition |
+
+### Examples
+
+```yaml
+# Match all models
+match:
+  model:
+    _ilike: "%"
+
+# Match GPT-4 variants
+match:
+  model:
+    _ilike: "%gpt-4%"
+
+# Combine conditions
+match:
+  _and:
+    - model:
+        _iregex: "claude|gpt-4"
+    - user:
+        _eq: "admin"
+```
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENGUARD_CONFIG` | `./guards.yaml` | Comma-separated guard config paths |
+| `OPENGUARD_OPENAI_URL_*` | `http://localhost:11434/v1` | Downstream OpenAI-compatible URLs |
+| `OPENGUARD_OPENAI_KEY_*` | — | API keys for OpenAI-compatible providers |
+| `OPENGUARD_ANTHROPIC_URL_*` | — | Downstream Anthropic URLs |
+| `OPENGUARD_ANTHROPIC_KEY_*` | — | API keys for Anthropic providers |
+| `OPENGUARD_API_KEY` | — | Single key to protect this proxy |
+| `OPENGUARD_API_KEYS` | — | Semicolon-separated additional proxy keys |
+| `OPENGUARD_PORT` | `23294` | Server port |
+| `OPENGUARD_HOST` | `0.0.0.0` | Server bind address |
+| `OPENGUARD_LOG_LEVEL` | `INFO` | Log level |
+| `OPENGUARD_CORS_ORIGINS` | — | Semicolon-separated allowed CORS origins |
+| `OPENGUARD_MODEL_FILTER` | — | Hasura-style filter for downstream model list |
+
+Wildcard variables (`*` suffix) accept any name — e.g., `OPENGUARD_OPENAI_KEY_PROD`, `OPENGUARD_OPENAI_KEY_2`. All matching values are gathered automatically.
+
+## Persistent config file
+
+As an alternative to environment variables, create `~/.config/openguard/config.yaml`:
+
+```yaml
+port: 23294
+providers:
+  - type: openai
+    key: sk-proj-...
+  - type: anthropic
+    key: sk-ant-...
+log_level: INFO
+```
+
+## Presets
+
+OpenGuard ships with ready-made presets:
+
+- **`presets/agentic.yaml`** — protection for coding agents (secrets, PII, dangerous commands, prompt injection). This is the default when running via the Docker wrapper.
+
+```bash
+OPENGUARD_CONFIG=presets/agentic.yaml uvx openguard serve
+```
