@@ -860,8 +860,8 @@
         <section id="hero">
             <div class="container">
                 <h1>OpenGuard</h1>
-                <p>The security gateway for LLMs. Inspect, redact, and govern AI traffic in real-time.</p>
-                <a href="/docs/getting-started/" class="get-started-btn">Get Started</a>
+                <p>Your AI traffic is leaving your network unguarded. OpenGuard sits between your app and the LLM — blocking prompt injections, stripping PII, and logging every request before it goes out.</p>
+                <a href="/docs/getting-started/" class="get-started-btn">Start Guarding Traffic</a>
             </div>
             <div class="scroll-indicator">
                 <span>More</span>
@@ -897,14 +897,14 @@
         </section>
 
         <section id="features">
-            <h2>What You Get</h2>
+            <h2>Six Layers Deep</h2>
 
             <div class="feature-panel" data-accent="green">
                 <div class="feature-inner">
                     <div class="feature-text">
                         <span class="feature-num">01</span>
                         <h3 class="feature-title" style="color:#81c784;">FULL TRAFFIC VISIBILITY</h3>
-                        <p class="feature-desc">Every request and response logged with guard verdicts, latency, and token counts. Complete audit trail before anything leaves your network.</p>
+                        <p class="feature-desc">Every request and response logged with guard verdicts, latency, and token counts. A complete audit trail — before anything leaves your network.</p>
                     </div>
                     <div class="feature-terminal">
                         <div class="term-chrome"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">openguard.log</span></div>
@@ -934,7 +934,7 @@
                     <div class="feature-text">
                         <span class="feature-num">02</span>
                         <h3 class="feature-title" style="color:#4fc3f7;">REAL-TIME REDACTION</h3>
-                        <p class="feature-desc">PII detected and replaced before it reaches the provider. Emails, phone numbers, SSNs, credit cards — stripped from streamed output, chunk by chunk.</p>
+                        <p class="feature-desc">Emails, phone numbers, SSNs, credit cards — detected and replaced before they reach the provider. Works on streamed output too, chunk by chunk.</p>
                     </div>
                     <div class="feature-terminal">
                         <div class="term-chrome"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">pii_filter</span></div>
@@ -958,7 +958,7 @@
                     <div class="feature-text">
                         <span class="feature-num">03</span>
                         <h3 class="feature-title" style="color:#ef9a9a;">BLOCK BEFORE DAMAGE</h3>
-                        <p class="feature-desc">Prompt injections, jailbreaks, and encoded payloads caught at the gate. LLM-powered semantic inspection understands intent — not just patterns.</p>
+                        <p class="feature-desc">Prompt injections, jailbreaks, and encoded payloads — caught at the gate. LLM-powered semantic inspection understands intent, not just regex patterns.</p>
                     </div>
                     <div class="feature-terminal">
                         <div class="term-chrome"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">llm_input_inspect</span></div>
@@ -988,7 +988,7 @@
                     <div class="feature-text">
                         <span class="feature-num">04</span>
                         <h3 class="feature-title" style="color:#ffb74d;">POLICY AS YAML</h3>
-                        <p class="feature-desc">Declarative guard rules in a single file. No code changes, no restarts, no deploy pipelines. Different policies per model, per endpoint.</p>
+                        <p class="feature-desc">Define guard rules in one YAML file. No code changes, no restarts, no deploy pipelines. Set different policies per model, per endpoint.</p>
                     </div>
                     <div class="feature-terminal">
                         <div class="term-chrome"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">guards.yaml</span></div>
@@ -1016,7 +1016,7 @@
                     <div class="feature-text">
                         <span class="feature-num">05</span>
                         <h3 class="feature-title" style="color:#ce93d8;">ONE COMMAND LAUNCH</h3>
-                        <p class="feature-desc">No setup scripts, no infra. A single command wires the proxy to your coding agent and starts guarding traffic immediately.</p>
+                        <p class="feature-desc">No setup scripts. No infrastructure. One command wires the proxy to your coding agent and starts guarding traffic.</p>
                     </div>
                     <div class="feature-terminal">
                         <div class="term-chrome"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">terminal</span></div>
@@ -1040,7 +1040,7 @@
                     <div class="feature-text">
                         <span class="feature-num">06</span>
                         <h3 class="feature-title" style="color:#80deea;">DROP-IN COMPATIBLE</h3>
-                        <p class="feature-desc">Works with any OpenAI or Anthropic SDK. Point your client at the proxy — one line changed, full protection gained.</p>
+                        <p class="feature-desc">Works with any OpenAI or Anthropic SDK. Change one line — your <code>base_url</code> — and every call runs through the security pipeline.</p>
                     </div>
                     <div class="feature-terminal">
                         <div class="term-chrome"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">app.py</span></div>
@@ -1062,7 +1062,7 @@ client = <span class="t-cyan">OpenAI</span>(
         <section id="modular-stack">
              <div class="architecture-container">
                 <h2>Modular Defense</h2>
-                <p style="margin-bottom: 2rem;">Composable security layers. Block PII, filter toxicity, and enforce limits without touching application code.</p>
+                <p style="margin-bottom: 2rem;">Stack guards like building blocks. Each layer runs independently — add, remove, or reorder them without touching your application code.</p>
                 <div id="stack-wrapper">
                     <canvas id="stack-canvas"></canvas>
                 </div>
@@ -1071,8 +1071,10 @@ client = <span class="t-cyan">OpenAI</span>(
 
         <section id="run-command">
             <div class="container">
+                <p>Open source. Run it anywhere. Pick your method:</p>
                 <code id="code-docker">docker run ghcr.io/Jitera-Labs/openguard:main</code>
                 <code id="code-uvx">uvx openguard</code>
+                <a href="/docs/getting-started/" class="get-started-btn">Read the Docs</a>
             </div>
         </section>
 
