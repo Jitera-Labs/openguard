@@ -546,7 +546,7 @@
         .status-label {
             font-family: var(--font-mono);
             font-size: 0.8rem;
-            color: #666;
+            color: #999;
             min-width: 60px;
         }
 
@@ -578,6 +578,117 @@
         }
         .sub-footer span {
             opacity: 0.5;
+        }
+
+        /* ===== #run-command ===== */
+        .run-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .run-method {
+            display: flex;
+            align-items: center;
+            height: 3.25rem;
+            border: 1px solid #333;
+            background: rgba(8, 8, 8, 0.9);
+            transition: border-color 0.2s;
+            cursor: pointer;
+        }
+
+        .run-method:hover {
+            border-color: #555;
+        }
+
+        .run-method-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 5.5rem;
+            flex-shrink: 0;
+            height: 100%;
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #666;
+            background: rgba(255, 255, 255, 0.02);
+            border-right: 1px solid #333;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .run-method-cmd {
+            flex: 1;
+            min-width: 0;
+            padding: 0 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+            user-select: all;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .run-method-cmd .t-dim {
+            opacity: 0.4;
+        }
+
+        .run-method-copy {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 3rem;
+            flex-shrink: 0;
+            height: 100%;
+            color: #555;
+            transition: color 0.2s;
+            border-left: 1px solid #333;
+        }
+
+        .run-method:hover .run-method-copy {
+            color: #888;
+        }
+
+        .run-method-copy svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .run-method.copied {
+            border-color: rgba(50, 255, 50, 0.4);
+        }
+
+        .run-method.copied .run-method-copy {
+            color: #4f4;
+        }
+
+        .run-or {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #444;
+            text-align: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        @media (max-width: 500px) {
+            .run-method-label {
+                width: 4.5rem;
+                font-size: 0.55rem;
+            }
+            .run-method-cmd {
+                font-size: 0.65rem;
+                padding: 0 0.75rem;
+            }
+            .run-method-copy {
+                width: 2.5rem;
+            }
         }
 
         /* ===== #features ===== */
@@ -662,7 +773,7 @@
         .feature-desc {
             font-family: var(--font-mono);
             font-size: 13px;
-            opacity: 0.6;
+            opacity: 0.8;
             line-height: 1.65;
             max-width: none;
             margin: 0;
@@ -703,7 +814,7 @@
         .term-title {
             font-family: var(--font-mono);
             font-size: 11px;
-            opacity: 0.35;
+            opacity: 0.55;
             margin-left: 8px;
             letter-spacing: 0.05em;
             -webkit-font-smoothing: antialiased;
@@ -719,7 +830,7 @@
             white-space: pre;
             overflow-x: auto;
             -webkit-font-smoothing: antialiased;
-            color: rgba(255,255,255,0.55);
+            color: rgba(255,255,255,0.75);
             margin: 0;
         }
 
@@ -758,7 +869,7 @@
         .t-orange { color: #ffb74d; }
         .t-purple { color: #ce93d8; }
         .t-cyan { color: #80deea; }
-        .t-dim { opacity: 0.3; }
+        .t-dim { opacity: 0.5; }
         .t-bright { color: rgba(255,255,255,0.9); }
 
         @keyframes cursor-blink {
@@ -1071,9 +1182,20 @@ client = <span class="t-cyan">OpenAI</span>(
 
         <section id="run-command">
             <div class="container">
-                <p>Open source. Run it anywhere. Pick your method:</p>
-                <code id="code-docker">docker run ghcr.io/Jitera-Labs/openguard:main</code>
-                <code id="code-uvx">uvx openguard</code>
+                <p>Open source. Run it anywhere.</p>
+                <div class="run-methods">
+                    <div class="run-method" data-cmd="uvx openguard">
+                        <div class="run-method-label">uvx</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> uvx openguard</div>
+                        <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+                    </div>
+                    <div class="run-or">or</div>
+                    <div class="run-method" data-cmd="docker run ghcr.io/Jitera-Labs/openguard:main">
+                        <div class="run-method-label">Docker</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> docker run ghcr.io/Jitera-Labs/openguard:main</div>
+                        <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+                    </div>
+                </div>
                 <a href="/docs/getting-started/" class="get-started-btn">Read the Docs</a>
             </div>
         </section>
@@ -1254,11 +1376,18 @@ client = <span class="t-cyan">OpenAI</span>(
         document.getElementById('toggle-container').addEventListener('click', toggleGuard);
         document.querySelector('.toggle-container').classList.add('active');
 
-        document.getElementById('code-docker').addEventListener('click', function() {
-            navigator.clipboard.writeText(this.innerText);
-        });
-        document.getElementById('code-uvx').addEventListener('click', function() {
-            navigator.clipboard.writeText(this.innerText);
+        document.querySelectorAll('.run-method').forEach(el => {
+            el.addEventListener('click', function() {
+                const cmd = this.dataset.cmd;
+                navigator.clipboard.writeText(cmd);
+                this.classList.add('copied');
+                const copyEl = this.querySelector('.run-method-copy');
+                copyEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+                setTimeout(() => {
+                    this.classList.remove('copied');
+                    copyEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+                }, 1500);
+            });
         });
 
         function startFlowAnimation() {
