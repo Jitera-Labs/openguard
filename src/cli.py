@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List, Optional
 
 import typer
@@ -11,6 +12,20 @@ from src.launch.setup import setup_opencode as launch_setup_opencode
 
 # Setup logging
 logger = log_module.setup_logger(__name__)
+
+# Read version from pyproject.toml at import time (works with mounted source in Docker)
+_PYPROJECT = Path(__file__).resolve().parent.parent / "pyproject.toml"
+
+
+def _get_version() -> str:
+    try:
+        for line in _PYPROJECT.read_text().splitlines():
+            if line.startswith("version"):
+                return line.split("=", 1)[1].strip().strip('"')
+    except Exception:
+        pass
+    return "unknown"
+
 
 app = typer.Typer(no_args_is_help=False)
 
@@ -63,11 +78,20 @@ def install(service: str):
         typer.echo(f"Service '{service}' not supported yet.")
 
 
+def _version_callback(value: bool):
+    if value:
+        typer.echo(_get_version())
+        raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
     config_paths: Optional[List[str]] = typer.Option(
         None, "--config", help="Guard config file path (can be repeated)."
+    ),
+    version: Optional[bool] = typer.Option(
+        None, "--version", callback=_version_callback, is_eager=True, help="Show version."
     ),
 ):
     """
@@ -77,6 +101,12 @@ def main(
         if config_paths:
             _apply_config_paths(config_paths)
         _run_server()
+
+
+@app.command()
+def version():
+    """Show the OpenGuard version."""
+    typer.echo(_get_version())
 
 
 @app.command(

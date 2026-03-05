@@ -1,13 +1,143 @@
 /* Bridge docs styling to match the landing page aesthetic */
 
+@font-face {
+	font-family: 'Geist';
+	src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Geist';
+	src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-sans/Geist-Medium.woff2') format('woff2');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Geist';
+	src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Geist';
+	src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-sans/Geist-Bold.woff2') format('woff2');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Geist Pixel Square';
+	src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Square.woff2') format('woff2');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Geist Pixel Grid';
+	src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Grid.woff2') format('woff2');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Geist Pixel Line';
+	src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Line.woff2') format('woff2');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* Site logo: match landing header */
+.site-title .title-text {
+	font-family: 'Geist Pixel Square', monospace !important;
+	font-weight: 500 !important;
+	font-size: 1.5rem !important;
+	letter-spacing: 0.25em;
+	text-transform: uppercase;
+	-webkit-font-smoothing: none;
+	-moz-osx-font-smoothing: grayscale;
+	text-shadow:
+		0 0 10px rgba(255, 255, 255, 0.4),
+		0 0 30px rgba(255, 255, 255, 0.15);
+}
+
+/* Headings: pixel font + chromatic aberration */
+[id="_top"],
+.sl-markdown-content :is(h1, h2, h3, h4) {
+	font-family: 'Geist Pixel Square', monospace;
+	-webkit-font-smoothing: none;
+	-moz-osx-font-smoothing: grayscale;
+	text-shadow:
+		-2px 0 rgba(255, 0, 0, 0.4),
+		2px 0 rgba(0, 100, 255, 0.4);
+}
+.sl-markdown-content h1, [id="_top"] { font-size: 2.6rem; }
+.sl-markdown-content h2 { font-size: 2rem; }
+.sl-markdown-content h3 { font-size: 1.6rem; }
+.sl-markdown-content h4 { font-size: 1.4rem; }
+.sl-markdown-content h1 {
+	text-shadow:
+		-2px 0 rgba(255, 0, 0, 0.5),
+		2px 0 rgba(0, 100, 255, 0.5),
+		0 0 8px rgba(255, 255, 255, 0.15);
+}
+
 :root:root {
-	--sl-font: 'Geist Mono', monospace;
+	--sl-font: 'Geist', sans-serif;
 	--sl-font-mono: 'Geist Mono', monospace;
+	--radius: 0;
 }
 
 :root[data-theme='dark'] {
 	--background: #0a0a0a;
 	--foreground: #ededed;
-	--card: #111111;
+	--card: #111;
 	--card-foreground: #ededed;
+	--popover: #111;
+	--popover-foreground: #ededed;
+	--secondary: #1a1a1a;
+	--secondary-foreground: #ededed;
+	--muted: #1a1a1a;
+	--muted-foreground: #888;
+	--accent: #222;
+	--accent-foreground: #ededed;
+	--border: transparent;
+	--input: rgba(255, 255, 255, 0.12);
+	--ring: #444;
+	--code-background: #111;
+	--mark-background: #222;
+	--destructive: #ff4444;
+	--sl-color-text-accent: #ff4444;
+}
+
+/* Constrain splash page content to match Starlight's content width */
+html[data-has-hero]:not([data-has-sidebar]) .sl-markdown-content {
+	max-width: 65rem;
+	margin-inline: auto;
+	padding-inline: 1rem;
+}
+
+/* CRT scanlines overlay */
+body::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 9999;
+	background: repeating-linear-gradient(
+		to bottom,
+		transparent 0,
+		transparent 2px,
+		rgba(0, 0, 0, 0.08) 2px,
+		rgba(0, 0, 0, 0.08) 4px
+	);
 }

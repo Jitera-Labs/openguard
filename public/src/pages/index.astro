@@ -7,7 +7,7 @@
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Square.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Grid.woff2" as="font" type="font/woff2" crossorigin>
     <title>OpenGuard</title>
-    <style>
+    <style is:inline>
         @font-face {
             font-family: 'Geist Pixel Circle';
             src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Circle.woff2') format('woff2');
@@ -49,6 +49,12 @@
             font-weight: 400;
             font-style: normal;
             font-display: swap;
+        }
+
+        @property --cta-angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
         }
 
         :root {
@@ -111,37 +117,108 @@
             gap: 2rem;
         }
 
-        h1 {
+        .site-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 1.5rem;
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .site-header-logo {
             font-family: var(--font-pixel-grid);
-            font-size: clamp(2rem, 9vw, 4.5rem);
+            font-size: 1rem;
             font-weight: 500;
-            line-height: 1;
-            letter-spacing: -0.06em;
+            letter-spacing: 0.25em;
             text-transform: uppercase;
-            margin-bottom: 0.5rem;
+            color: #fff;
+            text-decoration: none;
+            text-shadow:
+                0 0 10px rgba(255, 255, 255, 0.4),
+                0 0 30px rgba(255, 255, 255, 0.15);
+        }
+
+        .site-header-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .site-header-nav a {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--fg);
+            text-decoration: none;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            letter-spacing: 0.05em;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .site-header-nav a:hover {
+            opacity: 1;
+        }
+
+        .site-header-nav .gh-star {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0.8;
+            transition: opacity 0.2s, border-color 0.2s;
+        }
+
+        .site-header-nav .gh-star:hover {
+            opacity: 1;
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .site-header-nav .gh-star svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        h1 {
+            font-family: var(--font-pixel-square);
+            font-size: clamp(1.4rem, 5vw, 2.4rem);
+            font-weight: 500;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
+            max-width: 600px;
+            margin: 0 auto;
             cursor: default;
-            transition: opacity 0.2s, text-shadow 0.2s;
-            word-wrap: normal;
-            overflow-wrap: normal;
-            max-width: 100%;
-            /* Combined glitch/aberration + glow */
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: grayscale;
+            color: #fff;
+        }
+
+        /* Threat text in h1 — chromatic aberration matching the logo */
+        h1 .threat-text {
+            color: #ff4444;
             text-shadow:
                 -3px 0 rgba(255, 0, 0, 0.6),
                 3px 0 rgba(0, 0, 255, 0.6),
-                0 0 30px rgba(255, 255, 255, 0.8),
-                0 0 60px rgba(255, 255, 255, 0.6),
-                0 0 80px rgba(255, 255, 255, 0.4);
+                0 0 10px rgba(255, 0, 0, 0.4);
         }
 
-        h1:hover {
-            opacity: 1;
-            /* Stronger combined glitch/aberration + intense glow on hover */
+        /* Threat text in body copy — scaled-down aberration */
+        p .threat-text {
+            color: #ff4444;
             text-shadow:
-                -4px 0 rgba(255, 0, 0, 0.8),
-                4px 0 rgba(0, 0, 255, 0.8),
-                0 0 40px rgba(255, 255, 255, 1),
-                0 0 80px rgba(255, 255, 255, 0.8),
-                0 0 120px rgba(255, 255, 255, 0.6);
+                -1.5px 0 rgba(255, 0, 0, 0.5),
+                1.5px 0 rgba(0, 0, 255, 0.5);
         }
 
         p {
@@ -387,19 +464,89 @@
 
         .get-started-btn {
             display: inline-block;
+            align-self: center;
             margin-top: 1.5rem;
             padding: 0.75rem 2rem;
             font-family: 'Geist Pixel Square', monospace;
             font-size: 1rem;
-            color: #0a0a0a;
-            background: #ededed;
+            color: #ededed;
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             text-decoration: none;
             letter-spacing: 1px;
-            transition: background 0.2s, color 0.2s;
+            position: relative;
+            overflow: hidden;
+            text-shadow:
+                -1px 0 rgba(255, 0, 0, 0.3),
+                1px 0 rgba(0, 100, 255, 0.3),
+                0 0 8px rgba(255, 255, 255, 0.6),
+                0 0 20px rgba(255, 255, 255, 0.3);
+            box-shadow:
+                0 0 10px rgba(255, 255, 255, 0.15),
+                0 0 30px rgba(255, 255, 255, 0.08),
+                0 0 8px rgba(255, 0, 0, 0.1),
+                0 0 8px rgba(0, 100, 255, 0.1),
+                inset 0 0 10px rgba(255, 255, 255, 0.05);
+            animation: cta-pulse 3s ease-in-out infinite;
+            transition: all 0.25s ease;
+        }
+
+        /* CRT scanline overlay on button */
+        .get-started-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent 0,
+                transparent 2px,
+                rgba(0, 0, 0, 0.15) 2px,
+                rgba(0, 0, 0, 0.15) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Animated gradient border glow */
+        .get-started-btn::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            background: conic-gradient(
+                from var(--cta-angle, 0deg),
+                rgba(255, 0, 0, 0.6),
+                rgba(0, 100, 255, 0.6),
+                rgba(255, 255, 255, 0.4),
+                rgba(255, 0, 0, 0.6)
+            );
+            z-index: -1;
+            opacity: 0.6;
+            filter: blur(6px);
+            animation: cta-border-spin 4s linear infinite;
         }
 
         .get-started-btn:hover {
-            background: #ffffff;
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.9);
+            animation: cta-glitch 0.15s steps(2) 3, cta-pulse 3s ease-in-out infinite;
+            transform: scale(1.04);
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.7),
+                2px 0 rgba(0, 100, 255, 0.7),
+                0 0 12px rgba(255, 255, 255, 0.9),
+                0 0 30px rgba(255, 255, 255, 0.5);
+            box-shadow:
+                0 0 20px rgba(255, 255, 255, 0.35),
+                0 0 40px rgba(255, 255, 255, 0.15),
+                0 0 60px rgba(255, 255, 255, 0.08),
+                0 0 15px rgba(255, 0, 0, 0.2),
+                0 0 15px rgba(0, 100, 255, 0.2),
+                inset 0 0 15px rgba(255, 255, 255, 0.08);
+        }
+
+        .get-started-btn:hover::after {
+            opacity: 1;
+            filter: blur(10px);
         }
 
         .scroll-indicator {
@@ -428,7 +575,7 @@
         #site-footer {
             width: 100vw;
             margin: 0;
-            padding: 0;
+            padding: 0.15em 0 0;
             text-align: center;
             font-family: var(--font-pixel-line);
             font-size: calc(100vw / 6);
@@ -437,7 +584,7 @@
             text-transform: uppercase;
             opacity: 0.95;
             white-space: nowrap;
-            overflow: hidden;
+            overflow: visible;
             position: relative;
             z-index: 10;
             cursor: default;
@@ -466,19 +613,243 @@
             60% {transform: translateX(-50%) translateY(-2px);}
         }
 
-         #stack-wrapper {
+        @keyframes cta-pulse {
+            0%, 100% {
+                box-shadow:
+                    0 0 10px rgba(255, 255, 255, 0.15),
+                    0 0 30px rgba(255, 255, 255, 0.08),
+                    0 0 8px rgba(255, 0, 0, 0.1),
+                    0 0 8px rgba(0, 100, 255, 0.1),
+                    inset 0 0 10px rgba(255, 255, 255, 0.05);
+            }
+            50% {
+                box-shadow:
+                    0 0 15px rgba(255, 255, 255, 0.25),
+                    0 0 40px rgba(255, 255, 255, 0.12),
+                    0 0 15px rgba(255, 0, 0, 0.2),
+                    0 0 15px rgba(0, 100, 255, 0.2),
+                    inset 0 0 12px rgba(255, 255, 255, 0.08);
+            }
+        }
+
+        @keyframes cta-glitch {
+            0% { transform: scale(1.04) translate(0, 0); }
+            25% { transform: scale(1.04) translate(-2px, 1px); }
+            50% { transform: scale(1.04) translate(2px, -1px); }
+            75% { transform: scale(1.04) translate(1px, 1px); }
+            100% { transform: scale(1.04) translate(0, 0); }
+        }
+
+        @keyframes cta-border-spin {
+            to { --cta-angle: 360deg; }
+        }
+
+        .modular-viz {
             position: relative;
             width: 100%;
-            height: 400px;
-            border: 1px solid #333;
-            background: rgba(10, 10, 10, 0.6);
+            border: 1px solid #222;
+            background: rgba(8, 8, 8, 0.8);
             overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            text-align: left;
         }
-        #stack-canvas {
+
+        .modular-tabs {
+            display: flex;
+            border-bottom: 1px solid #222;
+        }
+
+        .modular-tab {
+            position: relative;
+            padding: 12px 20px;
+            font-family: var(--font-mono);
+            font-size: 18px;
+            color: #888;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            transition: color 200ms ease, background 200ms ease;
+            border-right: 1px solid #222;
+            user-select: none;
+        }
+
+        .modular-tab:last-child {
+            border-right: none;
+        }
+
+        .modular-tab:hover {
+            color: #ddd;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .modular-tab.active {
+            color: #fff;
+        }
+
+        .modular-tab-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            width: 0%;
+            background: #555;
+        }
+
+        .modular-tab.active .modular-tab-progress {
+            transition: width 6s linear;
             width: 100%;
-            height: 100%;
+        }
+
+        .modular-preset-desc {
+            font-family: var(--font-mono);
+            font-size: 17px;
+            color: #ccc;
+            padding: 10px 20px;
+            border-bottom: 1px solid #1a1a1a;
+            min-height: 18px;
+            transition: opacity 200ms ease;
+        }
+
+        .modular-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 310px;
+        }
+
+        .modular-pipeline {
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            border-right: 1px solid #222;
+        }
+
+        .modular-flow-label {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding: 4px 0;
+            text-align: center;
+        }
+
+        .modular-guards {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 0;
+            height: 260px;
+            overflow: hidden;
+        }
+
+        .modular-guard {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid #1a1a1a;
+            border-left: 3px solid var(--guard-color);
+            font-family: var(--font-mono);
+            opacity: 0;
+            transform: translateX(-12px);
+            transition: opacity 220ms ease, transform 220ms ease, border-color 300ms ease;
+        }
+
+        .modular-guard.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .modular-guard.exiting {
+            opacity: 0;
+            transform: translateX(12px);
+        }
+
+        .modular-guard.kept {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        @keyframes guard-pulse {
+            0%   { box-shadow: inset 0 0 0 0 transparent; }
+            50%  { box-shadow: inset 0 0 12px 0 var(--guard-color); }
+            100% { box-shadow: inset 0 0 0 0 transparent; }
+        }
+
+        .modular-guard.pulse {
+            animation: guard-pulse 500ms ease;
+        }
+
+        .modular-guard-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--guard-color);
+            flex-shrink: 0;
+            box-shadow: 0 0 6px var(--guard-color);
+        }
+
+        .modular-guard-name {
+            font-size: 18px;
+            color: #fff;
+            flex: 1;
+        }
+
+        .modular-guard-type {
+            font-size: 16px;
+            color: #bbb;
+        }
+
+        .modular-yaml-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modular-yaml-panel .term-chrome {
+            border: none;
+            border-bottom: 1px solid #222;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .modular-yaml-body {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-family: var(--font-mono);
+            font-size: 18px;
+            line-height: 2;
+            padding: 16px 20px;
+            margin: 0;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .yaml-line {
             display: block;
+            opacity: 0;
+            transform: translateX(8px);
+            transition: opacity 200ms ease, transform 200ms ease;
+        }
+
+        .yaml-line.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        @media (max-width: 700px) {
+            .modular-columns {
+                grid-template-columns: 1fr;
+            }
+
+            .modular-pipeline {
+                border-right: none;
+                border-bottom: 1px solid #222;
+            }
+
+            .modular-guards {
+                height: auto;
+                min-height: 160px;
+            }
         }
 
         .toggle-container {
@@ -581,6 +952,51 @@
         }
 
         /* ===== #run-command ===== */
+        .run-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 0.5rem;
+            border: 1px solid #333;
+            overflow: hidden;
+        }
+
+        .run-tab {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            background: transparent;
+            border: none;
+            border-right: 1px solid #333;
+            color: #555;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: color 0.2s, background 0.2s;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .run-tab:last-child {
+            border-right: none;
+        }
+
+        .run-tab:hover {
+            color: #999;
+        }
+
+        .run-tab.active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .run-tab-desc {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: #555;
+            margin-bottom: 0.75rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
         .run-methods {
             display: flex;
             flex-direction: column;
@@ -838,29 +1254,29 @@
             border-color: rgba(255,255,255,0.1);
         }
 
-        .feature-panel[data-accent="green"] .term-body {
-            border-left: 2px solid rgba(129, 199, 132, 0.5);
-            box-shadow: inset 3px 0 15px rgba(129, 199, 132, 0.04);
+        .feature-panel[data-accent="green"] .term-chrome {
+            background: rgba(129, 199, 132, 0.1);
+            border-color: rgba(129, 199, 132, 0.15);
         }
-        .feature-panel[data-accent="blue"] .term-body {
-            border-left: 2px solid rgba(79, 195, 247, 0.5);
-            box-shadow: inset 3px 0 15px rgba(79, 195, 247, 0.04);
+        .feature-panel[data-accent="blue"] .term-chrome {
+            background: rgba(79, 195, 247, 0.1);
+            border-color: rgba(79, 195, 247, 0.15);
         }
-        .feature-panel[data-accent="red"] .term-body {
-            border-left: 2px solid rgba(239, 154, 154, 0.5);
-            box-shadow: inset 3px 0 15px rgba(239, 154, 154, 0.04);
+        .feature-panel[data-accent="red"] .term-chrome {
+            background: rgba(239, 154, 154, 0.1);
+            border-color: rgba(239, 154, 154, 0.15);
         }
-        .feature-panel[data-accent="orange"] .term-body {
-            border-left: 2px solid rgba(255, 183, 77, 0.5);
-            box-shadow: inset 3px 0 15px rgba(255, 183, 77, 0.04);
+        .feature-panel[data-accent="orange"] .term-chrome {
+            background: rgba(255, 183, 77, 0.1);
+            border-color: rgba(255, 183, 77, 0.15);
         }
-        .feature-panel[data-accent="purple"] .term-body {
-            border-left: 2px solid rgba(206, 147, 216, 0.5);
-            box-shadow: inset 3px 0 15px rgba(206, 147, 216, 0.04);
+        .feature-panel[data-accent="purple"] .term-chrome {
+            background: rgba(206, 147, 216, 0.1);
+            border-color: rgba(206, 147, 216, 0.15);
         }
-        .feature-panel[data-accent="cyan"] .term-body {
-            border-left: 2px solid rgba(128, 222, 234, 0.5);
-            box-shadow: inset 3px 0 15px rgba(128, 222, 234, 0.04);
+        .feature-panel[data-accent="cyan"] .term-chrome {
+            background: rgba(128, 222, 234, 0.1);
+            border-color: rgba(128, 222, 234, 0.15);
         }
 
         .t-green { color: #81c784; }
@@ -908,6 +1324,9 @@
             }
             .term-cursor { animation: none; opacity: 1; }
             .t-pulse { animation: none; }
+            .get-started-btn { animation: none; }
+            .get-started-btn::after { animation: none; }
+            .get-started-btn:hover { animation: none; transform: none; }
         }
 
         @media (max-width: 700px) {
@@ -932,6 +1351,195 @@
             .term-body {
                 font-size: 10.5px;
                 padding: 14px 16px;
+            }
+        }
+
+        /* ===== #supported-agents ===== */
+        #supported-agents {
+            min-height: unset;
+            padding: 100px 32px 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+            gap: 0;
+        }
+
+        #supported-agents > h2 {
+            font-family: var(--font-pixel-grid);
+            font-size: 36px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.9;
+            margin-bottom: 16px;
+        }
+
+        #supported-agents > .section-subtitle {
+            font-family: var(--font-mono);
+            font-size: 17px;
+            color: rgba(255,255,255,0.55);
+            max-width: 520px;
+            line-height: 1.65;
+            margin: 0 auto 56px;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            width: 100%;
+            max-width: 960px;
+        }
+
+        .agent-card {
+            text-align: left;
+            padding: 24px 20px;
+            background: rgba(8, 8, 8, 0.8);
+            border: 1px solid #222;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out, border-color 0.2s;
+        }
+
+        .agent-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .agent-card:hover {
+            border-color: #333;
+        }
+
+        .agent-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .agent-card-name {
+            font-family: var(--font-mono);
+            font-size: 18px;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .agent-badge {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            flex-shrink: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .agent-badge--native {
+            color: #81c784;
+            border: 1px solid rgba(129, 199, 132, 0.3);
+            background: rgba(129, 199, 132, 0.06);
+        }
+
+        .agent-badge--compatible {
+            color: #4fc3f7;
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            background: rgba(79, 195, 247, 0.06);
+        }
+
+        .agent-card-cmd {
+            font-family: var(--font-mono);
+            font-size: 17px;
+            color: rgba(255,255,255,0.45);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        @media (max-width: 800px) {
+            .agents-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
+            #supported-agents {
+                padding: 60px 24px 50px;
+            }
+            .agents-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== #faq ===== */
+        #faq {
+            min-height: unset;
+            padding: 100px 32px 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: left;
+            gap: 0;
+        }
+
+        #faq > h2 {
+            font-family: var(--font-pixel-grid);
+            font-size: 36px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.9;
+            text-align: center;
+            margin-bottom: 56px;
+        }
+
+        .faq-list {
+            width: 100%;
+            max-width: 720px;
+        }
+
+        .faq-item {
+            padding: 32px 0;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+
+        .faq-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .faq-item + .faq-item {
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .faq-q {
+            font-family: var(--font-pixel-square);
+            font-size: 18px;
+            color: #fff;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+
+        .faq-a {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.7;
+            max-width: none;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        @media (max-width: 700px) {
+            #faq {
+                padding: 60px 24px 50px;
+            }
+            .faq-q {
+                font-size: 16px;
             }
         }
     </style>
@@ -965,14 +1573,22 @@
         </defs>
     </svg>
 
+    <header class="site-header">
+        <a href="/" class="site-header-logo">OpenGuard</a>
+        <nav class="site-header-nav">
+            <a href="/docs/">Docs</a>
+            <a href="https://github.com/Jitera-Labs/openguard" target="_blank" class="gh-star"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Star</a>
+        </nav>
+    </header>
+
     <div class="crt-stage">
         <canvas id="bg-canvas"></canvas>
 
         <section id="hero">
             <div class="container">
-                <h1>OpenGuard</h1>
-                <p>Your AI traffic is leaving your network unguarded. OpenGuard sits between your app and the LLM — blocking prompt injections, stripping PII, and logging every request before it goes out.</p>
-                <a href="/docs/getting-started/" class="get-started-btn">Start Guarding Traffic</a>
+                <h1>Your coding agent is an <span class="threat-text">attack surface.</span></h1>
+                <p><span class="threat-text">Prompt injections</span> hide in repos, docs, and pull requests — <em style="font-style:italic; opacity:0.6;">waiting for your agent to read them.</em> <span class="threat-text">Secrets leak</span> in every context window. <span style="color:#fff; text-shadow: 0 0 4px rgba(255,255,255,0.8), 0 0 8px rgba(255,255,255,0.5), 0 0 16px rgba(255,255,255,0.3);">OpenGuard</span> intercepts it all <span style="color:#fff">before it leaves your machine.</span></p>
+                <a href="/docs/getting-started/" class="get-started-btn">Guard Your Agents</a>
             </div>
             <div class="scroll-indicator">
                 <span>More</span>
@@ -1172,10 +1788,71 @@ client = <span class="t-cyan">OpenAI</span>(
 
         <section id="modular-stack">
              <div class="architecture-container">
-                <h2>Modular Defense</h2>
+                <h2>MODULAR DEFENSE</h2>
                 <p style="margin-bottom: 2rem;">Stack guards like building blocks. Each layer runs independently — add, remove, or reorder them without touching your application code.</p>
-                <div id="stack-wrapper">
-                    <canvas id="stack-canvas"></canvas>
+                <div class="modular-viz">
+                    <div class="modular-tabs" id="modular-tabs"></div>
+                    <div class="modular-preset-desc" id="modular-preset-desc"></div>
+                    <div class="modular-columns">
+                        <div class="modular-pipeline">
+                            <div class="modular-flow-label">&#9660; request</div>
+                            <div class="modular-guards" id="modular-guards"></div>
+                            <div class="modular-flow-label">&#9660; model</div>
+                        </div>
+                        <div class="modular-yaml-panel">
+                            <div class="term-chrome"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">guards.yaml</span></div>
+                            <div class="modular-yaml-body" id="modular-yaml-body"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="supported-agents">
+            <h2>Works With Your Stack</h2>
+            <p class="section-subtitle">Native integrations for popular agents. Drop-in compatible with anything that speaks OpenAI or Anthropic.</p>
+            <div class="agents-grid">
+                <div class="agent-card">
+                    <div class="agent-card-header">
+                        <span class="agent-card-name">Claude Code</span>
+                        <span class="agent-badge agent-badge--native">native</span>
+                    </div>
+                    <span class="agent-card-cmd">openguard launch claude</span>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-card-header">
+                        <span class="agent-card-name">Codex</span>
+                        <span class="agent-badge agent-badge--native">native</span>
+                    </div>
+                    <span class="agent-card-cmd">openguard launch codex</span>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-card-header">
+                        <span class="agent-card-name">OpenCode</span>
+                        <span class="agent-badge agent-badge--native">native</span>
+                    </div>
+                    <span class="agent-card-cmd">openguard launch opencode</span>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-card-header">
+                        <span class="agent-card-name">OpenAI SDK</span>
+                        <span class="agent-badge agent-badge--compatible">compatible</span>
+                    </div>
+                    <span class="agent-card-cmd">Point base_url at the proxy</span>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-card-header">
+                        <span class="agent-card-name">Anthropic SDK</span>
+                        <span class="agent-badge agent-badge--compatible">compatible</span>
+                    </div>
+                    <span class="agent-card-cmd">Point base_url at the proxy</span>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-card-header">
+                        <span class="agent-card-name">Aider, Goose, …</span>
+                        <span class="agent-badge agent-badge--compatible">compatible</span>
+                    </div>
+                    <span class="agent-card-cmd">Anything with a base_url setting</span>
                 </div>
             </div>
         </section>
@@ -1183,20 +1860,86 @@ client = <span class="t-cyan">OpenAI</span>(
         <section id="run-command">
             <div class="container">
                 <p>Open source. Run it anywhere.</p>
-                <div class="run-methods">
-                    <div class="run-method" data-cmd="uvx openguard">
-                        <div class="run-method-label">uvx</div>
-                        <div class="run-method-cmd"><span class="t-dim">$</span> uvx openguard</div>
+                <div class="run-tabs" id="run-tabs">
+                    <button class="run-tab active" data-tab="launch">Launch</button>
+                    <button class="run-tab" data-tab="serve">Serve</button>
+                    <button class="run-tab" data-tab="docker">Docker</button>
+                </div>
+                <div class="run-tab-desc" id="run-tab-desc">Starts OpenGuard + your coding agent in one command.</div>
+                <div class="run-methods" id="run-methods-launch">
+                    <div class="run-method" data-cmd="uvx openguard launch claude">
+                        <div class="run-method-label">Claude</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> uvx openguard launch claude</div>
                         <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
                     </div>
-                    <div class="run-or">or</div>
-                    <div class="run-method" data-cmd="docker run ghcr.io/Jitera-Labs/openguard:main">
-                        <div class="run-method-label">Docker</div>
-                        <div class="run-method-cmd"><span class="t-dim">$</span> docker run ghcr.io/Jitera-Labs/openguard:main</div>
+                    <div class="run-method" data-cmd="uvx openguard launch codex">
+                        <div class="run-method-label">Codex</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> uvx openguard launch codex</div>
+                        <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+                    </div>
+                    <div class="run-method" data-cmd="OPENGUARD_CONFIG=presets/agentic.yaml uvx openguard launch claude">
+                        <div class="run-method-label">Preset</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> OPENGUARD_CONFIG=presets/agentic.yaml uvx openguard launch claude</div>
+                        <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+                    </div>
+                </div>
+                <div class="run-methods" id="run-methods-serve" style="display:none">
+                    <div class="run-method" data-cmd="uvx openguard serve">
+                        <div class="run-method-label">Start</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> uvx openguard serve</div>
+                        <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+                    </div>
+                    <div class="run-method" data-cmd="uvx openguard serve --config presets/agentic.yaml">
+                        <div class="run-method-label">Preset</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> uvx openguard serve --config presets/agentic.yaml</div>
+                        <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+                    </div>
+                    <div class="run-method" data-cmd="uvx openguard serve --config ./guards.yaml">
+                        <div class="run-method-label">Custom</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> uvx openguard serve --config ./guards.yaml</div>
+                        <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+                    </div>
+                </div>
+                <div class="run-methods" id="run-methods-docker" style="display:none">
+                    <div class="run-method" data-cmd="docker run -p 23294:23294 -e OPENGUARD_OPENAI_KEY_1=sk-... ghcr.io/Jitera-Labs/openguard:main">
+                        <div class="run-method-label">OpenAI</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> docker run -p 23294:23294 -e OPENGUARD_OPENAI_KEY_1="sk-..." ghcr.io/Jitera-Labs/openguard:main</div>
+                        <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+                    </div>
+                    <div class="run-method" data-cmd="docker run -p 23294:23294 -e OPENGUARD_ANTHROPIC_KEY_1=sk-ant-... ghcr.io/Jitera-Labs/openguard:main">
+                        <div class="run-method-label">Anthropic</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> docker run -p 23294:23294 -e OPENGUARD_ANTHROPIC_KEY_1="sk-ant-..." ghcr.io/Jitera-Labs/openguard:main</div>
+                        <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+                    </div>
+                    <div class="run-method" data-cmd="docker run -p 23294:23294 -v ./guards.yaml:/app/guards.yaml ghcr.io/Jitera-Labs/openguard:main">
+                        <div class="run-method-label">Custom</div>
+                        <div class="run-method-cmd"><span class="t-dim">$</span> docker run -p 23294:23294 -v ./guards.yaml:/app/guards.yaml ghcr.io/Jitera-Labs/openguard:main</div>
                         <div class="run-method-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
                     </div>
                 </div>
                 <a href="/docs/getting-started/" class="get-started-btn">Read the Docs</a>
+            </div>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ</h2>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-q">Does it add latency?</div>
+                    <p class="faq-a">Guards run on input before forwarding to the provider. Regex-based guards do fast string matching with negligible overhead. The llm_input_inspection guard adds a full LLM round-trip since it sends the prompt to an inspection model first. No benchmarks published yet.</p>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-q">Does it work with streaming?</div>
+                    <p class="faq-a">Yes. Guards evaluate the input before the request is forwarded. The streaming response from the provider is proxied straight through to your client.</p>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-q">Does it collect telemetry?</div>
+                    <p class="faq-a">No. OpenGuard only connects to the LLM providers you explicitly configure. Nothing phones home.</p>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-q">What providers work?</div>
+                    <p class="faq-a">Any provider exposing /v1/chat/completions (OpenAI-compatible) or /v1/messages (Anthropic-compatible). OpenRouter, Azure OpenAI, local models via Ollama — anything behind those endpoints.</p>
+                </div>
             </div>
         </section>
 
@@ -1242,18 +1985,26 @@ client = <span class="t-cyan">OpenAI</span>(
         const speed = 0.5;
 
         const stars = [];
-        const numStars = 100;
+        const numStars = 70;
+
+        function initStar(startRandom) {
+            const isRed = Math.random() > 0.8;
+            // Power distribution: mostly small, some medium, few large (10–150px base)
+            const r = Math.random();
+            const baseSize = 10 + Math.pow(r, 3) * 140;
+            // lane: normalized position across the bottom edge (-0.5 to 1.5 to cover full spread)
+            const lane = -0.5 + Math.random() * 2;
+            return {
+                z: startRandom ? Math.random() : 0,
+                lane: lane,
+                baseSize: baseSize,
+                speed: 0.04 + Math.random() * 0.06,
+                color: isRed ? '#ef5350' : '#66bb6a'
+            };
+        }
 
         for(let i=0; i<numStars; i++) {
-            const isRed = Math.random() > 0.8;
-            stars.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                size: Math.random() * 2 + 1,
-                opacity: Math.random(),
-                speed: Math.random() * 0.5 + 0.1,
-                color: isRed ? '#ef5350' : '#66bb6a'
-            });
+            stars.push(initStar(true));
         }
 
         function drawGrid(dt) {
@@ -1268,24 +2019,48 @@ client = <span class="t-cyan">OpenAI</span>(
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(0, 0, width, height);
 
-            const isMobile = width < 600;
-            const starOpacity = isMobile ? 0.15 : 0.3;
+            const starOpacity = 1.0;
 
-            stars.forEach(star => {
+            const vpX = width / 2;
+            const vpY = height * 0.2;
+            const bottomWidth = width * 4;
+
+            stars.forEach((star, idx) => {
+                // Advance depth along the grid
+                star.z += star.speed * (dt || 0.016);
+                if (star.z > 1) {
+                    const newStar = initStar(false);
+                    stars[idx] = newStar;
+                    return;
+                }
+
+                // Perspective: t = z² matches the horizontal grid line spacing
+                const t = star.z * star.z;
+
+                // Bottom-edge x for this lane
+                const xBottom = star.lane * bottomWidth - (bottomWidth - width) / 2;
+
+                // Interpolate along the radial line from vanishing point to bottom edge
+                const sx = vpX + (xBottom - vpX) * t;
+                const sy = vpY + (height - vpY) * t;
+
+                // Scale size with depth (tiny near vanishing point, full size at bottom)
+                const size = star.baseSize * Math.max(0.15, t);
+
+                // Fade larger particles; also fade near vanishing point and near exit
+                const sizeAlpha = Math.max(0.2, 1 - (star.baseSize - 10) / 200);
+                const depthAlpha = Math.min(1, star.z * 3) * Math.max(0, 1 - (star.z - 0.92) / 0.08);
+                ctx.globalAlpha = starOpacity * sizeAlpha * depthAlpha;
                 ctx.fillStyle = star.color;
 
+                // Diamond data packet — matches flow visualization
+                ctx.fillStyle = star.color;
                 ctx.beginPath();
-                ctx.moveTo(star.x, star.y - star.size);
-                ctx.lineTo(star.x + star.size, star.y);
-                ctx.lineTo(star.x, star.y + star.size);
-                ctx.lineTo(star.x - star.size, star.y);
+                ctx.moveTo(sx, sy - size);
+                ctx.lineTo(sx + size, sy);
+                ctx.lineTo(sx, sy + size);
+                ctx.lineTo(sx - size, sy);
                 ctx.fill();
-
-                star.y -= star.speed * timeScale;
-                if(star.y < 0) {
-                    star.y = height;
-                    star.x = Math.random() * width;
-                }
             });
             ctx.globalAlpha = 1;
 
@@ -1303,11 +2078,10 @@ client = <span class="t-cyan">OpenAI</span>(
             for (let z = 0; z < height; z += gridSize) {
             }
 
-            const vanishingPointY = height * 0.2;
-            const vanishingPointX = width / 2;
+            const vanishingPointY = vpY;
+            const vanishingPointX = vpX;
 
             const numLines = 40;
-            const bottomWidth = width * 4;
 
             for(let i = 0; i <= numLines; i++) {
                 const xBottom = (i / numLines) * bottomWidth - (bottomWidth - width)/2;
@@ -1330,8 +2104,7 @@ client = <span class="t-cyan">OpenAI</span>(
                 ctx.lineTo(width, y);
             }
 
-            ctx.strokeStyle = 'rgba(50, 255, 50, 0.08)';
-            ctx.strokeStyle = 'rgba(237, 237, 237, 0.1)';
+            ctx.strokeStyle = 'rgba(237, 237, 237, 0.3)';
             ctx.stroke();
 
             const gradient = ctx.createLinearGradient(0, vanishingPointY, 0, height);
@@ -1375,6 +2148,20 @@ client = <span class="t-cyan">OpenAI</span>(
 
         document.getElementById('toggle-container').addEventListener('click', toggleGuard);
         document.querySelector('.toggle-container').classList.add('active');
+
+        const runTabDescs = {
+            launch: 'Starts OpenGuard + your coding agent in one command.',
+            serve: 'Runs OpenGuard as a standalone proxy. Point your SDK at it.',
+            docker: 'Containerized — no Python needed. Pass keys with -e.'
+        };
+        document.querySelectorAll('.run-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const target = this.dataset.tab;
+                document.querySelectorAll('.run-tab').forEach(t => t.classList.toggle('active', t === this));
+                document.querySelectorAll('.run-methods').forEach(m => m.style.display = m.id === 'run-methods-' + target ? 'flex' : 'none');
+                document.getElementById('run-tab-desc').textContent = runTabDescs[target];
+            });
+        });
 
         document.querySelectorAll('.run-method').forEach(el => {
             el.addEventListener('click', function() {
@@ -1738,7 +2525,7 @@ client = <span class="t-cyan">OpenAI</span>(
                                     type: 'BREACH',
                                     x: xEnv,
                                     y: cy,
-                                    life: 0.5
+                                    life: 2.0
                                 });
                             }
                          }
@@ -1764,7 +2551,8 @@ client = <span class="t-cyan">OpenAI</span>(
                 effects = effects.filter(e => e.life > 0);
 
                 effects.forEach(e => {
-                    const alpha = Math.max(0, e.life / 0.5);
+                    const maxLife = e.type === 'BREACH' ? 2.0 : 0.5;
+                    const alpha = Math.max(0, e.life / maxLife);
                     flowCtx.save();
                     flowCtx.globalAlpha = alpha;
 
@@ -1783,13 +2571,14 @@ client = <span class="t-cyan">OpenAI</span>(
                         flowCtx.fillRect(e.x - cw/2, e.y - cw/2, cw, cw);
                     }
                     else if (e.type === 'BREACH') {
-                        flowCtx.fillStyle = 'rgba(180, 0, 255, 0.4)';
+                        flowCtx.fillStyle = 'rgba(255, 50, 255, 0.6)';
                         flowCtx.beginPath();
-                        flowCtx.arc(e.x, e.y, 30, 0, Math.PI*2);
+                        flowCtx.arc(e.x, e.y, 34, 0, Math.PI*2);
                         flowCtx.fill();
-                        flowCtx.fillStyle = '#b0f';
+                        flowCtx.fillStyle = '#ff66ff';
                         flowCtx.textAlign = 'center';
-                        flowCtx.fillText('!! BREACH !!', e.x, e.y - 35);
+                        flowCtx.font = 'bold 12px monospace';
+                        flowCtx.fillText('!! BREACH !!', e.x, e.y - 40);
                     }
 
                     flowCtx.restore();
@@ -1804,252 +2593,169 @@ client = <span class="t-cyan">OpenAI</span>(
 
         startFlowAnimation();
 
-        function startStackAnimation() {
-            const canvas = document.getElementById('stack-canvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
+        function startModularViz() {
+            const guardsEl = document.getElementById('modular-guards');
+            const yamlEl = document.getElementById('modular-yaml-body');
+            const tabsEl = document.getElementById('modular-tabs');
+            const descEl = document.getElementById('modular-preset-desc');
+            if (!guardsEl || !yamlEl) return;
 
-            let w, h;
-            function resize() {
-                const rect = canvas.parentElement.getBoundingClientRect();
-                w = canvas.width = rect.width;
-                h = canvas.height = rect.height;
-            }
-            window.addEventListener('resize', resize);
-            resize();
+            const CYCLE_MS = 6000;
 
-            const lanesCount = 3;
+            const allGuards = {
+                secrets:    { name: 'Secrets Detection',  type: 'keyword_filter',       color: '#ff8a65', comment: ' # secrets' },
+                pii:        { name: 'PII Filter',         type: 'pii_filter',           color: '#4fc3f7', comment: '' },
+                content:    { name: 'Content Filter',     type: 'content_filter',       color: '#81c784', comment: '' },
+                maxTokens:  { name: 'Max Tokens',         type: 'max_tokens',           color: '#fff176', comment: '' },
+                inspection: { name: 'Input Inspection',   type: 'llm_input_inspection', color: '#ce93d8', comment: '' },
+                commands:   { name: 'Command Blocking',   type: 'keyword_filter',       color: '#ef9a9a', comment: ' # commands' },
+            };
 
-            const guardBlocks = [
-                { name: 'Max Tokens',       color: 'rgb(129, 199, 132)', lanes: [0, 1, 2], y: 0, height: 40 },
-                { name: 'PII Filter',       color: 'rgb(79, 195, 247)', lanes: [0],       y: 50, height: 90 },
-                { name: 'Content Filter',   color: 'rgb(255, 138, 101)', lanes: [1, 2],    y: 50, height: 40 },
-                { name: 'Input Inspection', color: 'rgb(186, 104, 200)', lanes: [1, 2],    y: 100, height: 40 },
-                { name: 'Keyword Filter',   color: 'rgb(255, 238, 88)',  lanes: [0, 1, 2], y: 150, height: 40 }
+            const presets = [
+                { name: 'full',    desc: 'All guards active — maximum protection for production.',              guards: ['secrets', 'pii', 'content', 'maxTokens', 'inspection'] },
+                { name: 'agentic', desc: 'Tailored for coding agents — blocks secrets, PII, and injections.',   guards: ['secrets', 'pii', 'commands', 'inspection'] },
+                { name: 'minimal', desc: 'Lightweight — content filtering and token limits only.',              guards: ['content', 'maxTokens'] },
+                { name: 'custom',  desc: 'Mix and match — pick exactly the guards your app needs.',             guards: ['pii', 'content', 'inspection'] },
             ];
 
-            let packets = [];
-            let particles = [];
-            let lastTime = 0;
-            let spawnTimer = 0;
+            // Build named tabs
+            presets.forEach((p, i) => {
+                const tab = document.createElement('div');
+                tab.className = 'modular-tab';
+                tab.textContent = p.name;
+                const bar = document.createElement('div');
+                bar.className = 'modular-tab-progress';
+                tab.appendChild(bar);
+                tab.addEventListener('click', () => goTo(i));
+                tabsEl.appendChild(tab);
+            });
 
-            function spawnPacket() {
-                 const lane = Math.floor(Math.random() * lanesCount);
-                 const isMalicious = Math.random() < 0.25;
+            let currentIndex = 0;
+            let prevGuardIds = [];
+            let intervalId = null;
 
-                 const relevantGuards = guardBlocks.filter(g => g.lanes.includes(lane));
-
-                 let stopBlockIndex = -1;
-
-                 if (isMalicious && relevantGuards.length > 0) {
-                     const randomGuard = relevantGuards[Math.floor(Math.random() * relevantGuards.length)];
-                     stopBlockIndex = guardBlocks.indexOf(randomGuard);
-                 }
-
-                 packets.push({
-                     x: 0,
-                     y: -30,
-                     lane: lane,
-                     speed: 100 + Math.random() * 80,
-                     isMalicious: isMalicious,
-                     stopBlockIndex: stopBlockIndex,
-                     state: 'moving',
-                     color: isMalicious ? '#ef5350' : '#66bb6a',
-                     width: 8,
-                     height: 8,
-                     analyzeTimer: 0,
-                     id: Math.random().toString(36).substr(2, 9)
-                 });
+            function makeGuardCard(id) {
+                const g = allGuards[id];
+                const card = document.createElement('div');
+                card.className = 'modular-guard';
+                card.dataset.guardId = id;
+                card.style.setProperty('--guard-color', g.color);
+                card.innerHTML = '<div class="modular-guard-dot"></div>'
+                    + '<span class="modular-guard-name">' + g.name + '</span>'
+                    + '<span class="modular-guard-type">' + g.type + '</span>';
+                return card;
             }
 
-            function spawnParticles(x, y, color, count) {
-                for(let i=0; i<count; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const speed = 20 + Math.random() * 60;
-                    particles.push({
-                        x: x,
-                        y: y,
-                        vx: Math.cos(angle) * speed,
-                        vy: Math.sin(angle) * speed,
-                        life: 1.0,
-                        color: color,
-                        size: 2 + Math.random() * 3
-                    });
-                }
+            function makeYamlLine(id) {
+                const g = allGuards[id];
+                const line = document.createElement('div');
+                line.className = 'yaml-line';
+                line.dataset.guardId = id;
+                line.innerHTML = '  <span class="t-dim">- type:</span> '
+                    + '<span style="color:' + g.color + '">' + g.type + '</span>'
+                    + (g.comment ? '<span class="t-dim">' + g.comment + '</span>' : '');
+                return line;
             }
 
-            function update(timestamp) {
-                if (!lastTime) lastTime = timestamp;
-                const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
-                lastTime = timestamp;
+            function renderPreset(idx) {
+                const preset = presets[idx];
+                const newIds = preset.guards;
+                const kept = newIds.filter(id => prevGuardIds.includes(id));
+                const added = newIds.filter(id => !prevGuardIds.includes(id));
+                const removed = prevGuardIds.filter(id => !newIds.includes(id));
 
-                ctx.clearRect(0, 0, w, h);
-
-                const totalContentHeight = 200;
-                const startY = (h - totalContentHeight) / 2;
-                const totalWidth = Math.min(600, w * 0.9);
-                const laneWidth = totalWidth / lanesCount;
-                const startX = (w - totalWidth) / 2;
-
-                ctx.strokeStyle = '#222';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([4, 4]);
-
-                for (let i = 0; i < lanesCount; i++) {
-                    const lx = startX + i * laneWidth + laneWidth / 2;
-                    ctx.beginPath();
-                    ctx.moveTo(lx, 0);
-                    ctx.lineTo(lx, h);
-                    ctx.stroke();
-                }
-                ctx.setLineDash([]);
-
-                spawnTimer += dt;
-                if (spawnTimer > 0.4) {
-                    spawnPacket();
-                    spawnTimer = 0;
-                }
-
-                packets.forEach(p => {
-                    if (p.state === 'dead') return;
-
-                    const laneCenterX = startX + p.lane * laneWidth + laneWidth / 2;
-                    p.x = laneCenterX;
-
-                    if (p.state === 'moving' || p.state === 'passed') {
-                        p.y += p.speed * dt;
+                // Update tabs
+                tabsEl.querySelectorAll('.modular-tab').forEach((t, j) => {
+                    t.classList.toggle('active', j === idx);
+                    // Reset progress bar on all tabs
+                    const bar = t.querySelector('.modular-tab-progress');
+                    bar.style.transition = 'none';
+                    bar.style.width = '0%';
+                    if (j === idx) {
+                        void bar.offsetWidth;
+                        bar.style.transition = 'width ' + (CYCLE_MS / 1000) + 's linear';
+                        bar.style.width = '100%';
                     }
+                });
 
-                    let activeGuardIndex = -1;
+                // Update description
+                descEl.textContent = preset.desc;
 
-                    for (let i = 0; i < guardBlocks.length; i++) {
-                        const g = guardBlocks[i];
-                        if (!g.lanes.includes(p.lane)) continue;
+                // --- Guard cards: diff-based ---
 
-                        const gy = startY + g.y;
-                        const gh = g.height;
+                // 1. Mark removed guards for exit
+                removed.forEach(id => {
+                    const el = guardsEl.querySelector('[data-guard-id="' + id + '"]');
+                    if (el) {
+                        el.classList.remove('visible');
+                        el.classList.add('exiting');
+                    }
+                });
 
-                        if (p.y >= gy && p.y <= gy + gh) {
-                            activeGuardIndex = i;
-                            break;
+                // 2. Mark removed yaml lines for exit
+                removed.forEach(id => {
+                    const el = yamlEl.querySelector('[data-guard-id="' + id + '"]');
+                    if (el) el.classList.remove('visible');
+                });
+
+                // 3. After exit animation, rebuild in correct order
+                setTimeout(() => {
+                    guardsEl.innerHTML = '';
+                    yamlEl.innerHTML = '';
+
+                    // YAML header
+                    const header = document.createElement('div');
+                    header.className = 'yaml-line visible';
+                    header.innerHTML = '<span class="t-dim">apply:</span>';
+                    yamlEl.appendChild(header);
+
+                    newIds.forEach((id, i) => {
+                        const isKept = kept.includes(id);
+                        const delay = isKept ? 0 : (40 + added.indexOf(id) * 70);
+
+                        // Guard card
+                        const card = makeGuardCard(id);
+                        if (isKept) {
+                            card.classList.add('kept', 'visible');
+                            // Pulse to show "still here"
+                            requestAnimationFrame(() => card.classList.add('pulse'));
+                            card.addEventListener('animationend', () => card.classList.remove('pulse'), { once: true });
                         }
-                    }
+                        guardsEl.appendChild(card);
+                        if (!isKept) setTimeout(() => card.classList.add('visible'), delay);
 
-                    if (activeGuardIndex !== -1) {
-                         if (p.state === 'moving') {
-                             p.state = 'analyzing';
-                             p.speed = 20;
-                         }
+                        // YAML line
+                        const line = makeYamlLine(id);
+                        if (isKept) line.classList.add('visible');
+                        yamlEl.appendChild(line);
+                        if (!isKept) setTimeout(() => line.classList.add('visible'), delay + 40);
+                    });
+                }, 220);
 
-                         if (p.state === 'analyzing') {
-                             p.y += p.speed * dt;
-
-                             if (p.isMalicious && p.stopBlockIndex === activeGuardIndex) {
-                                 p.analyzeTimer += dt;
-                                 if (p.analyzeTimer > 0.5) {
-                                     p.state = 'rejected';
-                                     spawnParticles(p.x, p.y, '#f44336', 10);
-                                 }
-                             }
-                         }
-                    } else {
-                           if (p.state === 'analyzing') {
-                             p.state = 'moving';
-                             p.speed = 150;
-                         }
-                    }
-
-                    if (p.y > h + 20) p.state = 'dead';
-                });
-
-                guardBlocks.forEach((g, idx) => {
-                    const minLane = Math.min(...g.lanes);
-                    const maxLane = Math.max(...g.lanes);
-                    const laneSpan = maxLane - minLane + 1;
-
-                    const gx = startX + minLane * laneWidth + 4;
-                    const gy = startY + g.y;
-                    const gw = laneSpan * laneWidth - 8;
-                    const gh = g.height;
-
-                    const activePackets = packets.filter(p =>
-                        p.state === 'analyzing' &&
-                        g.lanes.includes(p.lane) &&
-                        p.y >= gy && p.y <= gy + gh
-                    );
-                    const isBusy = activePackets.length > 0;
-                    const isBlocking = activePackets.some(p => p.stopBlockIndex === idx);
-
-                    ctx.fillStyle = g.color.replace('rgb', 'rgba').replace(')', ', 0.1)');
-                    ctx.fillRect(gx, gy, gw, gh);
-
-                    ctx.strokeStyle = isBusy ? (isBlocking ? '#ef5350' : '#fff') : '#333';
-                    ctx.lineWidth = isBusy ? 2 : 1;
-                    ctx.strokeRect(gx, gy, gw, gh);
-
-                    if (!isBusy) {
-                        ctx.fillStyle = 'rgba(255,255,255,0.03)';
-                        for(let i=4; i<gw; i+=10) ctx.fillRect(gx+i, gy, 1, gh);
-                    }
-
-                    if (isBusy) {
-                        ctx.fillStyle = g.color.replace('rgb', 'rgba').replace(')', ', 0.2)');
-                        ctx.fillRect(gx, gy, gw, gh);
-
-                        const scanY = gy + (Math.sin(timestamp * 5 + idx) * 0.5 + 0.5) * gh;
-                        ctx.beginPath();
-                        ctx.moveTo(gx, scanY);
-                        ctx.lineTo(gx + gw, scanY);
-                        ctx.strokeStyle = g.color;
-                        ctx.globalAlpha = 0.5;
-                        ctx.lineWidth = 2;
-                        ctx.stroke();
-                        ctx.globalAlpha = 1;
-                    }
-
-                    ctx.fillStyle = isBusy ? '#fff' : '#888';
-                    ctx.font = '12px "Geist Mono", monospace';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(g.name, gx + gw/2, gy + gh/2);
-                });
-
-                packets.forEach(p => {
-                    if (p.state === 'dead' || p.state === 'rejected') return;
-
-                    ctx.fillStyle = p.isMalicious ? '#ef5350' : '#66bb6a';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = ctx.fillStyle;
-
-                    if (p.isMalicious) {
-                         const shake = (Math.random() - 0.5) * 3;
-                         ctx.fillRect(p.x - 3 + shake, p.y - 3, 6, 6);
-                    } else {
-                         ctx.beginPath();
-                         ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-                         ctx.fill();
-                    }
-                    ctx.shadowBlur = 0;
-                });
-
-                particles.forEach(p => {
-                    p.x += p.vx * dt;
-                    p.y += p.vy * dt;
-                    p.life -= dt * 2.5;
-
-                    ctx.fillStyle = p.color;
-                    ctx.globalAlpha = Math.max(0, p.life);
-                    ctx.fillRect(p.x, p.y, p.size, p.size);
-                    ctx.globalAlpha = 1;
-                });
-                particles = particles.filter(p => p.life > 0);
-
-                requestAnimationFrame(update);
+                prevGuardIds = [...newIds];
             }
-            requestAnimationFrame(update);
+
+            function advance() {
+                renderPreset(currentIndex);
+                currentIndex = (currentIndex + 1) % presets.length;
+            }
+
+            function goTo(idx) {
+                currentIndex = idx;
+                advance();
+                resetTimer();
+            }
+
+            function resetTimer() {
+                clearInterval(intervalId);
+                intervalId = setInterval(advance, CYCLE_MS);
+            }
+
+            advance();
+            resetTimer();
         }
 
-        startStackAnimation();
+        startModularViz();
 
         function startFontToggle() {
             const fonts = [
@@ -2088,7 +2794,6 @@ client = <span class="t-cyan">OpenAI</span>(
                 });
             };
 
-            applyPerLetterFontToggle(document.querySelector('#hero h1'));
             applyPerLetterFontToggle(document.querySelector('#site-footer'));
         }
 
@@ -2107,6 +2812,36 @@ client = <span class="t-cyan">OpenAI</span>(
         document.querySelectorAll('.feature-panel').forEach(panel => {
             featureObserver.observe(panel);
         });
+
+        // Scroll-reveal for agent cards (staggered)
+        const agentObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const cards = entry.target.querySelectorAll('.agent-card');
+                    cards.forEach((card, i) => {
+                        setTimeout(() => card.classList.add('visible'), i * 80);
+                    });
+                    agentObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        const agentsGrid = document.querySelector('.agents-grid');
+        if (agentsGrid) agentObserver.observe(agentsGrid);
+
+        // Scroll-reveal for FAQ items (staggered)
+        const faqObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const items = entry.target.querySelectorAll('.faq-item');
+                    items.forEach((item, i) => {
+                        setTimeout(() => item.classList.add('visible'), i * 100);
+                    });
+                    faqObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        const faqList = document.querySelector('.faq-list');
+        if (faqList) faqObserver.observe(faqList);
     </script>
 </body>
 </html>

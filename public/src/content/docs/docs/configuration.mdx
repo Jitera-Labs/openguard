@@ -8,9 +8,28 @@ description: Guards config format, environment variables, and match filters.
 OpenGuard loads guard rules from a YAML file (default: `./guards.yaml`). Override with:
 
 ```bash
+uvx openguard serve --config path/to/config.yaml
+# or via environment variable:
 OPENGUARD_CONFIG=path/to/config.yaml uvx openguard serve
-# or multiple files, merged in order:
+# multiple files, merged in order:
 OPENGUARD_CONFIG=base.yaml,overrides.yaml uvx openguard serve
+```
+
+In Docker, mount your config file into the container at `/app/guards.yaml`:
+
+```bash
+docker run -p 23294:23294 \
+  -v ./guards.yaml:/app/guards.yaml \
+  ghcr.io/Jitera-Labs/openguard:main
+```
+
+To use a file at a different path inside the container, set `OPENGUARD_CONFIG`:
+
+```bash
+docker run -p 23294:23294 \
+  -v ./my-config.yaml:/etc/openguard/guards.yaml \
+  -e OPENGUARD_CONFIG=/etc/openguard/guards.yaml \
+  ghcr.io/Jitera-Labs/openguard:main
 ```
 
 ### Structure
@@ -98,10 +117,34 @@ log_level: INFO
 
 ## Presets
 
-OpenGuard ships with ready-made presets:
+OpenGuard ships with ready-made guard configs so you don't have to write one from scratch:
 
-- **`presets/agentic.yaml`** — protection for coding agents (secrets, PII, dangerous commands, prompt injection). This is the default when running via the Docker wrapper.
+| Preset | What it covers |
+|---|---|
+| `presets/agentic.yaml` | Secrets leakage, PII exposure, prompt injection, dangerous shell commands. Tailored for coding agents. Default when running via the Docker wrapper. |
+| `presets/full.yaml` | Exercises every guard type. Used by integration tests — also useful as a reference for all available options. |
+
+### Using a preset
 
 ```bash
-OPENGUARD_CONFIG=presets/agentic.yaml uvx openguard serve
+# Serve
+uvx openguard serve --config presets/agentic.yaml
+
+# Launch
+OPENGUARD_CONFIG=presets/agentic.yaml uvx openguard launch claude
+```
+
+In Docker, the presets are already baked into the image at `/app/presets/`:
+
+```bash
+docker run -p 23294:23294 \
+  -e OPENGUARD_CONFIG=/app/presets/agentic.yaml \
+  -e OPENGUARD_OPENAI_KEY_1="sk-..." \
+  ghcr.io/Jitera-Labs/openguard:main
+```
+
+You can also layer a preset with your own overrides — files are merged in order:
+
+```bash
+OPENGUARD_CONFIG=presets/agentic.yaml,./my-overrides.yaml uvx openguard serve
 ```

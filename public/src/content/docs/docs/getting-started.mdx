@@ -3,75 +3,218 @@ title: Getting Started
 description: Install and run OpenGuard in under a minute.
 ---
 
-OpenGuard is a transparent security proxy for LLM applications. It sits between your app and any OpenAI-compatible or Anthropic API, running configurable guards on every request.
+import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Install
+OpenGuard is a local proxy that sits between your app and an LLM provider (OpenAI, Anthropic, or any OpenAI-compatible API like Ollama). Every request and response passes through a pipeline of **guards** — they can redact PII, block keywords, cap token usage, and more. Your app talks to OpenGuard exactly like it would talk to the real API; it doesn't need to know OpenGuard exists.
 
-The fastest way to run OpenGuard:
+<svg viewBox="0 0 720 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Request flow: Your app → OpenGuard → LLM provider" style="max-width:640px;margin:1.5rem auto;display:block">
+  <style>{`text{font-family:ui-monospace,monospace;font-size:13px;fill:currentColor}rect{rx:0;stroke:currentColor;stroke-width:1.5;fill:none}.arrow{stroke:currentColor;stroke-width:1.5;fill:none;marker-end:url(#ah)}.label{font-size:11px;opacity:.7}`}</style>
+  <defs><marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="currentColor"/></marker></defs>
+  <rect x="20" y="30" width="140" height="50"/>
+  <text x="90" y="60" text-anchor="middle">Your app</text>
+  <line x1="160" y1="55" x2="240" y2="55" class="arrow"/>
+  <rect x="240" y="15" width="220" height="80" stroke-dasharray="6,3"/>
+  <text x="350" y="48" text-anchor="middle" style="font-weight:600">OpenGuard</text>
+  <text x="350" y="68" text-anchor="middle" class="label">:23294 · guards run here</text>
+  <line x1="460" y1="55" x2="540" y2="55" class="arrow"/>
+  <rect x="540" y="30" width="160" height="50"/>
+  <text x="620" y="60" text-anchor="middle">LLM provider</text>
+</svg>
+
+## How you can run OpenGuard
+
+There are three ways to run OpenGuard. Pick the one that fits your setup:
+
+| Mode | What it does | Best for |
+|---|---|---|
+| **Launch** | Starts OpenGuard in the background, configures a coding agent to route through it, and launches the agent — all in one command. | Claude Code, Codex, OpenCode users |
+| **Serve** | Runs OpenGuard as a standalone proxy. You point your own app or SDK at it. | Custom apps, any OpenAI/Anthropic SDK |
+| **Docker** | Same as Serve, but containerized. No Python required on the host. | CI pipelines, production, Python-free setups |
+
+All three modes listen on **port 23294** by default and load guards from `guards.yaml` in the working directory.
+
+---
+
+## Launch mode
+
+One command. OpenGuard starts in the background, wires the agent to route through it, then launches the agent. When the agent exits, OpenGuard stops automatically. The agent manages its own API credentials — no extra key configuration needed.
+
+[`uvx`](https://docs.astral.sh/uv/) is a Python package runner (like `npx` for Node). It downloads and runs OpenGuard in an isolated environment. Requires **Python 3.10+**.
 
 ```bash
-# via uvx (no install needed)
-uvx openguard serve
-
-# or via Docker
-docker run -p 23294:23294 ghcr.io/Jitera-Labs/openguard:main
+uvx openguard launch claude   # Claude Code
+uvx openguard launch codex    # Codex
+uvx openguard launch opencode # OpenCode
 ```
 
-## Point your SDK at OpenGuard
+Any extra arguments are forwarded to the agent:
 
-```python
+```bash
+uvx openguard launch claude --model sonnet
+```
+
+OpenGuard ships with a built-in preset for coding agents — use it to get protection out of the box:
+
+```bash
+OPENGUARD_CONFIG=presets/agentic.yaml uvx openguard launch claude
+```
+
+Or point to your own config:
+
+```bash
+OPENGUARD_CONFIG=./guards.yaml uvx openguard launch claude
+```
+
+See [Configure guards](#configure-guards) below for how to write your own, or [Presets](/docs/configuration/#presets) for what the built-in configs cover.
+
+---
+
+## Serve mode
+
+Runs OpenGuard as a long-running proxy. You point your own app or SDK at it.
+
+### Provider API keys
+
+Tell OpenGuard which provider to forward to. You only need the one that applies to you:
+
+```bash
 # OpenAI
-from openai import OpenAI
-client = OpenAI(base_url="http://localhost:23294/v1", api_key="your-key")
+export OPENGUARD_OPENAI_KEY_1="sk-..."
 
 # Anthropic
-import anthropic
-client = anthropic.Anthropic(base_url="http://localhost:23294", api_key="your-key")
+export OPENGUARD_ANTHROPIC_KEY_1="sk-ant-..."
+
+# Local models (Ollama, LM Studio, etc.) — no key needed.
+# OpenGuard forwards to http://localhost:11434/v1 by default.
 ```
 
-## Add guards
+OpenGuard forwards your key to the provider on each request. It does not store or log keys.
 
-Create a `guards.yaml` in your working directory:
+### Start the proxy
+
+```bash
+uvx openguard serve
+```
+
+To use a built-in preset or your own config:
+
+```bash
+# Built-in preset (secrets, PII, prompt injection, dangerous commands)
+uvx openguard serve --config presets/agentic.yaml
+
+# Your own config
+uvx openguard serve --config ./guards.yaml
+```
+
+Then change the base URL in your SDK to `localhost:23294`. Use your **real** provider API key — OpenGuard forwards it as-is:
+
+<Tabs>
+  <TabItem label="OpenAI Python">
+    ```python
+    from openai import OpenAI
+
+    client = OpenAI(
+        base_url="http://localhost:23294/v1",
+        api_key="sk-...",  # your real OpenAI key
+    )
+    ```
+  </TabItem>
+  <TabItem label="Anthropic Python">
+    ```python
+    import anthropic
+
+    client = anthropic.Anthropic(
+        base_url="http://localhost:23294",
+        api_key="sk-ant-...",  # your real Anthropic key
+    )
+    ```
+  </TabItem>
+  <TabItem label="curl">
+    ```bash
+    curl http://localhost:23294/v1/chat/completions \
+      -H "Authorization: Bearer sk-..." \
+      -H "Content-Type: application/json" \
+      -d '{
+        "model": "gpt-4o",
+        "messages": [{"role": "user", "content": "Hello"}]
+      }'
+    ```
+  </TabItem>
+</Tabs>
+
+Your existing code works identically — the only change is the base URL.
+
+---
+
+## Docker
+
+Same as Serve, but containerized — no Python needed. Pass your provider key with `-e` and mount your guard config with `-v`:
+
+```bash
+docker run -p 23294:23294 \
+  -e OPENGUARD_OPENAI_KEY_1="sk-..." \
+  -v ./guards.yaml:/app/guards.yaml \
+  ghcr.io/Jitera-Labs/openguard:main
+```
+
+Then point your SDK at `http://localhost:23294` the same way as in [Serve mode](#serve-mode).
+
+For Anthropic, swap the env var:
+
+```bash
+docker run -p 23294:23294 \
+  -e OPENGUARD_ANTHROPIC_KEY_1="sk-ant-..." \
+  -v ./guards.yaml:/app/guards.yaml \
+  ghcr.io/Jitera-Labs/openguard:main
+```
+
+---
+
+## Configure guards
+
+Create a file called `guards.yaml` in the directory where you run OpenGuard:
 
 ```yaml
 guards:
   - match:
       model:
-        _ilike: "%"
+        _ilike: "%" # matches every model name
     apply:
-      - type: pii_filter
+      - type: pii_filter # redacts emails, phone numbers, SSNs, etc.
         config: {}
       - type: keyword_filter
         config:
           keywords: ["secret", "confidential"]
-          action: block
+          action: block # rejects the entire request if a keyword is found
 ```
 
-Then start OpenGuard with your config:
+OpenGuard loads `guards.yaml` from the current directory automatically. To use a different path:
 
-```bash
-uvx openguard serve --config guards.yaml
-```
+<Tabs>
+  <TabItem label="Launch">
+    ```bash
+    OPENGUARD_CONFIG=./my-guards.yaml uvx openguard launch claude
+    ```
+  </TabItem>
+  <TabItem label="Serve">
+    ```bash
+    uvx openguard serve --config ./my-guards.yaml
+    ```
+  </TabItem>
+  <TabItem label="Docker">
+    ```bash
+    docker run -p 23294:23294 \
+      -e OPENGUARD_OPENAI_KEY_1="sk-..." \
+      -v ./my-guards.yaml:/app/guards.yaml \
+      ghcr.io/Jitera-Labs/openguard:main
+    ```
+  </TabItem>
+</Tabs>
 
-Every request now passes through PII redaction and keyword blocking before reaching the downstream LLM.
+With no config file present, all traffic passes through untouched — useful for verifying the proxy works before adding rules.
 
-## Launch integrations
+## Next steps
 
-OpenGuard can wrap popular coding agents directly:
-
-```bash
-uvx openguard launch claude
-uvx openguard launch opencode
-uvx openguard launch codex
-```
-
-## Environment variables
-
-Set your provider API keys:
-
-```bash
-export OPENGUARD_OPENAI_KEY_1="sk-..."
-export OPENGUARD_ANTHROPIC_KEY_1="sk-ant-..."
-```
-
-See [Configuration](/docs/configuration/) for the full reference.
+- [Configuration](/docs/configuration/) — match filters, environment variables, multi-file configs.
+- [PII Filter](/docs/guards/pii_filter/) — what PII patterns are detected and redacted.
+- [Keyword Filter](/docs/guards/keyword_filter/) — blocking, redacting, or auditing by keyword or regex.
