@@ -1987,13 +1987,20 @@ client = <span class="t-cyan">OpenAI</span>(
         const stars = [];
         const numStars = 70;
 
+        function smoothstep(edge0, edge1, x) {
+            const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+            return t * t * (3 - 2 * t);
+        }
+
         function initStar(startRandom) {
             const isRed = Math.random() > 0.8;
-            // Power distribution: mostly small, some medium, few large (10–150px base)
+            // Power distribution: mostly small, some medium, few large (4–50px base at full depth)
             const r = Math.random();
-            const baseSize = 10 + Math.pow(r, 3) * 140;
-            // lane: normalized position across the bottom edge (-0.5 to 1.5 to cover full spread)
-            const lane = -0.5 + Math.random() * 2;
+            const baseSize = 4 + Math.pow(r, 3) * 46;
+            // lane: inverse-normal — most particles stream along the sides, few in center
+            const dist = Math.pow(Math.random(), 0.4);
+            const side = Math.random() < 0.5 ? -1 : 1;
+            const lane = 0.5 + side * dist;
             return {
                 z: startRandom ? Math.random() : 0,
                 lane: lane,
@@ -2019,8 +2026,6 @@ client = <span class="t-cyan">OpenAI</span>(
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(0, 0, width, height);
 
-            const starOpacity = 1.0;
-
             const vpX = width / 2;
             const vpY = height * 0.2;
             const bottomWidth = width * 4;
@@ -2044,14 +2049,13 @@ client = <span class="t-cyan">OpenAI</span>(
                 const sx = vpX + (xBottom - vpX) * t;
                 const sy = vpY + (height - vpY) * t;
 
-                // Scale size with depth (tiny near vanishing point, full size at bottom)
-                const size = star.baseSize * Math.max(0.15, t);
+                // Linear perspective scaling — size proportional to z for correct depth
+                const size = star.baseSize * Math.max(0.02, star.z);
 
-                // Fade larger particles; also fade near vanishing point and near exit
-                const sizeAlpha = Math.max(0.2, 1 - (star.baseSize - 10) / 200);
-                const depthAlpha = Math.min(1, star.z * 3) * Math.max(0, 1 - (star.z - 0.92) / 0.08);
-                ctx.globalAlpha = starOpacity * sizeAlpha * depthAlpha;
-                ctx.fillStyle = star.color;
+                // Smooth fade in from vanishing point, smooth fade out at grid bottom
+                const fadeIn = smoothstep(0, 0.12, star.z);
+                const fadeOut = 1 - smoothstep(0.88, 1.0, star.z);
+                ctx.globalAlpha = fadeIn * fadeOut;
 
                 // Diamond data packet — matches flow visualization
                 ctx.fillStyle = star.color;
@@ -2107,13 +2111,14 @@ client = <span class="t-cyan">OpenAI</span>(
             ctx.strokeStyle = 'rgba(237, 237, 237, 0.3)';
             ctx.stroke();
 
-            const gradient = ctx.createLinearGradient(0, vanishingPointY, 0, height);
-            gradient.addColorStop(0, 'rgba(10,10,10, 1)');
-            gradient.addColorStop(0.2, 'rgba(10,10,10, 0)');
-            gradient.addColorStop(1, 'rgba(10,10,10, 0)');
-
+            // Smooth gradient fade above vanishing point (no hard clip)
             ctx.fillStyle = '#0a0a0a';
-            ctx.fillRect(0, 0, width, vanishingPointY);
+            ctx.fillRect(0, 0, width, Math.max(0, vanishingPointY - 30));
+            const topFade = ctx.createLinearGradient(0, vanishingPointY - 30, 0, vanishingPointY + 60);
+            topFade.addColorStop(0, 'rgba(10,10,10,1)');
+            topFade.addColorStop(1, 'rgba(10,10,10,0)');
+            ctx.fillStyle = topFade;
+            ctx.fillRect(0, Math.max(0, vanishingPointY - 30), width, 90);
         }
 
         let lastTime = 0;
