@@ -544,25 +544,14 @@ POST {{host}}/v1/responses
   "input": "This request contains forbidden content and should be blocked."
 }
 
+?? status == 403
 {{
-  test('Responses /v1/responses guard test should return rejection envelope when enabled or allow response when guards are permissive', () => {
-    const status = response.statusCode || response.status;
+  test('Responses /v1/responses should apply keyword block guards before native forwarding', () => {
     const body = response.parsedBody;
 
-    if (status === 403) {
-      expect(body.error).toBeDefined('Expected error envelope on blocked response');
-      expect(body.error.type).toBe('guard_block', 'Expected guard_block error type');
-      expect(body.error.message).toInclude('forbidden', 'Expected forbidden keyword in blocked message');
-      return;
-    }
-
-    if (status === 200) {
-      expect(body.object).toBe('response', 'Expected Responses object envelope for permissive guard config');
-      expect(Array.isArray(body.output)).toBeTruthy('Expected output array for permissive guard config');
-      return;
-    }
-
-    throw new Error(`Unexpected status for Responses guard path: ${status}`);
+    expect(body.error).toBeDefined('Expected error envelope on blocked response');
+    expect(body.error.type).toBe('guard_block', 'Expected guard_block error type');
+    expect(body.error.message).toInclude('forbidden', 'Expected forbidden keyword in blocked message');
   });
 }}
 

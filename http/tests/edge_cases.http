@@ -1,4 +1,5 @@
 # @import ../variables.http
+# @import ../helpers.http
 
 ### InvalidModel: Missing `model`
 # Case: The `model` field is required by the OpenAI API spec.
@@ -208,8 +209,8 @@ POST {{host}}/v1/responses
 ?? status == 400
 
 ### ResponsesUnknownModel: `model: "unknown-model-xyz"`
-# Case: Model is unknown to downstream backend.
-# Expected: explicit downstream error envelope/status (400/404/422)
+# Case: Model is unknown during local routing.
+# Expected: 404 Not Found with `detail` message.
 POST {{host}}/v1/responses
 ...defaultHeaders
 {
@@ -217,21 +218,31 @@ POST {{host}}/v1/responses
   "input": "Hello"
 }
 
+?? status == 404
 {{
-  test('/v1/responses unknown model should return explicit error for unsupported model', () => {
-    const status = response.statusCode || response.status;
+  test('/v1/responses unknown model should return 404 detail message', () => {
     const body = response.parsedBody;
 
-    if (status === 400 || status === 404 || status === 422) {
-      const hasOpenAIError = body && body.error && typeof body.error.message === 'string';
-      const hasFastAPIError = body && typeof body.detail === 'string';
+    expect(body.detail).toBe("Unknown model: 'unknown-model-xyz'", 'Expected local unknown-model detail message');
+  });
+}}
 
-      if (!hasOpenAIError && !hasFastAPIError) {
-        throw new Error('Expected explicit error envelope for /v1/responses unknown model');
-      }
-      return;
-    }
+### ResponsesUnknownModelStream: `model: "unknown-model-xyz", stream: true`
+# Case: Streaming /v1/responses should fail during local routing before SSE setup.
+# Expected: same 404 Not Found with `detail` message.
+POST {{host}}/v1/responses
+...defaultHeaders
+{
+  "model": "unknown-model-xyz",
+  "input": "Hello",
+  "stream": true
+}
 
-    throw new Error(`Unexpected status for /v1/responses unknown model: ${status}`);
+?? status == 404
+{{
+  test('/v1/responses streaming unknown model should return 404 detail message', () => {
+    const body = response.parsedBody;
+
+    expect(body.detail).toBe("Unknown model: 'unknown-model-xyz'", 'Expected local unknown-model detail message before SSE setup');
   });
 }}

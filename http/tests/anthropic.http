@@ -126,6 +126,38 @@ POST {{host}}/v1/messages/count_tokens
   });
 }}
 
+### 4a. Anthropic Messages x-api-key Auth (downstream-independent)
+POST {{host}}/v1/messages
+Content-Type: application/json
+x-api-key: {{apiKey}}
+
+{
+  "model": "{{model}}",
+  "user": "keyword-block",
+  "max_tokens": 64,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "This request contains forbidden content."
+        }
+      ]
+    }
+  ]
+}
+
+?? status == 403
+{{
+  test('Anthropic /v1/messages should authenticate with x-api-key header only and preserve Anthropic block envelope', () => {
+    const body = response.parsedBody;
+    expect(body.type).toBe('error', 'Expected top-level Anthropic error envelope');
+    expect(body.error.type).toBe('invalid_request_error', 'Expected Anthropic invalid_request_error type');
+    expect(body.error.message).toInclude('forbidden', 'Expected blocked keyword in message');
+  });
+}}
+
 ### 5. Anthropic Structured Outputs (non-stream)
 POST {{host}}/v1/messages
 ...defaultHeaders

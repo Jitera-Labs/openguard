@@ -26,6 +26,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -57,6 +58,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -94,6 +96,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -141,6 +144,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -165,6 +169,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -192,6 +197,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -214,6 +220,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -236,6 +243,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -258,6 +266,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -285,6 +294,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -307,6 +317,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -329,6 +340,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -355,6 +367,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -387,6 +400,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -421,6 +435,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -447,6 +462,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -475,6 +491,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -501,6 +518,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -527,6 +545,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -553,6 +572,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -579,6 +599,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -606,6 +627,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -632,6 +654,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {
@@ -658,6 +681,7 @@ POST {{host}}/v1/chat/completions
 
 {
   "model": "{{model}}",
+  "user": "llm-input-inspection",
   "temperature": 0,
   "messages": [
     {

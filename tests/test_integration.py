@@ -442,6 +442,34 @@ def test_authentication_enabled(test_client, setup_mock_non_streaming, monkeypat
     assert response.status_code == 200
 
 
+def test_anthropic_messages_accepts_front_door_x_api_key(
+    test_client, setup_mock_downstream, monkeypatch
+):
+    """Test Anthropic-compatible endpoint accepts x-api-key for proxy auth."""
+    from src import config
+
+    monkeypatch.setattr(config.OPENGUARD_API_KEY, "__value__", "test-key-123")
+
+    payload = {
+        "model": "claude-3-5-sonnet-20241022",
+        "max_tokens": 128,
+        "messages": [{"role": "user", "content": "Hello"}],
+    }
+
+    response = test_client.post(
+        "/v1/messages",
+        json=payload,
+        headers={"x-api-key": "test-key-123"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["type"] == "message"
+
+    forwarded = setup_mock_downstream["request"][-1]
+    assert forwarded["url"] == "http://anthropic.test/v1/messages"
+    assert forwarded["headers"]["x-api-key"] == "anthropic-downstream-key"
+
+
 def test_invalid_model(test_client, setup_mock_downstream, monkeypatch):
     """Test error handling for unknown model"""
     from src import config
@@ -634,10 +662,28 @@ def test_models_endpoint_requires_auth_when_enabled(
     response = test_client.get("/v1/models")
     assert response.status_code == 401
 
-    # Request with correct auth should succeed
+    # Request with correct bearer auth should succeed
     headers = {"Authorization": "Bearer test-key-123"}
     response = test_client.get("/v1/models", headers=headers)
     assert response.status_code == 200
+
+
+def test_models_endpoint_accepts_front_door_x_api_key(
+    test_client, setup_mock_downstream, monkeypatch
+):
+    """Test that /v1/models accepts x-api-key when authentication is enabled."""
+    from src import config
+
+    monkeypatch.setattr(config.OPENGUARD_API_KEY, "__value__", "test-key-123")
+
+    response = test_client.get("/v1/models", headers={"x-api-key": "test-key-123"})
+
+    assert response.status_code == 200
+    assert response.json()["object"] == "list"
+
+    forwarded = setup_mock_downstream["get"][-1]
+    assert forwarded["url"] == "http://downstream.test/models"
+    assert "x-api-key" not in {key.lower() for key in forwarded["headers"]}
 
 
 def test_multiple_messages_with_guards(test_client, setup_mock_non_streaming):
