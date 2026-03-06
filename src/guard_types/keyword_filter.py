@@ -112,7 +112,9 @@ def apply(chat: "Chat", llm: "LLM", config: dict) -> List[str]:
 
     flags = 0 if cfg.case_sensitive else re.IGNORECASE
 
-    if hasattr(llm, "stream_blocks") and not cfg.scan_input_only:
+    # Stream blocks are per-keyword, so they only work for match_mode "any".
+    # For "all", blocking requires all keywords present — can't be done per-token.
+    if hasattr(llm, "stream_blocks") and not cfg.scan_input_only and cfg.match_mode != "all":
         for kw in cfg.keywords:
             raw_pattern = kw if cfg.use_regex else re.escape(kw)
             try:

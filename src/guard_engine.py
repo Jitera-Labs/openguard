@@ -80,11 +80,9 @@ async def apply_guards(chat: Chat, llm: LLM, guards: List[GuardRule]) -> Tuple[C
             except AttributeError:
                 logger.error(f"Guard type '{action_type}' does not have an 'apply' function")
             except Exception as e:
-                if isinstance(e, GuardBlockedError):
+                _guards_mod = importlib.import_module("src.guards")
+                if isinstance(e, (GuardBlockedError, _guards_mod.GuardBlockedError)):
                     # Re-raise using the current class to survive module reloads.
-                    # importlib.import_module returns the cached (potentially reloaded)
-                    # module, so the class identity matches what callers expect.
-                    _guards_mod = importlib.import_module("src.guards")
                     raise _guards_mod.GuardBlockedError(str(e)) from e
                 logger.error(f"Error applying guard action '{action_type}': {e}")
 
