@@ -56,16 +56,11 @@ async def verify_auth(request: Request):
     if not api_key and not api_keys_list:
         return True
 
-    # Check Authorization header
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = mapper.extract_api_key(request.headers)
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing API key")
 
-    token = auth_header[7:]  # Remove "Bearer "
-
-    # Check against configured keys
-    valid_keys = [api_key] if api_key else []
-    valid_keys.extend(api_keys_list)
+    valid_keys = mapper.get_internal_api_keys()
 
     if token not in valid_keys:
         raise HTTPException(status_code=403, detail="Invalid API key")
@@ -348,6 +343,8 @@ async def _proxy_anthropic_messages_with_guards(request: Request):
         raise
 
     forwarded_payload = chat.serialize("anthropic")
+    if not isinstance(forwarded_payload, dict):
+        raise HTTPException(status_code=500, detail="Invalid guarded anthropic payload")
 
     for key, value in llm_instance.params.items():
         if key not in param_keys_excluded:
@@ -750,30 +747,6 @@ async def responses_endpoint(request: Request, authorized: bool = Depends(verify
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="Request body must be a JSON object")
 
-    # Determine the upstream URL to decide passthrough vs translation
-    try:
-        route_config = mapper.resolve_provider_route(
-            provider="openai",
-            endpoint_path="/responses",
-            body=payload,
-            headers=request.headers,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    upstream_url = route_config.get("url", "")
-
-    if responses_module.upstream_supports_responses_api(upstream_url):
-        # Native passthrough — forward directly to /responses
-        return await _forward_provider_request(
-            request,
-            provider="openai",
-            endpoint_path="/responses",
-            body_bytes=body_bytes,
-            payload=payload,
-        )
-
-    # Translation path: Responses API → Chat Completions → guards → forward → translate back
     try:
         cc_payload = responses_module.responses_to_chat_completions(payload)
     except Exception as e:
@@ -791,27 +764,74 @@ async def responses_endpoint(request: Request, authorized: bool = Depends(verify
         logger.error(f"Failed to build Chat from translated payload: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail="Invalid request format")
 
-    try:
-        proxy_config = mapper.resolve_request_config(cc_payload)
-    except ValueError:
-        raise
-
-    llm_instance = llm.LLM(
-        url=proxy_config["url"],
-        headers=proxy_config["headers"],
+    provisional_llm = llm.LLM(
+        url=mapper._as_list(config.OPENGUARD_OPENAI_URLS.value)[0]
+        if mapper._as_list(config.OPENGUARD_OPENAI_URLS.value)
+        else "",
+        headers={},
         model=cc_payload.get("model"),
-        params=proxy_config["params"],
+        params={k: v for k, v in cc_payload.items() if k not in {"model", "messages"}},
         messages=cc_payload.get("messages"),
+        raw_payload=payload,
     )
 
     try:
         guards = get_guards()
-        _, audit_logs = await apply_guards(llm_instance.chat, llm_instance, guards)
+        _, audit_logs = await apply_guards(provisional_llm.chat, provisional_llm, guards)
         log_audit(audit_logs)
     except GuardBlockedError as e:
         return JSONResponse(
             status_code=403,
             content={"error": {"message": str(e), "type": "guard_block", "code": 403}},
+        )
+
+    guarded_cc_payload = {
+        "model": provisional_llm.model,
+        "messages": provisional_llm.chat.serialize(),
+        **provisional_llm.params,
+    }
+
+    try:
+        proxy_config = mapper.resolve_request_config(guarded_cc_payload)
+    except ValueError as e:
+        logger.error(f"Failed to resolve backend for Responses API request: {e}")
+        if "without a model specifier" in str(e):
+            raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
+
+    llm_instance = llm.LLM(
+        url=proxy_config["url"],
+        headers=proxy_config["headers"],
+        model=guarded_cc_payload.get("model"),
+        params=proxy_config["params"],
+        messages=guarded_cc_payload.get("messages"),
+        raw_payload=payload,
+    )
+
+    if responses_module.upstream_supports_responses_api(proxy_config["url"]):
+        guarded_messages = llm_instance.chat.serialize()
+        if not isinstance(guarded_messages, list):
+            raise HTTPException(status_code=500, detail="Invalid guarded chat state")
+
+        guarded_cc_payload_for_upstream: dict = {
+            "model": llm_instance.model,
+            "messages": guarded_messages,
+            **llm_instance.params,
+        }
+        guarded_responses_payload: dict = (
+            responses_module.apply_guarded_chat_completions_to_responses_request(
+                payload,
+                guarded_cc_payload_for_upstream,
+            )
+        )
+        guarded_body_bytes = json.dumps(guarded_responses_payload).encode("utf-8")
+
+        return await _forward_provider_request(
+            request,
+            provider="openai",
+            endpoint_path="/responses",
+            body_bytes=guarded_body_bytes,
+            payload=guarded_responses_payload,
         )
 
     is_streaming = payload.get("stream", False)

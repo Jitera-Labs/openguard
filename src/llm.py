@@ -467,33 +467,15 @@ class LLM(AsyncEventEmitter):
                     )
                 )
             except httpx.ConnectError as e:
-                await self.emit_data(
-                    json.dumps(
-                        {
-                            "error": {
-                                "message": f"Failed to connect to downstream API: {str(e)}",
-                                "type": "connection_error",
-                                "code": 502,
-                            }
-                        }
-                    )
+                await self.emit_error(
+                    f"Failed to connect to downstream API: {str(e)}", "connection_error", 502
                 )
             except httpx.TimeoutException as e:
                 logger.error(f"Upstream timeout error: {e}")
-                await self.emit_data(
-                    json.dumps(
-                        {
-                            "error": {
-                                "message": "Request to downstream API timed out",
-                                "type": "timeout_error",
-                                "code": 504,
-                            }
-                        }
-                    )
-                )
+                await self.emit_error("Request to downstream API timed out", "timeout_error", 504)
             except Exception as e:
                 logger.error(f"Error in LLM service: {e}")
-                # Emit generic error if needed
+                await self.emit_error(str(e), "internal_server_error", 500)
             finally:
                 await self.emit_done()
 
@@ -546,6 +528,19 @@ class LLM(AsyncEventEmitter):
 
     async def emit_message(self, message):
         await self.emit_chunk(self.chunk_from_message(message))
+
+    async def emit_error(self, message: str, error_type: str, code: int):
+        await self.emit_data(
+            json.dumps(
+                {
+                    "error": {
+                        "message": message,
+                        "type": error_type,
+                        "code": code,
+                    }
+                }
+            )
+        )
 
     async def emit_chunk(self, chunk):
         if (
@@ -810,30 +805,36 @@ class LLM(AsyncEventEmitter):
                                     logger.error(line)
             except httpx.TimeoutException as e:
                 logger.error(f"Upstream timeout error: {e}")
-                await self.emit_data(
-                    json.dumps(
-                        {
-                            "error": {
-                                "message": "Request to downstream API timed out",
-                                "type": "timeout_error",
-                                "code": 504,
-                            }
-                        }
-                    )
-                )
+                await self.emit_error("Request to downstream API timed out", "timeout_error", 504)
                 return
             except httpx.ConnectError as e:
-                await self.emit_data(
-                    json.dumps(
-                        {
-                            "error": {
-                                "message": f"Failed to connect to downstream API: {str(e)}",
-                                "type": "connection_error",
-                                "code": 502,
-                            }
-                        }
-                    )
+                await self.emit_error(
+                    f"Failed to connect to downstream API: {str(e)}", "connection_error", 502
                 )
+                return
+            except httpx.RequestError as e:
+                logger.error(f"Downstream request error: {e}")
+                await self.emit_error(
+                    f"Failed to construct or send downstream API request: {str(e)}",
+                    "request_error",
+                    502,
+                )
+                return
+            except httpx.HTTPStatusError as e:
+                try:
+                    error_body = e.response.text
+                except Exception:
+                    error_body = str(e)
+                logger.error(f"Downstream HTTP error {e.response.status_code}: {error_body}")
+                await self.emit_error(
+                    error_body or str(e),
+                    "upstream_error",
+                    e.response.status_code,
+                )
+                return
+            except Exception as e:
+                logger.error(f"Unexpected error while streaming chat completion: {e}")
+                await self.emit_error(str(e), "internal_server_error", 500)
                 return
 
             # After stream ends, check if we need to execute tool calls

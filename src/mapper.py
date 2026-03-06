@@ -67,31 +67,42 @@ def _as_list(value):
     return list(value or [])
 
 
+def _non_blank_backend_pairs(urls, keys):
+    if len(keys) < len(urls):
+        keys = [*keys, *([""] * (len(urls) - len(keys)))]
+
+    normalized = []
+    for index, url in enumerate(urls):
+        key = keys[index]
+        if isinstance(url, str):
+            url = url.strip()
+        if url:
+            normalized.append((url, key))
+    return normalized
+
+
 def get_provider_backends(provider: str):
     provider_normalized = provider.lower()
     if provider_normalized == "anthropic":
         urls = _as_list(config.OPENGUARD_ANTHROPIC_URLS.value)
         keys = _as_list(config.OPENGUARD_ANTHROPIC_KEYS.value)
+        backend_pairs = _non_blank_backend_pairs(urls, keys)
 
-        if not urls:
+        if not backend_pairs:
             # No explicit backend configured — default to Anthropic's public API with no
             # downstream key.  With an empty key, _build_forward_headers forwards the
             # incoming Authorization/x-api-key header verbatim, which supports both OAuth
             # subscription tokens and direct API keys without any credential management.
-            urls = ["https://api.anthropic.com"]
-            keys = [""]
+            backend_pairs = [("https://api.anthropic.com", "")]
     else:
-        urls = _as_list(config.OPENGUARD_OPENAI_URLS.value)
-        keys = _as_list(config.OPENGUARD_OPENAI_KEYS.value)
-
-    if len(keys) < len(urls):
-        keys.extend([""] * (len(urls) - len(keys)))
+        backend_pairs = _non_blank_backend_pairs(
+            _as_list(config.OPENGUARD_OPENAI_URLS.value),
+            _as_list(config.OPENGUARD_OPENAI_KEYS.value),
+        )
 
     backends = []
-    for index, url in enumerate(urls):
-        if not url:
-            continue
-        backends.append({"provider": provider_normalized, "url": url, "key": keys[index]})
+    for url, key in backend_pairs:
+        backends.append({"provider": provider_normalized, "url": url, "key": key})
 
     return backends
 
@@ -244,7 +255,13 @@ def resolve_request_config(body: Dict) -> Dict:
         # list_downstream is cached.
 
         # Fallback: check if we can guess backend from config if only 1 exists
-        urls = _as_list(config.OPENGUARD_OPENAI_URLS.value)
+        urls = [
+            url
+            for url, _ in _non_blank_backend_pairs(
+                _as_list(config.OPENGUARD_OPENAI_URLS.value),
+                _as_list(config.OPENGUARD_OPENAI_KEYS.value),
+            )
+        ]
 
         if len(urls) == 1:
             proxy_backend = urls[0]
@@ -254,8 +271,12 @@ def resolve_request_config(body: Dict) -> Dict:
             raise ValueError(f"Unknown model: '{model}'")
 
     # Find key for backend
-    urls = _as_list(config.OPENGUARD_OPENAI_URLS.value)
-    keys = _as_list(config.OPENGUARD_OPENAI_KEYS.value)
+    backend_pairs = _non_blank_backend_pairs(
+        _as_list(config.OPENGUARD_OPENAI_URLS.value),
+        _as_list(config.OPENGUARD_OPENAI_KEYS.value),
+    )
+    urls = [url for url, _ in backend_pairs]
+    keys = [key for _, key in backend_pairs]
 
     proxy_key = ""
     if proxy_backend in urls:
