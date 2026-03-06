@@ -16,10 +16,12 @@ services:
       OPENGUARD_OPENAI_KEY_1: "${OPENGUARD_OPENAI_KEY_1:-}"
       OPENGUARD_ANTHROPIC_URL_1: "${OPENGUARD_ANTHROPIC_URL_1:-}"
       OPENGUARD_ANTHROPIC_KEY_1: "${OPENGUARD_ANTHROPIC_KEY_1:-}"
+      UV_PROJECT_ENVIRONMENT: /tmp/venv
     volumes:
       # Bind-mount overrides the image's COPY content — intentional for hot-reload in dev.
       # The production image uses only COPY'd files; this mount is NOT present in production.
       - .:/app
+      - /app/.venv
     # Override command to enable hot-reloading for development
     command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "23294", "--reload", "--reload-dir", "/app"]
 
@@ -30,8 +32,11 @@ services:
     image: openguard-dev
     ports:
       - "4400:4400"
+    environment:
+      UV_PROJECT_ENVIRONMENT: /tmp/venv
     volumes:
       - .:/app
+      - /app/.venv
     # bun install runs on every start; it is fast when node_modules is up-to-date (no-op install).
     # Moving this to a build step would require rebuilding the image on every dependency change.
     command: ["sh", "-c", "cd /app/public && bun install && bun run dev --host 0.0.0.0 --port 4400"]

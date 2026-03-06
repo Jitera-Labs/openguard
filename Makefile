@@ -7,6 +7,15 @@ dev:
 dev-test:
 	OPENGUARD_CONFIG=/app/presets/full.yaml docker compose up
 
+dev-test-ollama:
+	@harbor ollama --version || true
+	OPENGUARD_CONFIG=/app/presets/full.yaml \
+	OPENGUARD_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
+	OPENGUARD_OPENAI_KEY_1="sk-ollama" \
+	OPENGUARD_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
+	OPENGUARD_ANTHROPIC_KEY_1="sk-ollama" \
+	docker compose up
+
 dev-ollama:
 	@harbor ollama --version || true
 	OPENGUARD_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
