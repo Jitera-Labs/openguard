@@ -9,8 +9,23 @@ import yaml
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
 
-import src.guard_types
-from src.guard_meta import GuardMeta
+TITLE_OVERRIDES = {
+    "content_filter": "Content Filter",
+    "keyword_filter": "Keyword Filter",
+    "llm_input_inspection": "LLM Input Inspection",
+    "max_tokens": "Max Tokens Guard",
+    "pii_filter": "PII Filter",
+}
+
+DESCRIPTION_OVERRIDES = {
+    "content_filter": "Filter blocked words and phrases from LLM message content.",
+    "llm_input_inspection": (
+        "Use an LLM to inspect prompts and tool output for policy violations, "
+        "prompt injection, or abuse."
+    ),
+    "max_tokens": "Enforce a maximum token limit on LLM requests.",
+    "pii_filter": ("Detect and redact personally identifiable information in LLM message content."),
+}
 
 
 def get_type_string(prop: Dict[str, Any]) -> str:
@@ -93,7 +108,18 @@ def generate_examples(examples: List[Dict[str, Any]], module_name: str) -> str:
     return "\n\n".join(blocks) + "\n"
 
 
+def get_doc_title(module_name: str, meta: Any) -> str:
+    return TITLE_OVERRIDES.get(module_name) or meta.name or module_name
+
+
+def get_doc_description(module_name: str, meta: Any) -> str:
+    return DESCRIPTION_OVERRIDES.get(module_name) or meta.description or ""
+
+
 def main() -> None:
+    import src.guard_types
+    from src.guard_meta import GuardMeta
+
     # Use relative path based on the root of the project
     # The root is one level up from scripts
     root_dir = Path(__file__).resolve().parent.parent
@@ -120,14 +146,16 @@ def main() -> None:
         config_table = generate_config_table(meta.config_schema)
         examples_str = generate_examples(meta.examples, module_name)
 
+        title = get_doc_title(module_name, meta)
+        description = get_doc_description(module_name, meta)
         docs = meta.docs.strip() if meta.docs else ""
 
         mdx_content = f"""---
-title: {meta.name}
-description: {meta.description}
+title: {title}
+description: {description}
 ---
 
-{meta.description}
+{description}
 
 {docs}
 
