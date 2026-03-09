@@ -1,0 +1,25 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+---
+
+<StarlightPage
+	frontmatter={{
+		title: 'Page Not Found',
+		description: 'The page you requested could not be found.',
+		template: 'splash',
+		head: [
+			{
+				tag: 'meta',
+				attrs: {
+					name: 'robots',
+					content: 'noindex,follow',
+				},
+			},
+		],
+	}}
+>
+	<p>The page you requested could not be found.</p>
+	<p>
+		<a href="/docs/getting-started/">Read the docs</a> or <a href="/">return home</a>.
+	</p>
+</StarlightPage>
