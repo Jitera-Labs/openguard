@@ -1,10 +1,12 @@
 import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import starlightThemeBlack from 'starlight-theme-black';
 
 export default defineConfig({
 	site: 'https://openguard.sh',
 	integrations: [
+		sitemap(),
 		starlight({
 			title: 'OpenGuard',
 			disable404Route: true,

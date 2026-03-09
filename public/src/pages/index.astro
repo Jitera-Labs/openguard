@@ -16,6 +16,8 @@
     <meta property="og:url" content="https://openguard.sh/">
     <meta property="og:site_name" content="OpenGuard">
     <meta property="og:image" content="https://openguard.sh/splash.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="OpenGuard — LLM Security Gateway for Coding Agents">
     <meta name="twitter:description" content="OpenGuard is a local LLM security gateway for coding agents. Block prompt injection, redact PII, inspect traffic, and enforce policy with a drop-in proxy.">
@@ -28,7 +30,66 @@
             "description": "OpenGuard is a local LLM security gateway for coding agents. Block prompt injection, redact PII, inspect traffic, and enforce policy with a drop-in proxy.",
             "applicationCategory": "SecurityApplication",
             "url": "https://openguard.sh/",
-            "operatingSystem": "Linux, macOS, Windows, Docker"
+            "operatingSystem": "Linux, macOS, Windows, Docker",
+            "codeRepository": "https://github.com/Jitera-Labs/openguard",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            },
+            "publisher": {
+                "@type": "Organization",
+                "name": "Jitera Labs",
+                "url": "https://openguard.sh/"
+            }
+        }
+    </script>
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": "Does OpenGuard add latency?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Guards run on input before forwarding to the provider. Regex-based guards add negligible overhead. The llm_input_inspection guard adds a full LLM round-trip since it sends the prompt to an inspection model first."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Does OpenGuard work with streaming?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Yes. Guards evaluate the input before the request is forwarded. The streaming response from the provider is proxied straight through to your client."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Does OpenGuard collect telemetry?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "No. OpenGuard only connects to the LLM providers you explicitly configure. Nothing phones home."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "What LLM providers work with OpenGuard?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Any provider exposing /v1/chat/completions (OpenAI-compatible) or /v1/messages (Anthropic-compatible). OpenRouter, Azure OpenAI, local models via Ollama — anything behind those endpoints."
+                    }
+                }
+            ]
+        }
+    </script>
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "OpenGuard",
+            "url": "https://openguard.sh/"
         }
     </script>
     <style is:inline>
@@ -1611,6 +1672,7 @@
         <section id="hero">
             <div class="container">
                 <h1>Your coding agent is an <span class="threat-text">attack surface.</span></h1>
+                <h2 style="font-family:var(--font-mono);font-size:0.9rem;font-weight:400;letter-spacing:0.08em;opacity:0.55;text-transform:uppercase;margin:0 auto;-webkit-font-smoothing:antialiased;">LLM Security Gateway for AI Coding Agents</h2>
                 <p><span class="threat-text">Prompt injections</span> hide in repos, docs, and pull requests — <em style="font-style:italic; opacity:0.6;">waiting for your agent to read them.</em> <span class="threat-text">Secrets leak</span> in every context window. <span style="color:#fff; text-shadow: 0 0 4px rgba(255,255,255,0.8), 0 0 8px rgba(255,255,255,0.5), 0 0 16px rgba(255,255,255,0.3);">OpenGuard</span> intercepts it all <span style="color:#fff">before it leaves your machine.</span></p>
                 <a href="/docs/getting-started/" class="get-started-btn">Guard Your Agents</a>
             </div>
@@ -1648,7 +1710,7 @@
         </section>
 
         <section id="features">
-            <h2>Six Layers Deep</h2>
+            <h2>Six Security Guards for AI Agents</h2>
 
             <div class="feature-panel" data-accent="green">
                 <div class="feature-inner">
@@ -1812,7 +1874,7 @@ client = <span class="t-cyan">OpenAI</span>(
 
         <section id="modular-stack">
              <div class="architecture-container">
-                <h2>MODULAR DEFENSE</h2>
+                <h2>MODULAR LLM SECURITY STACK</h2>
                 <p style="margin-bottom: 2rem;">Stack guards like building blocks. Each layer runs independently — add, remove, or reorder them without touching your application code.</p>
                 <div class="modular-viz">
                     <div class="modular-tabs" id="modular-tabs"></div>
@@ -1833,7 +1895,7 @@ client = <span class="t-cyan">OpenAI</span>(
         </section>
 
         <section id="supported-agents">
-            <h2>Works With Your Stack</h2>
+            <h2>Works With Claude Code, Codex, and Any OpenAI-Compatible Agent</h2>
             <p class="section-subtitle">Native integrations for popular agents. Drop-in compatible with anything that speaks OpenAI or Anthropic.</p>
             <div class="agents-grid">
                 <div class="agent-card">
