@@ -15,6 +15,7 @@
     <meta property="og:description" content="OpenGuard is a local LLM security gateway for coding agents. Block prompt injection, redact PII, inspect traffic, and enforce policy with a drop-in proxy.">
     <meta property="og:url" content="https://openguard.sh/">
     <meta property="og:site_name" content="OpenGuard">
+    <meta property="og:locale" content="en_US">
     <meta property="og:image" content="https://openguard.sh/splash.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -22,6 +23,7 @@
     <meta name="twitter:title" content="OpenGuard — LLM Security Gateway for Coding Agents">
     <meta name="twitter:description" content="OpenGuard is a local LLM security gateway for coding agents. Block prompt injection, redact PII, inspect traffic, and enforce policy with a drop-in proxy.">
     <meta name="twitter:image" content="https://openguard.sh/splash.png">
+    <meta name="twitter:site" content="@openguard_sh">
     <script type="application/ld+json">
         {
             "@context": "https://schema.org",
@@ -32,6 +34,20 @@
             "url": "https://openguard.sh/",
             "operatingSystem": "Linux, macOS, Windows, Docker",
             "codeRepository": "https://github.com/Jitera-Labs/openguard",
+            "softwareVersion": "0.1",
+            "screenshot": "https://openguard.sh/splash.png",
+            "featureList": [
+                "PII redaction (email, phone, SSN, credit card)",
+                "Prompt injection detection",
+                "Keyword blocking and sanitization",
+                "Token usage capping",
+                "LLM-powered semantic input inspection",
+                "Content filtering",
+                "Streaming response support",
+                "OpenAI and Anthropic API compatibility",
+                "YAML-based policy configuration",
+                "Zero telemetry"
+            ],
             "offers": {
                 "@type": "Offer",
                 "price": "0",
@@ -40,7 +56,7 @@
             "publisher": {
                 "@type": "Organization",
                 "name": "Jitera Labs",
-                "url": "https://openguard.sh/"
+                "url": "https://jitera.com/"
             }
         }
     </script>
@@ -80,6 +96,46 @@
                         "@type": "Answer",
                         "text": "Any provider exposing /v1/chat/completions (OpenAI-compatible) or /v1/messages (Anthropic-compatible). OpenRouter, Azure OpenAI, local models via Ollama — anything behind those endpoints."
                     }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Does OpenGuard work with LangChain or LlamaIndex?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Yes. Any library that lets you set a custom base URL works — LangChain, LlamaIndex, LiteLLM, and others. Point the base URL at http://localhost:23294/v1 and your real provider API key, and all traffic flows through the guard pipeline."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Can I run OpenGuard in production or CI?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Yes. The Docker image is the recommended path for production and CI — no Python host dependency, single container, configurable via environment variables. Mount your guards.yaml and pass provider keys with -e."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "How do I block a specific keyword or secret?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Use the keyword_filter guard. Add the keyword or regex pattern to the keywords list in guards.yaml and set the action to block or redact. It matches across request and response content, including streamed output."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Does OpenGuard support local models like Ollama?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Yes. Any model server that exposes an OpenAI-compatible endpoint (/v1/chat/completions) works — Ollama, LM Studio, vLLM, and others. No API key is required for local models."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Is OpenGuard open source?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Yes. OpenGuard is MIT-licensed and available on GitHub at https://github.com/Jitera-Labs/openguard. Contributions, issues, and feature requests are welcome."
+                    }
                 }
             ]
         }
@@ -90,6 +146,18 @@
             "@type": "WebSite",
             "name": "OpenGuard",
             "url": "https://openguard.sh/"
+        }
+    </script>
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Jitera Labs",
+            "url": "https://jitera.com/",
+            "sameAs": [
+                "https://github.com/Jitera-Labs",
+                "https://pypi.org/project/openguard/"
+            ]
         }
     </script>
     <style is:inline>
@@ -1671,8 +1739,8 @@
 
         <section id="hero">
             <div class="container">
-                <h1>Your coding agent is an <span class="threat-text">attack surface.</span></h1>
-                <h2 style="font-family:var(--font-mono);font-size:0.9rem;font-weight:400;letter-spacing:0.08em;opacity:0.55;text-transform:uppercase;margin:0 auto;-webkit-font-smoothing:antialiased;">LLM Security Gateway for AI Coding Agents</h2>
+                <h1>Your coding agent is an <span class="threat-text">attack surface.</span><br><span style="font-size:0.55em;opacity:0.75;letter-spacing:0.04em;">OpenGuard LLM Security Gateway</span></h1>
+                <h2 style="font-family:var(--font-mono);font-size:0.9rem;font-weight:400;letter-spacing:0.08em;opacity:0.55;text-transform:uppercase;margin:0 auto;-webkit-font-smoothing:antialiased;">for AI Coding Agents</h2>
                 <p><span class="threat-text">Prompt injections</span> hide in repos, docs, and pull requests — <em style="font-style:italic; opacity:0.6;">waiting for your agent to read them.</em> <span class="threat-text">Secrets leak</span> in every context window. <span style="color:#fff; text-shadow: 0 0 4px rgba(255,255,255,0.8), 0 0 8px rgba(255,255,255,0.5), 0 0 16px rgba(255,255,255,0.3);">OpenGuard</span> intercepts it all <span style="color:#fff">before it leaves your machine.</span></p>
                 <a href="/docs/getting-started/" class="get-started-btn">Guard Your Agents</a>
             </div>
@@ -2011,20 +2079,40 @@ client = <span class="t-cyan">OpenAI</span>(
             <h2>FAQ</h2>
             <div class="faq-list">
                 <div class="faq-item">
-                    <div class="faq-q">Does it add latency?</div>
+                    <h3 class="faq-q">Does it add latency?</h3>
                     <p class="faq-a">Guards run on input before forwarding to the provider. Regex-based guards do fast string matching with negligible overhead. The llm_input_inspection guard adds a full LLM round-trip since it sends the prompt to an inspection model first. No benchmarks published yet.</p>
                 </div>
                 <div class="faq-item">
-                    <div class="faq-q">Does it work with streaming?</div>
+                    <h3 class="faq-q">Does it work with streaming?</h3>
                     <p class="faq-a">Yes. Guards evaluate the input before the request is forwarded. The streaming response from the provider is proxied straight through to your client.</p>
                 </div>
                 <div class="faq-item">
-                    <div class="faq-q">Does it collect telemetry?</div>
+                    <h3 class="faq-q">Does it collect telemetry?</h3>
                     <p class="faq-a">No. OpenGuard only connects to the LLM providers you explicitly configure. Nothing phones home.</p>
                 </div>
                 <div class="faq-item">
-                    <div class="faq-q">What providers work?</div>
+                    <h3 class="faq-q">What providers work?</h3>
                     <p class="faq-a">Any provider exposing /v1/chat/completions (OpenAI-compatible) or /v1/messages (Anthropic-compatible). OpenRouter, Azure OpenAI, local models via Ollama — anything behind those endpoints.</p>
+                </div>
+                <div class="faq-item">
+                    <h3 class="faq-q">Does OpenGuard work with LangChain or LlamaIndex?</h3>
+                    <p class="faq-a">Yes. Any library that lets you set a custom base URL works — LangChain, LlamaIndex, LiteLLM, and others. Point the base URL at <code style="display:inline;padding:0.1em 0.3em;font-size:0.8em;">http://localhost:23294/v1</code> and your real provider API key, and all traffic flows through the guard pipeline.</p>
+                </div>
+                <div class="faq-item">
+                    <h3 class="faq-q">Can I run OpenGuard in production or CI?</h3>
+                    <p class="faq-a">Yes. The Docker image is the recommended path for production and CI — no Python host dependency, single container, configurable via environment variables. Mount your guards.yaml and pass provider keys with <code style="display:inline;padding:0.1em 0.3em;font-size:0.8em;">-e</code>.</p>
+                </div>
+                <div class="faq-item">
+                    <h3 class="faq-q">How do I block a specific keyword or secret?</h3>
+                    <p class="faq-a">Use the keyword_filter guard. Add the keyword or regex pattern to the keywords list in guards.yaml and set the action to block or redact. It matches across request and response content, including streamed output.</p>
+                </div>
+                <div class="faq-item">
+                    <h3 class="faq-q">Does OpenGuard support local models like Ollama?</h3>
+                    <p class="faq-a">Yes. Any model server that exposes an OpenAI-compatible endpoint (/v1/chat/completions) works — Ollama, LM Studio, vLLM, and others. No API key is required for local models.</p>
+                </div>
+                <div class="faq-item">
+                    <h3 class="faq-q">Is OpenGuard open source?</h3>
+                    <p class="faq-a">Yes. OpenGuard is MIT-licensed and available on <a href="https://github.com/Jitera-Labs/openguard" style="color:inherit;opacity:0.8;">GitHub</a>. Contributions, issues, and feature requests are welcome.</p>
                 </div>
             </div>
         </section>
