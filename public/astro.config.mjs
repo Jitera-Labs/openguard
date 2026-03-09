@@ -7,7 +7,6 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'OpenGuard',
-			disable404Route: true,
 			customCss: ['./src/styles/custom.css'],
 			plugins: [
 				starlightThemeBlack({

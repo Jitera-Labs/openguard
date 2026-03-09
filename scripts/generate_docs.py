@@ -109,11 +109,11 @@ def generate_examples(examples: List[Dict[str, Any]], module_name: str) -> str:
 
 
 def get_doc_title(module_name: str, meta: Any) -> str:
-    return TITLE_OVERRIDES.get(module_name) or meta.name or module_name
+    return TITLE_OVERRIDES.get(module_name, meta.name)
 
 
 def get_doc_description(module_name: str, meta: Any) -> str:
-    return DESCRIPTION_OVERRIDES.get(module_name) or meta.description or ""
+    return DESCRIPTION_OVERRIDES.get(module_name, meta.description)
 
 
 def main() -> None:
