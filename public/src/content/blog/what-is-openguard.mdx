@@ -1,0 +1,11 @@
+---
+title: "What Is OpenGuard?"
+description: "OpenGuard is a local proxy that sits between your coding agent and its LLM provider, letting you inspect and control every request and response."
+date: 2026-03-10
+author: "OpenGuard Team"
+tags: ["llm", "security", "proxy"]
+---
+
+OpenGuard is a local proxy that runs between a coding agent (like Claude Code, Cursor, or any tool using OpenAI/Anthropic APIs) and the LLM provider. All LLM traffic passes through it, where configured guards evaluate each request and response before forwarding them on.
+
+Guards are configured in a YAML file and cover things like PII redaction, keyword blocking, token caps, and semantic input inspection. There's no telemetry — the proxy only connects to the providers you configure.

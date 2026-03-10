@@ -1,0 +1,199 @@
+---
+import {
+	githubCtaAriaLabel,
+	githubCtaLabel,
+	githubUrl,
+	siteHeaderNavLinks,
+} from '../config/site-header.mjs';
+
+interface Props {
+	currentPath?: string;
+	position?: 'fixed' | 'sticky' | 'static';
+}
+
+const { currentPath = Astro.url.pathname, position = 'sticky' } = Astro.props;
+
+function isActive(href: string): boolean {
+	if (href === '/') {
+		return currentPath === '/';
+	}
+
+	return currentPath.startsWith(href);
+}
+---
+
+<header class="og-site-header" data-position={position}>
+	<div class="og-site-header__shell">
+		<a href="/" class="og-site-header__brand">OpenGuard</a>
+
+		<nav class="og-site-header__nav" aria-label="Primary">
+			{siteHeaderNavLinks.map(({ href, label }) => (
+				<a href={href} class:list={[{ 'is-active': isActive(href) }]} aria-current={isActive(href) ? 'page' : undefined}>
+					{label}
+				</a>
+			))}
+		</nav>
+
+		<a
+			href={githubUrl}
+			target="_blank"
+			rel="noreferrer"
+			class="og-site-header__cta"
+			aria-label={githubCtaAriaLabel}
+		>
+			<svg viewBox="0 0 24 24" aria-hidden="true">
+				<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+			</svg>
+			<span>{githubCtaLabel}</span>
+		</a>
+	</div>
+</header>
+
+<style>
+	.og-site-header {
+		left: 0;
+		right: 0;
+		z-index: 100;
+	}
+
+	.og-site-header[data-position='fixed'] {
+		position: fixed;
+		top: 0;
+	}
+
+	.og-site-header[data-position='sticky'] {
+		position: sticky;
+		top: 0;
+	}
+
+	.og-site-header[data-position='static'] {
+		position: relative;
+	}
+
+	.og-site-header__shell {
+		width: min(100% - 1.5rem, 70rem);
+		margin: 12px auto 0;
+		padding: 11px 16px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px 20px;
+		background: rgba(10, 10, 10, 0.72);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 0;
+		backdrop-filter: blur(14px);
+		-webkit-backdrop-filter: blur(14px);
+		box-shadow: 0 16px 50px rgba(0, 0, 0, 0.28);
+	}
+
+	.og-site-header__brand {
+		color: #fff;
+		text-decoration: none;
+		font-family: 'Geist Pixel Grid', 'Geist Pixel Square', monospace;
+		font-size: 15px;
+		font-weight: 500;
+		line-height: 1;
+		letter-spacing: 0.25em;
+		text-transform: uppercase;
+		white-space: nowrap;
+		-webkit-font-smoothing: none;
+		-moz-osx-font-smoothing: grayscale;
+		text-shadow:
+			0 0 10px rgba(255, 255, 255, 0.4),
+			0 0 30px rgba(255, 255, 255, 0.15);
+	}
+
+	.og-site-header__nav {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.og-site-header__nav a {
+		color: rgba(237, 237, 237, 0.66);
+		text-decoration: none;
+		font-family: 'Geist Mono', monospace;
+		font-size: 12px;
+		line-height: 1;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		transition: color 0.2s ease, opacity 0.2s ease;
+	}
+
+	.og-site-header__nav a:hover,
+	.og-site-header__nav a.is-active {
+		color: #fff;
+	}
+
+	.og-site-header__cta {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 8px 14px;
+		border: 1px solid rgba(255, 255, 255, 0.18);
+		color: #ededed;
+		text-decoration: none;
+		font-family: 'Geist Mono', monospace;
+		font-size: 12px;
+		line-height: 1;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+	}
+
+	.og-site-header__cta:hover {
+		border-color: rgba(255, 255, 255, 0.42);
+		background: rgba(255, 255, 255, 0.05);
+		color: #fff;
+	}
+
+	.og-site-header__cta svg {
+		width: 13px;
+		height: 13px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+	}
+
+	@media (max-width: 780px) {
+		.og-site-header__shell {
+			border-radius: 0;
+			flex-wrap: wrap;
+		}
+
+		.og-site-header__brand {
+			order: 1;
+		}
+
+		.og-site-header__cta {
+			order: 2;
+			margin-left: auto;
+		}
+
+		.og-site-header__nav {
+			order: 3;
+			width: 100%;
+			justify-content: space-between;
+			gap: 0.75rem;
+		}
+	}
+
+	@media (max-width: 520px) {
+		.og-site-header__shell {
+			width: min(100% - 1rem, 70rem);
+			padding-inline: 0.85rem;
+		}
+
+		.og-site-header__nav a,
+		.og-site-header__cta {
+			font-size: 11px;
+		}
+	}
+</style>
+
+<style is:global>
+	@import '../styles/header-star-cta.css';
+</style>

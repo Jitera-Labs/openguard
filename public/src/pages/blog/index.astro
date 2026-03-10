@@ -1,0 +1,95 @@
+---
+import { getCollection } from 'astro:content';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+const posts = (await getCollection('blog')).sort(
+    (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+
+function formatDate(date: Date): string {
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "OpenGuard Blog",
+    "description": "Articles on LLM security, prompt injection, PII protection, and AI agent safety from the OpenGuard team.",
+    "url": "https://openguard.sh/blog/",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Jitera Labs",
+        "url": "https://jitera.com/"
+    }
+});
+---
+<BlogLayout
+    title="Blog – OpenGuard"
+    canonicalUrl="https://openguard.sh/blog/"
+    description="Articles on LLM security, prompt injection, PII protection, and AI agent safety from the OpenGuard team."
+    ogType="blog"
+    jsonLd={jsonLd}
+>
+    <section class="blog-index">
+        <h1>Blog</h1>
+        <ul class="post-list">
+            {posts.map((post) => (
+                <li class="post-item">
+                    <div class="post-meta">{formatDate(post.data.date)}</div>
+                    <a href={`/blog/${post.id}/`} class="post-title">{post.data.title}</a>
+                    <p class="post-desc">{post.data.description}</p>
+                </li>
+            ))}
+        </ul>
+    </section>
+</BlogLayout>
+
+<style>
+    h1 {
+        font-family: 'Geist Pixel Square', monospace;
+        font-size: 2.25rem;
+        font-weight: 500;
+        -webkit-font-smoothing: none;
+        text-shadow: -2px 0 rgba(255, 0, 0, 0.4), 2px 0 rgba(0, 255, 255, 0.4);
+        margin-bottom: 2.5rem;
+    }
+
+    .post-list {
+        list-style: none;
+    }
+
+    .post-item {
+        border-top: 1px solid #1a1a1a;
+        padding: 1.75rem 0;
+    }
+
+    .post-item:last-child {
+        border-bottom: 1px solid #1a1a1a;
+    }
+
+    .post-meta {
+        font-size: 0.8rem;
+        color: #555;
+        margin-bottom: 0.4rem;
+        letter-spacing: 0.04em;
+    }
+
+    .post-title {
+        font-size: 1.2rem;
+        font-weight: 500;
+        color: #e5e5e5;
+        transition: color 0.15s;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .post-title:hover {
+        color: #fff;
+    }
+
+    .post-desc {
+        font-size: 0.9rem;
+        color: #888;
+        line-height: 1.6;
+    }
+</style>

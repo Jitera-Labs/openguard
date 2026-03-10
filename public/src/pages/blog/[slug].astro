@@ -1,0 +1,144 @@
+---
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+export async function getStaticPaths() {
+    const posts = await getCollection('blog');
+    return posts.map((post) => ({
+        params: { slug: post.id },
+        props: { post },
+    }));
+}
+
+interface Props {
+    post: CollectionEntry<'blog'>;
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+function formatDate(date: Date): string {
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+const canonicalUrl = `https://openguard.sh/blog/${post.id}/`;
+const dateIso = post.data.date.toISOString();
+
+const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": post.data.title,
+    "description": post.data.description,
+    "datePublished": dateIso,
+    "dateModified": dateIso,
+    "author": { "@type": "Person", "name": post.data.author },
+    "publisher": { "@type": "Organization", "name": "Jitera Labs", "url": "https://jitera.com/" },
+    "url": canonicalUrl,
+    "mainEntityOfPage": { "@type": "WebPage", "@id": canonicalUrl }
+});
+---
+<BlogLayout
+    title={`${post.data.title} – OpenGuard`}
+    canonicalUrl={canonicalUrl}
+    description={post.data.description}
+    ogType="article"
+    publishedTime={dateIso}
+    tags={post.data.tags ?? []}
+    jsonLd={jsonLd}
+>
+    <section class="blog-post">
+        <a href="/blog/" class="back">← Back to Blog</a>
+        <h1>{post.data.title}</h1>
+        <div class="post-meta">{formatDate(post.data.date)} · {post.data.author}</div>
+        <article class="blog-article">
+            <Content />
+        </article>
+    </section>
+</BlogLayout>
+
+<style>
+    .back {
+        font-size: 0.875rem;
+        color: #555;
+        display: inline-block;
+        margin-bottom: 2.5rem;
+        transition: color 0.15s;
+    }
+
+    .back:hover {
+        color: #e5e5e5;
+    }
+
+    h1 {
+        font-family: 'Geist Pixel Square', monospace;
+        font-size: 2.25rem;
+        font-weight: 500;
+        -webkit-font-smoothing: none;
+        text-shadow:
+            -2px 0 rgba(255, 0, 0, 0.5),
+            2px 0 rgba(0, 100, 255, 0.5),
+            0 0 8px rgba(255, 255, 255, 0.15);
+        margin-bottom: 1rem;
+        line-height: 1.2;
+    }
+
+    .post-meta {
+        font-size: 0.8rem;
+        color: #555;
+        margin-bottom: 3rem;
+        letter-spacing: 0.04em;
+    }
+
+    :global(.blog-article p) {
+        margin-bottom: 1.5rem;
+        color: #c8c8c8;
+    }
+
+    :global(.blog-article a) {
+        color: #e5e5e5;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    :global(.blog-article a:hover) {
+        color: #fff;
+    }
+
+    :global(.blog-article h2),
+    :global(.blog-article h3) {
+        font-family: 'Geist Pixel Square', monospace;
+        -webkit-font-smoothing: none;
+        text-shadow: -2px 0 rgba(255, 0, 0, 0.35), 2px 0 rgba(0, 100, 255, 0.35);
+        margin: 2.5rem 0 1rem;
+        line-height: 1.25;
+    }
+
+    :global(.blog-article ul),
+    :global(.blog-article ol) {
+        margin: 0 0 1.5rem 1.25rem;
+        color: #c8c8c8;
+    }
+
+    :global(.blog-article li + li) {
+        margin-top: 0.5rem;
+    }
+
+    :global(.blog-article pre) {
+        margin: 0 0 1.5rem;
+        overflow-x: auto;
+    }
+
+    :global(.blog-article code) {
+        font-family: 'Geist Mono', monospace;
+        background: #1a1a1a;
+        padding: 0.1em 0.35em;
+        border-radius: 3px;
+        font-size: 0.875em;
+    }
+
+    :global(.blog-article pre code) {
+        background: transparent;
+        padding: 0;
+    }
+</style>

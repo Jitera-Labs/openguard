@@ -1,3 +1,7 @@
+---
+import SiteHeader from '../components/SiteHeader.astro';
+---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -261,6 +265,26 @@
             z-index: 10;
         }
 
+        #hero {
+            min-height: min(100svh, 820px);
+            padding: 6.5rem 1rem 4rem;
+        }
+
+        .hero-kicker {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 400;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            opacity: 0.58;
+            margin: 0 auto;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .hero-copy {
+            max-width: 33rem;
+        }
+
         .container {
             width: 100%;
             max-width: 912px;
@@ -268,79 +292,6 @@
             display: flex;
             flex-direction: column;
             gap: 2rem;
-        }
-
-        .site-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.6rem 1.5rem;
-            background: rgba(10, 10, 10, 0.6);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .site-header-logo {
-            font-family: var(--font-pixel-grid);
-            font-size: 1rem;
-            font-weight: 500;
-            letter-spacing: 0.25em;
-            text-transform: uppercase;
-            color: #fff;
-            text-decoration: none;
-            text-shadow:
-                0 0 10px rgba(255, 255, 255, 0.4),
-                0 0 30px rgba(255, 255, 255, 0.15);
-        }
-
-        .site-header-nav {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .site-header-nav a {
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: var(--fg);
-            text-decoration: none;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-            letter-spacing: 0.05em;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .site-header-nav a:hover {
-            opacity: 1;
-        }
-
-        .site-header-nav .gh-star {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 14px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            opacity: 0.8;
-            transition: opacity 0.2s, border-color 0.2s;
-        }
-
-        .site-header-nav .gh-star:hover {
-            opacity: 1;
-            border-color: rgba(255, 255, 255, 0.5);
-        }
-
-        .site-header-nav .gh-star svg {
-            width: 14px;
-            height: 14px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
         }
 
         h1 {
@@ -583,6 +534,34 @@
 
             #flow-wrapper {
                 height: 220px !important;
+            }
+
+            #hero {
+                min-height: auto;
+                padding: 5.5rem 1rem 6rem;
+            }
+
+            #hero .container {
+                gap: 1.25rem;
+            }
+
+            .hero-kicker {
+                font-size: 0.6rem;
+                letter-spacing: 0.12em;
+            }
+
+            .hero-copy {
+                max-width: 20rem;
+                font-size: 0.82rem;
+                line-height: 1.5;
+            }
+
+            .get-started-btn {
+                margin-top: 1rem;
+            }
+
+            .scroll-indicator {
+                bottom: 1rem;
             }
         }
 
@@ -1726,22 +1705,16 @@
         </defs>
     </svg>
 
-    <header class="site-header">
-        <a href="/" class="site-header-logo">OpenGuard</a>
-        <nav class="site-header-nav">
-            <a href="/docs/">Docs</a>
-            <a href="https://github.com/Jitera-Labs/openguard" target="_blank" class="gh-star"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Star</a>
-        </nav>
-    </header>
+    <SiteHeader position="fixed" currentPath="/" />
 
     <div class="crt-stage">
         <canvas id="bg-canvas"></canvas>
 
         <section id="hero">
             <div class="container">
-                <h1>Your coding agent is an <span class="threat-text">attack surface.</span><br><span style="font-size:0.55em;opacity:0.75;letter-spacing:0.04em;">OpenGuard LLM Security Gateway</span></h1>
-                <h2 style="font-family:var(--font-mono);font-size:0.9rem;font-weight:400;letter-spacing:0.08em;opacity:0.55;text-transform:uppercase;margin:0 auto;-webkit-font-smoothing:antialiased;">for AI Coding Agents</h2>
-                <p><span class="threat-text">Prompt injections</span> hide in repos, docs, and pull requests — <em style="font-style:italic; opacity:0.6;">waiting for your agent to read them.</em> <span class="threat-text">Secrets leak</span> in every context window. <span style="color:#fff; text-shadow: 0 0 4px rgba(255,255,255,0.8), 0 0 8px rgba(255,255,255,0.5), 0 0 16px rgba(255,255,255,0.3);">OpenGuard</span> intercepts it all <span style="color:#fff">before it leaves your machine.</span></p>
+                <h1>LLM Security Gateway for AI Coding Agents</h1>
+                <h2 class="hero-kicker">Block prompt injection. Redact secrets. Inspect traffic locally.</h2>
+                <p class="hero-copy">OpenGuard sits between your coding agent and model provider, enforcing policy before prompts or sensitive data leave your machine.</p>
                 <a href="/docs/getting-started/" class="get-started-btn">Guard Your Agents</a>
             </div>
             <div class="scroll-indicator">

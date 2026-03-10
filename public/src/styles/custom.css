@@ -58,9 +58,10 @@
 
 /* Site logo: match landing header */
 .site-title .title-text {
-	font-family: 'Geist Pixel Square', monospace !important;
+	font-family: 'Geist Pixel Grid', monospace !important;
 	font-weight: 500 !important;
-	font-size: 1.5rem !important;
+	font-size: 15px !important;
+	line-height: 1 !important;
 	letter-spacing: 0.25em;
 	text-transform: uppercase;
 	-webkit-font-smoothing: none;
@@ -68,6 +69,25 @@
 	text-shadow:
 		0 0 10px rgba(255, 255, 255, 0.4),
 		0 0 30px rgba(255, 255, 255, 0.15);
+}
+
+@media (min-width: 768px) {
+	.site-title .title-text {
+		display: inline-block !important;
+	}
+}
+
+.layout__header {
+	--sl-nav-height: 5rem;
+	background: rgba(10, 10, 10, 0.72) !important;
+	border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+	border-radius: 0 !important;
+	box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+.container__header {
+	min-height: var(--sl-nav-height) !important;
+	padding: 11px 16px !important;
 }
 
 /* Headings: pixel font + chromatic aberration */

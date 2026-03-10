@@ -1,0 +1,165 @@
+---
+import config from 'virtual:starlight/user-config';
+import LanguageSelect from '@astrojs/starlight/components/LanguageSelect.astro';
+import MobileMenuToggle from '@astrojs/starlight/components/MobileMenuToggle.astro';
+import Search from 'starlight-theme-black/overrides/Search.astro';
+import SiteTitle from 'starlight-theme-black/overrides/SiteTitle.astro';
+import ThemeSelect from 'starlight-theme-black/overrides/ThemeSelect.astro';
+import {
+	githubCtaAriaLabel,
+	githubCtaLabel,
+	githubUrl,
+	siteHeaderNavLinks,
+} from '../../config/site-header.mjs';
+
+const shouldRenderSearch =
+	config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
+
+const currentPath = Astro.url.pathname;
+
+function isActive(href: string): boolean {
+	if (href === '/') {
+		return currentPath === '/';
+	}
+
+	return currentPath.startsWith(href);
+}
+---
+
+<div class="og-docs-header__brand-strip">
+	<div class="og-docs-header__title-group">
+		<SiteTitle />
+		<nav class="og-docs-header__nav" aria-label="Primary">
+			{siteHeaderNavLinks.map(({ href, label }) => (
+				<a href={href} class:list={[{ 'is-active': isActive(href) }]} aria-current={isActive(href) ? 'page' : undefined}>
+					{label}
+				</a>
+			))}
+		</nav>
+	</div>
+</div>
+
+<MobileMenuToggle />
+
+<div class="og-docs-header__controls">
+	{shouldRenderSearch && <Search />}
+
+	<nav class="og-docs-header__utility-nav" aria-label="Utilities">
+		<a href={githubUrl} rel="noreferrer" target="_blank" class="og-docs-header__cta" aria-label={githubCtaAriaLabel}>
+			<svg viewBox="0 0 24 24" aria-hidden="true">
+				<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+			</svg>
+			<span>{githubCtaLabel}</span>
+		</a>
+		<ThemeSelect />
+		<LanguageSelect />
+	</nav>
+</div>
+
+<style>
+	.og-docs-header__brand-strip {
+		display: none;
+		margin-right: 1rem;
+	}
+
+	@media (min-width: 768px) {
+		.og-docs-header__brand-strip {
+			display: flex;
+			min-width: 0;
+		}
+	}
+
+	.og-docs-header__title-group {
+		display: flex;
+		align-items: center;
+		gap: 20px;
+		min-width: 0;
+	}
+
+	.og-docs-header__nav {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+	}
+
+	.og-docs-header__nav a {
+		color: rgba(237, 237, 237, 0.66);
+		text-decoration: none;
+		font-family: 'Geist Mono', monospace;
+		font-size: 11px;
+		line-height: 1;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		transition: color 0.2s ease;
+	}
+
+	.og-docs-header__nav a:hover,
+	.og-docs-header__nav a.is-active {
+		color: #fff;
+	}
+
+	.og-docs-header__controls {
+		display: flex;
+		flex: 1 1 0%;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		min-width: 0;
+	}
+
+	@media (min-width: 768px) {
+		.og-docs-header__controls {
+			justify-content: flex-end;
+		}
+	}
+
+	.og-docs-header__utility-nav {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.og-docs-header__cta {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 8px 14px;
+		border: 1px solid rgba(255, 255, 255, 0.16);
+		color: #ededed;
+		text-decoration: none;
+		font-family: 'Geist Mono', monospace;
+		font-size: 11px;
+		line-height: 1;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+	}
+
+	.og-docs-header__cta:hover {
+		border-color: rgba(255, 255, 255, 0.4);
+		background: rgba(255, 255, 255, 0.05);
+		color: #fff;
+	}
+
+	.og-docs-header__cta svg {
+		width: 13px;
+		height: 13px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+	}
+
+	@media (max-width: 480px) {
+		.og-docs-header__cta {
+			padding-inline: 0.55rem;
+		}
+
+		.og-docs-header__cta span {
+			display: none;
+		}
+	}
+</style>
+
+<style is:global>
+	@import '../../styles/header-star-cta.css';
+</style>

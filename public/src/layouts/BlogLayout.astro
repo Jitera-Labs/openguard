@@ -1,0 +1,142 @@
+---
+import SiteHeader from '../components/SiteHeader.astro';
+
+interface Props {
+	canonicalUrl: string;
+	description: string;
+	jsonLd: string;
+	ogType?: 'article' | 'blog' | 'website';
+	publishedTime?: string;
+	tags?: string[];
+	title: string;
+}
+
+const {
+	canonicalUrl,
+	description,
+	jsonLd,
+	ogType = 'website',
+	publishedTime,
+	tags = [],
+	title,
+} = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+	<link rel="preload" href="https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Square.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="preload" href="https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Grid.woff2" as="font" type="font/woff2" crossorigin>
+	<title>{title}</title>
+	<link rel="canonical" href={canonicalUrl}>
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+	<meta name="description" content={description}>
+	<meta property="og:type" content={ogType}>
+	<meta property="og:title" content={title}>
+	<meta property="og:description" content={description}>
+	<meta property="og:url" content={canonicalUrl}>
+	<meta property="og:site_name" content="OpenGuard">
+	<meta property="og:locale" content="en_US">
+	<meta property="og:image" content="https://openguard.sh/splash.png">
+	<meta property="og:image:width" content="1200">
+	<meta property="og:image:height" content="630">
+	{publishedTime && <meta property="article:published_time" content={publishedTime}>}
+	{tags.map((tag) => <meta property="article:tag" content={tag}>)}
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:title" content={title}>
+	<meta name="twitter:description" content={description}>
+	<meta name="twitter:image" content="https://openguard.sh/splash.png">
+	<script type="application/ld+json" set:html={jsonLd} />
+	<style is:inline>
+		@font-face {
+			font-family: 'Geist Pixel Square';
+			src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Square.woff2') format('woff2');
+			font-weight: 500;
+			font-style: normal;
+			font-display: swap;
+		}
+
+		@font-face {
+			font-family: 'Geist Pixel Grid';
+			src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-pixel/GeistPixel-Grid.woff2') format('woff2');
+			font-weight: 500;
+			font-style: normal;
+			font-display: swap;
+		}
+
+		@font-face {
+			font-family: 'Geist Mono';
+			src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');
+			font-weight: 400;
+			font-style: normal;
+			font-display: swap;
+		}
+
+		@font-face {
+			font-family: 'Geist';
+			src: url('https://cdn.jsdelivr.net/npm/geist@1.7.0/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
+			font-weight: 400;
+			font-style: normal;
+			font-display: swap;
+		}
+
+		*, *::before, *::after {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			background: #0a0a0a;
+			color: #e5e5e5;
+			font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+			font-size: 1rem;
+			line-height: 1.7;
+			min-height: 100vh;
+			display: flex;
+			flex-direction: column;
+		}
+
+		a {
+			color: inherit;
+			text-decoration: none;
+		}
+
+		.blog-shell {
+			flex: 1;
+			max-width: 740px;
+			margin: 0 auto;
+			padding: 3.25rem 2rem 4rem;
+			width: 100%;
+		}
+
+		footer {
+			border-top: 1px solid #1a1a1a;
+			padding: 1.5rem 2rem;
+			text-align: center;
+			font-size: 0.8rem;
+			color: #444;
+		}
+
+		footer a {
+			color: #555;
+		}
+
+		@media (max-width: 640px) {
+			.blog-shell {
+				padding: 2.75rem 1.25rem 3rem;
+			}
+		}
+	</style>
+</head>
+<body>
+	<SiteHeader position="sticky" currentPath={Astro.url.pathname} />
+	<main class="blog-shell">
+		<slot />
+	</main>
+	<footer>Built with <a href="https://starlight.astro.build">Astro Starlight</a>.</footer>
+</body>
+</html>
