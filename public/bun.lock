@@ -5,6 +5,7 @@
     "": {
       "name": "tmp-astro-starlight",
       "dependencies": {
+        "@astrojs/sitemap": "^3.2.1",
         "@astrojs/starlight": "^0.37.6",
         "@fontsource/geist-mono": "^5.2.7",
         "@fontsource/geist-sans": "^5.2.5",
