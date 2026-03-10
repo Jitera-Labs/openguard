@@ -11,6 +11,16 @@
       "sourceType": "github",
       "computedHash": "6b8a1945921342906ce9eff9d60c8fd68b9f07f87ff6388848530ac2f7e2d1b4"
     },
+    "remotion-best-practices": {
+      "source": "remotion-dev/skills",
+      "sourceType": "github",
+      "computedHash": "9851afb52e1b892c43b2af973bda1776ce01fedfdfe704e0cfd70069a3a9c300"
+    },
+    "remotion-bits": {
+      "source": "av/remotion-bits",
+      "sourceType": "github",
+      "computedHash": "a2da1e08921370e6d98438f0f9a1ce00d0b7860b7264ed1b856239eb5c75c941"
+    },
     "seo-audit": {
       "source": "coreyhaines31/marketingskills",
       "sourceType": "github",
