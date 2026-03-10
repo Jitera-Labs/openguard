@@ -33,6 +33,7 @@ build/
 guards.yaml
 reference/
 .wrangler/
+node_modules/
 
 local/
 .playwright-mcp/
