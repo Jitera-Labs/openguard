@@ -1,11 +1,23 @@
+HOST_UID := $(shell id -u)
+HOST_GID := $(shell id -g)
+
 build:
 	docker compose build openguard
+
+fix-docker-ownership:
+	docker compose run --rm --user root \
+		-e HOST_UID=$(HOST_UID) \
+		-e HOST_GID=$(HOST_GID) \
+		openguard sh -lc 'chown -R "$$HOST_UID:$$HOST_GID" /app /app/.venv'
 
 dev:
 	docker compose up
 
 dev-test:
 	OPENGUARD_CONFIG=/app/presets/full.yaml docker compose up
+
+dev-ui:
+	docker compose up ui
 
 dev-test-ollama:
 	@harbor ollama --version || true
@@ -83,7 +95,7 @@ test-unit:
 test-integration:
 	httpyac http/tests/**/*.http --all
 
-docs-build:
+docs-build: fix-docker-ownership
 	cd public && bun run build
 
 docs-dev:
