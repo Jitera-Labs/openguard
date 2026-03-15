@@ -1,0 +1,135 @@
+---
+title: "The Webpage Has Instructions. The Agent Has Your Credentials."
+description: "Prompt injection is the most important security problem in agent development. It happens when an attacker controls part of the agent's context and uses that to make it do something the user did not ask for. The attack surface includes any untrusted content the agent sees: webpages, emails, issue threads, shared docs, tool outputs, MCP metadata, memory lookups, and artifacts from other agents. The damage comes from what the agent does with that content: sending information to a third party, following a link, using a tool, writing to memory, or handing off to another agent. Defending against prompt injection requires treating it as an infrastructure problem with trust boundaries, scoped credentials, and auditable tool chains."
+date: 2026-03-15
+author: "OpenGuard Team"
+tags: ["security", "agents", "prompt injection", "mcp", "memory poisoning", "a2a"]
+---
+
+A poisoned GitHub issue told a coding agent to read a private repository the user never pointed it at, then post the contents in a public pull request. The agent did it. The system gave it broad repository access, and the user had already clicked Always Allow.[^1] That same month, Operator shipped with a 23% prompt-injection success rate after mitigations across 31 browser-agent test scenarios. Agent Security Bench published an 84.30% attack success rate across mixed attacks the same week.[^1] All of them described agents people were already using.
+
+The failure mode that matters is untrusted content reaching a tool call, a repository write, a memory update, or a handoff between agents. All of these run with the user's permissions. Filtering bad inputs at the door helps, but the damage comes from what the agent does after hostile content enters its context. By early 2025, the industry was shipping agents that browse the web, read email, run code, store memories, and delegate to other agents. Every one of those abilities is a point where prompt injection turns into something worse than a bad completion.
+
+## Browser Agents Made It Real
+
+Operator made browser-agent prompt injection a deployment problem, and OpenAI's system card said so explicitly. The company called prompt injection one of the new risks created by letting a model navigate websites, interact with interfaces, and act on a user's behalf. It published its safeguards: confirmation prompts, watch mode for sensitive sites, automatic refusals, and a prompt-injection detector with 99% recall and 90% precision on 77 red-team attempts.[^2] Attackers still succeeded 23% of the time across 31 test scenarios. That 23% is the number worth sitting with. OpenAI shipped the product anyway, which means the company decided the risk was manageable, and every team building browser agents now has to make the same call.
+
+Deep Research widened the surface a month later. Its system card grouped prompt injections, privacy, and code execution into the same risk category, then described the product as an agent that searches the internet, reads user files, and writes and runs Python.[^3] Browsing, private data, and code execution in one workflow means poisoned content can do more than corrupt search results. It can misuse tools, leak data, or make bad decisions that compound over several steps.
+
+March 2025 is when prompt injection became a standard engineering problem. OpenAI's Responses API and Agents SDK bundled web search, file search, computer use, handoffs, guardrails, and tracing into a mainstream developer toolkit.[^4] The same release wave warned that prompt injection carries higher impact outside browsers, especially when agents can access local operating systems.[^5] The browser, the filesystem, and the tool layer are now part of a normal SDK. Prompt injection sits next to SQL injection and XSS on the list of things application developers have to worry about.
+
+Anthropic's November 2025 browser-use write-up puts a finer point on the bar. The company says every webpage, embedded document, advertisement, and dynamically loaded script is part of the browser-agent attack surface, and that even a 1% attack success rate is meaningful risk.[^6] One percent sounds low until you think about an agent that handles inboxes, admin panels, or developer tools. If it processes a thousand pages a day, ten of them get a shot at making it do something the user did not ask for.
+
+## Untrusted Content, Dangerous Actions
+
+The clearest public descriptions landed between mid-2025 and early 2026. Microsoft listed specific attack mechanics: HTML image tags that leak data, clickable links, direct tool calls, and hidden channels, plus downstream actions like sending phishing messages or running commands with the user's permissions.[^7] OpenAI's March 2026 security post used source-and-sink language: the dangerous combination is untrusted outside content plus an ability like sending information to a third party, following a link, or using a tool.[^8]
+
+Source-and-sink gives builders something concrete to audit. Map every place your agent takes in untrusted material: webpages, emails, issue threads, shared docs, tool outputs, MCP metadata, memory lookups, and artifacts from other agents. Then map every place where a wrong belief can cause real harm: opening a URL, sending an email, creating a pull request, writing to long-term memory, moving to another repository, or handing off to a more powerful agent. If you have not drawn both maps, you do not know where your prompt-injection risk is.
+
+Training helps. OpenAI, Anthropic, Google, and Microsoft all report gains from making models harder to trick, safety training, and classifiers. But training does not change what permissions mean. Invariant Labs' GitHub MCP disclosure makes this plain: a well-trained model still leaked data across repositories when the surrounding system gave it overly broad connector permissions and no trust boundaries.[^9] Microsoft says the same thing in different words: perfectly detecting all prompt injections is still an unsolved research problem, so defenders should focus on limiting damage.[^10]
+
+Generic input filtering is useful. System design that holds when the model gets partially fooled is the actual defense.
+
+## MCP Made Tool Descriptions an Attack Surface
+
+April and May 2025 changed how builders had to think about tool calling. Invariant Labs disclosed MCP tool-poisoning attacks that hid malicious instructions inside tool descriptions, visible to the model but not fully visible to the user. Their examples showed data theft, local file reads, and cross-server shadowing where one malicious tool changed how the agent used another, trusted tool.[^11] The attack surface goes past the chat window. Tool descriptions, labels, manifests, and connector metadata all influence how the model plans its actions.
+
+The MCP specification now says this directly. Both the March 26 and June 18, 2025 versions warn that tool behavior descriptions should be treated as untrusted unless they come from a trusted server.[^12] A tool manifest is not passive documentation. If the model reads it while deciding what to do, it belongs in the same threat model as your code and your security policy.
+
+Invariant's GitHub MCP exploit showed what this looks like end-to-end. A malicious public issue fed attacker-controlled instructions to the agent, which pulled data from a private repository and leaked it into a public pull request.[^13] No compromised MCP server was needed. The exploit used public content, broad repository access, and legitimate write tools. Confirmation dialogs did not help because, in practice, users turn on broad approval modes like Always Allow and stop reading every tool request.[^14]
+
+Connector setup is supply-chain security. Tool manifests should be reviewable in the full form the model sees. Pin versions and hashes. Scope credentials per task or per repository. Require explicit policy for cross-repository movement. If one MCP session can read from a public issue tracker and write to a public pull request while also accessing private repositories, you have already built the conditions that made the GitHub exploit work.
+
+## Memory Poisoning Outlasts the Session
+
+Browser exploits are dramatic. Memory poisoning is slower and sticks around longer. A January 2026 paper on memory-based LLM agents found that agents with persistent memory are vulnerable to interactions that corrupt their long-term memory and influence future responses.[^15] The paper revisits earlier MINJA results showing above 95% injection success and 70% attack success under ideal conditions, then shows that real deployments with pre-existing legitimate memories reduce the attack's effectiveness.[^16] So memory poisoning is real, but how well it works depends on memory design and retrieval strategy.
+
+A poisoned memory entry is a lasting instruction fragment that future tasks may pull in as if it had already been verified. The thing that breaks in production might not be the current task. It might be next Tuesday's task, after malicious content has been stored as something the agent treats as prior knowledge.
+
+The paper's defense suggestions are reasonable: input and output checks with trust scoring, memory cleanup with trust-aware retrieval, time-based decay, and pattern-based filtering.[^17] The design rule underneath all of that is simpler. Treat memory as a high-privilege write path. Limit what can be stored. Record where each memory came from. Make entries reviewable and deletable. If arbitrary outside text can become lasting context without a control boundary, one successful injection becomes a recurring problem.
+
+## Multi-Agent Handoffs
+
+Prompt injection stopped being a single-agent problem in 2025. Google's April launch of A2A described the protocol as complementary to MCP.[^18] Many teams are now building exactly the architecture that implies: one layer for tools and context, another for agent-to-agent delegation. When those layers coexist, contaminated context can flow from one agent into another that has different permissions, a longer task window, or more powerful tools.
+
+A2A's model makes the risk concrete. Agents advertise capabilities through agent cards, coordinate through task objects with lifecycle states, and exchange messages and artifacts as structured protocol objects.[^19] By August 2025, version 0.3 added gRPC support and signed security cards.[^20] Signed cards help you verify who an agent is. They do not tell you what an artifact is allowed to do after it crosses a handoff boundary.
+
+Public standards now talk about consent, authentication, and trust, but there is no widely adopted default for cross-agent data flow policy. In practice, builders carry origin tracking and permission budgets through each handoff themselves. If an upstream artifact contains untrusted web content, the downstream agent should know that. If the next step combines that artifact with private data or a public-write ability, policy should force a review. Without that, the handoff is a silent way to escalate authority.
+
+## Least Privilege Actions
+
+By early 2026, vendors had arrived at the same shape of defense from different directions. Google documented prompt-injection classifiers, security-focused reasoning, markdown cleanup, suspicious URL removal, user confirmation, end-user notifications, and model hardening.[^21] OpenAI described safety training, monitors, sandboxing, watch mode, logged-out mode, confirmation steps, bug bounties, and later automated red teaming for Atlas.[^22] Anthropic combined reinforcement learning, classifiers, and expert red teaming while insisting that no browser agent is immune.[^23] Different stacks, same practical answer: assume some manipulative content will get through, then make the dangerous consequences harder to trigger.
+
+For teams shipping agent systems today, a defensible baseline looks like this.
+
+1. Label untrusted inputs clearly. Web content, emails, issue text, shared docs, tool outputs, and third-party metadata should not silently inherit the same trust level as system instructions.
+2. List your dangerous actions. Public writes, link fetches, repository traversal, message sends, financial actions, destructive operations, and persistent-memory writes all deserve named policy.
+3. Scope permissions to the task. Per-repository credentials, one-repo-per-session rules, and short-lived tokens cut off a large class of public-to-private data leaks.[^24]
+4. Limit outbound connections where you can. OpenAI's January 2026 link-safety work is a good example of a bounded control: allow automatic fetching only for exact URLs already known to exist publicly in an independent web index.[^25]
+5. Treat connector metadata as code. Pin versions. Sign what can be signed. Show the full description that the model sees.
+6. Treat memory as part of the security surface. Persistent memory needs origin tracking, the ability to revoke entries, and policy, not just relevance tuning.
+7. Keep the feedback loop fast. Monitors and traces matter because attack patterns change faster than model updates, and the best defenses often start as patterns spotted in replayed incidents.
+
+None of these controls are free. Approval gates reduce autonomy. Outbound restrictions frustrate users who expect agents to browse freely. Memory cleanup can reduce recall if thresholds are too strict. Connector review slows integration. But betting your entire security model on perfect instruction-following in a hostile environment is more expensive.
+
+## Where This Goes
+
+The first major prompt-injection incident with real financial damage will probably involve a multi-agent workflow. A browser agent picks up poisoned content, passes an artifact to a planning agent, which delegates to a code-execution agent that has write access to production infrastructure. Each handoff looks clean in isolation. The compound result is an action no single agent was supposed to take. The post-mortem will find that every individual permission was reasonable and every individual safeguard worked as designed.
+
+That incident, whenever it arrives, will do for agent security what the 2013 Target breach did for network segmentation: make the boring architectural work feel urgent. Right now, most teams treat prompt-injection defense as a model-level concern. After a public, expensive failure, it becomes an infrastructure concern, and budgets follow.
+
+Two shifts will probably accelerate in the next twelve to eighteen months. First, agent permissions will start looking more like cloud IAM than app-level API keys. Per-session credentials, scoped to specific repositories or actions, with automatic expiry. The GitHub MCP exploit already demonstrated why broad, long-lived tokens are untenable when the agent processes attacker-controlled input as part of normal operation. Second, connector and tool registries will develop something resembling package signing and vulnerability disclosure. MCP tool descriptions influence agent behavior as directly as code does, and the supply-chain security practices around code have not yet caught up to that reality.
+
+The harder prediction is whether the context-window problem gets a real answer. Today, the moment a tool returns sensitive data into the context, that data has already left the user's environment and reached the model provider. Sandboxing, approval gates, and output filters all operate after that boundary has been crossed. Some version of confidential computing or client-side inference may eventually close that gap for high-sensitivity workloads, but the timeline is unclear and the performance trade-offs are steep. For most teams, this means accepting a residual exposure that no permission architecture can eliminate, and scoping agent access accordingly.
+
+Agent security will converge with application security over the next year or so. The tools, the job titles, and the compliance frameworks will merge. The teams that treat prompt injection as a model-safety curiosity will keep getting surprised. The teams that treat it as an infrastructure problem, with trust boundaries, scoped credentials, and auditable tool chains, will ship agents that survive contact with hostile content. The gap between those two positions will widen as agents get more capable and the blast radius of a successful injection grows with them.
+
+[^1]: OpenAI, Operator system card, January 23, 2025. Agent Security Bench, ICLR 2025 poster published January 22, 2025.
+
+[^2]: OpenAI, Operator system card. The same source also reports 46 benign-screen flags out of 13,704 and 92% confirmation recall across 607 risky tasks.
+
+[^3]: OpenAI, Deep Research system card, February 25, 2025.
+
+[^4]: OpenAI, New tools for building agents, March 11, 2025.
+
+[^5]: OpenAI, Operator system card API update, March 11, 2025.
+
+[^6]: Anthropic, Mitigating the risk of prompt injections in browser use, November 24, 2025.
+
+[^7]: Microsoft MSRC, How Microsoft defends against indirect prompt injection attacks, July 29, 2025.
+
+[^8]: OpenAI, Designing AI agents to resist prompt injection, March 11, 2026.
+
+[^9]: Invariant Labs, GitHub MCP exploited: Accessing private repositories via MCP, May 26, 2025.
+
+[^10]: Microsoft MSRC, How Microsoft defends against indirect prompt injection attacks.
+
+[^11]: Invariant Labs, MCP Security Notification: Tool Poisoning Attacks, April 1, 2025.
+
+[^12]: Model Context Protocol specification, March 26, 2025 and June 18, 2025.
+
+[^13]: Invariant Labs, GitHub MCP exploited: Accessing private repositories via MCP.
+
+[^14]: Invariant Labs notes that many users already opt for broad approval policies in agent tooling, which weakens the value of per-call confirmations.
+
+[^15]: Sunil et al., Memory Poisoning Attack and Defense on Memory Based LLM-Agents, arXiv:2601.05504, January 2026.
+
+[^16]: The same paper cites earlier MINJA results above 95% injection success and 70% attack success under idealized conditions while showing weaker attacks under more realistic memory states.
+
+[^17]: Sunil et al., Memory Poisoning Attack and Defense on Memory Based LLM-Agents.
+
+[^18]: Google, Announcing the Agent2Agent Protocol, April 9, 2025.
+
+[^19]: Google's A2A description highlights agent cards, task objects, messages, and artifacts as first-class protocol objects.
+
+[^20]: Google Cloud, Announcing a complete developer toolkit for scaling A2A agents on Google Cloud, August 1, 2025.
+
+[^21]: Google Workspace Admin Help, Indirect prompt injections and Google's layered defense strategy for Gemini.
+
+[^22]: OpenAI, Understanding prompt injections: a frontier security challenge, November 7, 2025, and Continuously hardening ChatGPT Atlas against prompt injection attacks, December 22, 2025.
+
+[^23]: Anthropic, Mitigating the risk of prompt injections in browser use.
+
+[^24]: Invariant Labs proposes one-repo-per-session style controls to prevent cross-repository toxic flows in MCP-driven coding workflows.
+
+[^25]: OpenAI, Keeping your data safe when an AI agent clicks a link, January 28, 2026.
