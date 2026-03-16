@@ -4,6 +4,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.guard_types import (
+    tool_filter as _tool_filter_mod,  # noqa: F401 — pre-import before guards reload
+)
 from src.guards import GuardBlockedError
 
 
