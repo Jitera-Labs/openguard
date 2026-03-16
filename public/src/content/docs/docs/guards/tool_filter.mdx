@@ -1,0 +1,44 @@
+---
+title: tool_filter
+description: Filter tool definitions using Hasura-style matching rules.
+---
+
+Filter tool definitions using Hasura-style matching rules.
+
+Evaluates each tool definition in the request against a Hasura-style filter.
+Tool definitions are normalized to a flat shape before filtering:
+`{"name": "...", "description": "...", "parameters": {...}, "type": "..."}`
+This works identically for OpenAI and Anthropic tool formats.
+
+Supports three actions: block (reject request), strip (remove matching tools), or log (audit only).
+
+## Configuration
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `filter` | `object` | `Required` | Hasura-style filter applied to each normalized tool definition. |
+| `scope` | `string` | `"any"` | 'any': trigger if any tool matches. 'every': trigger if all tools match. 'none': trigger if no tools match (useful for requiring a tool). |
+| `action` | `string` | `"block"` | 'block': reject the request. 'strip': remove matching tools from the request. 'log': log the finding without blocking. |
+
+## Examples
+
+```yaml
+# Block tools with suspicious descriptions
+type: tool_filter
+config:
+  filter:
+    description:
+      _iregex: ignore previous|disregard|system prompt
+  action: block
+```
+
+```yaml
+# Strip shell execution tools
+type: tool_filter
+config:
+  filter:
+    name:
+      _ilike: '%execute%'
+  action: strip
+```
+
