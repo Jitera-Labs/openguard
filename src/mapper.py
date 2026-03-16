@@ -263,7 +263,7 @@ def resolve_request_config(body: Dict) -> Dict:
             )
         ]
 
-        if len(urls) == 1:
+        if len(urls) == 1 and not MODEL_TO_BACKEND.get("openai"):
             proxy_backend = urls[0]
         else:
             # Check if we should raise HTTPException or ValueError based on contract

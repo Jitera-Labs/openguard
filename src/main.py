@@ -33,6 +33,15 @@ logger = log_module.setup_logger(__name__)
 # Create FastAPI app
 app = FastAPI(title="OpenGuard", description="guarding proxy for AI", version=__version__)
 
+
+@app.on_event("startup")
+async def _warm_model_cache():
+    try:
+        await mapper.list_downstream("openai")
+    except Exception as e:
+        logger.warning(f"Could not warm model cache: {e}")
+
+
 # Add middlewares in correct order
 app.add_middleware(RequestStateMiddleware)
 app.add_middleware(RequestIDMiddleware)
