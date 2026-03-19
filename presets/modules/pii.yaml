@@ -1,0 +1,11 @@
+# Redacts PII — email, phone, SSN, credit card — from all messages and output stream.
+#
+# Action: sanitize (never block; PII may appear legitimately in context)
+# Scope:  input + output stream (pii_filter always scans output)
+# Note:   Covers US-centric formats. International phone numbers (+44, +49 etc.)
+#         are not matched. See src/guard_types/pii_filter.py for full coverage.
+guards:
+  - match: {}
+    apply:
+      - type: pii_filter
+        config: {}
