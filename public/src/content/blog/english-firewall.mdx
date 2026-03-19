@@ -6,9 +6,6 @@ author: "Ivan Charapanau"
 tags: ["security", "agents", "pdf"]
 ---
 
-
-# There Is No Firewall for English
-
 [OpenPDF](https://github.com/LibrePDF/OpenPDF) throws an `IllegalArgumentException` if you set font size to 0.0 in a PDF. Set it to 0.1 and color it white, and the text passes every library check, and every human eye, while remaining *fully legible* to any AI assistant that processes the document.
 
 Wait! Your car dealership just sent you a new lease agreement, and the PDF looks completely ordinary because it is completely ordinary, except for a few paragraphs of 0.1pt white text that a worm on the dealer's machine injected before the email was sent. You drag the file into ChatGPT, type "summarize key contract terms," and switch tabs to work on some other useful things. The assistant extracts the document's text, hits the hidden instructions, accesses your Google Drive, locates files that resemble credentials, spins up a Python sandbox, and fires a GET request with your secrets encoded in base57 (because why not) as query parameters to an attacker-controlled server. When you return, the summary of your lease terms is waiting. The tool-call log shows some extra steps, but you have no reason to check it, just some assistant stuff, and the exfiltration is already complete.

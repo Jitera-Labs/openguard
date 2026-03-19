@@ -1,24 +1,28 @@
 ---
 title: PII Filter
-description: Detect and redact personally identifiable information in LLM message content.
+description: "Detect and redact personally identifiable information in LLM message content."
 ---
 
 Detect and redact personally identifiable information in LLM message content.
 
-The `pii_filter` guard scans the chat context for Personally Identifiable
-Information (PII) such as email addresses, phone numbers, SSNs, and credit card
-numbers.
-When PII is found, it is replaced with a masked value like `<protected:email>`
-before being sent to the LLM.
-You can configure which types of PII to filter by passing an optional `pii_types`
-list containing values like `"email"`, `"phone"`, `"ssn"`, or `"creditcard"`.
-If `pii_types` is omitted, all available PII detectors will run.
+**Sensitivity levels**
+- *relaxed*: email, SSN, credit card (Luhn-validated)
+- *balanced* (default): + phone (Google libphonenumber, 250+ countries),
+  IPv4 (octet-validated), IBAN (mod-97), DoB, salutation-prefixed names, EIN
+- *strict*: + US passport numbers, generic hex secrets
+
+**Options**: `pii_types`, `allowlist`, `custom_patterns`,
+`action` (redact/mask/hash), `sensitivity`.
 
 ## Configuration
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `pii_types` | `array | null` | `None` | Optional list of PII types to filter (e.g. ['email', 'phone']). If omitted, all detectors run. |
+| `pii_types` | `array | null` | `None` | PII types to scan for. When omitted, all detectors at the configured sensitivity level run. Available: email, phone, ssn, creditcard, ipv4, iban, dob, name, ein, passport, secret_hex. Include 'phone' to activate the libphonenumber scanner explicitly. |
+| `sensitivity` | `string` | `"balanced"` | 'relaxed' = email, SSN, credit card only (no phone). 'balanced' (default) = + phone (libphonenumber), IPv4, IBAN, DoB, names, EIN. 'strict' = all types, no context requirement. |
+| `action` | `string` | `"redact"` | Replacement format for detected PII (not credentials). 'redact' → `[protected:TYPE]` (default). 'mask' → ****. 'hash' → `[protected:TYPE:HASH8]` (referential integrity). |
+| `allowlist` | `array` | `[]` | Values left untouched regardless of detection (e.g. known-safe emails). |
+| `custom_patterns` | `array` | `[]` | Additional regex patterns added to the PII tier as relaxed-level detectors. |
 
 ## Examples
 
@@ -26,15 +30,34 @@ If `pii_types` is omitted, all available PII detectors will run.
 # Example 1
 type: pii_filter
 config:
-  pii_types:
-  - email
-  - phone
+  sensitivity: balanced
 ```
 
 ```yaml
 # Example 2
 type: pii_filter
 config:
-  {}
+  pii_types:
+  - email
+  - phone
+  - ssn
+  - creditcard
+```
+
+```yaml
+# Example 3
+type: pii_filter
+config:
+  action: hash
+  sensitivity: strict
+```
+
+```yaml
+# Example 4
+type: pii_filter
+config:
+  custom_patterns:
+  - name: employee_id
+    pattern: \bEMP-\d{6}\b
 ```
 
