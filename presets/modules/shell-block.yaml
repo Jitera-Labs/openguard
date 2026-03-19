@@ -1,0 +1,70 @@
+# Hard-blocks dangerous shell commands — file reads, credential exfiltration,
+# remote code execution, and reverse shells.
+#
+# Use for coding agents and high-security deployments where the AI should never
+# suggest or execute these patterns. For pipelines where sanitization is
+# preferable to rejection, use shell-sanitize.yaml instead.
+#
+# Action: block → HTTP 403
+# Scope:  input + output stream (scan_input_only: false)
+# Coverage: Bash/sh, PowerShell (Windows), Python/Perl/Ruby one-liners,
+#           curl/wget exfiltration, scp/rsync, netcat, process substitution
+guards:
+  - match: {}
+    apply:
+      - type: keyword_filter
+        config:
+          keywords:
+            # --- Destructive file removal ---
+            - 'rm\s+(-rf|-fr|-r\s+-f|-f\s+-r|--recursive)\s+[/~]'
+            # --- Sensitive file reads (Unix) ---
+            - '(cat|less|more|head|tail|strings)\s+\S*\.ssh/'
+            - '(cat|less|more|head|tail|strings)\s+\S*\.aws/credentials'
+            - '(cat|less|more|head|tail|strings)\s+\S*\.env\b'
+            - '(cat|less|more|head|tail|strings)\s+\S*/etc/(shadow|passwd|sudoers)'
+            # --- Sensitive file reads (Windows CMD / PowerShell) ---
+            - '\btype\s+\S*\.(aws|ssh|env)\S*'
+            - '\btype\s+\S*\\(credentials|shadow|passwd|id_rsa|id_ed25519)\b'
+            - 'Get-Content\s+\S*\.aws[/\\]credentials'
+            - 'Get-Content\s+\S*\.env\b'
+            - 'Get-Content\s+\S*\.ssh[/\\]'
+            - '\bgc\s+\S*\.aws[/\\]credentials'
+            - '\bgc\s+\S*\.ssh[/\\]'
+            - '\bgc\s+\S*\.env\b'
+            # --- Scripting one-liners that read sensitive files ---
+            - 'python3?\s+-c\s+["''"][^"'']*open\([^)]*\.(ssh|aws|env|gitconfig)'
+            - 'perl\s+-e\s+["''"][^"'']*\.(ssh|aws|env|gitconfig)'
+            - 'ruby\s+-e\s+["''"][^"'']*\.(ssh|aws|env|gitconfig)'
+            # --- Bash process substitution reading sensitive files ---
+            - '\$\(<[^>]*(\.aws/credentials|\.ssh/|\.env\b|etc/shadow|etc/passwd)'
+            # --- Reverse shells / netcat exfiltration ---
+            - '(^|[\|;`])\s*n?ca?t\s+(\S+\s+)?\S+\s+\d{2,5}\b'
+            - '[<]\s*\S*\.(ssh|aws|env)\S*\s+n?ca?t\s'
+            # --- Remote code execution via pipe-to-shell ---
+            - 'curl\s+[^\n]*\|\s*(bash|sh|zsh|python3?|perl|ruby|node|pwsh|powershell)\b'
+            - 'wget\s+[^\n]*\|\s*(bash|sh|zsh|python3?|perl|ruby|node)\b'
+            - 'Invoke-WebRequest\s+[^\n]*\|\s*Invoke-Expression\b'
+            - 'iwr\s+[^\n]*\|\s*iex\b'
+            - 'irm\s+[^\n]*\|\s*iex\b'
+            - 'Invoke-RestMethod\s+[^\n]*\|\s*Invoke-Expression\b'
+            # --- Credential file upload / exfiltration ---
+            - 'curl\s+[^\n]*@\S*\.(aws/credentials|ssh/id_|env\b|config|npmrc)'
+            - 'curl\s+[^\n]*(?:-T|--upload-file)\s+\S*\.(aws|ssh|env\b|npmrc)'
+            - 'wget\s+[^\n]*--post-file[=\s]+\S*\.(aws/credentials|ssh/|env\b|passwd|shadow)'
+            - 'wget\s+[^\n]*--post-data[=\s]+\$\('
+            - '\bscp\s+[^\n]*\.(aws/credentials|ssh/id_|env\b|passwd|shadow)'
+            - '\brsync\s+[^\n]*\.(aws/|ssh/|env\b|passwd|shadow)'
+            # --- Encoding / obfuscated exfiltration ---
+            - '\|\s*base64\b'
+            - 'base64\s+-d\s*\|'
+            - '\|\s*openssl\s+enc\s+[^\n]*-base64\b'
+            - '(cat|less|head|tail)\s+\S*\.(aws/|ssh/|env\b|passwd|shadow)[^\n]*\|\s*xxd\b'
+            - '(cat|less|head|tail)\s+\S*\.(aws/|ssh/|env\b|passwd|shadow)[^\n]*\|\s*od\b'
+            # --- PowerShell destructive operations ---
+            - 'Remove-Item\s+[^\n]*-Recurse\s+[^\n]*[/\\][^\s]'
+            # --- Fork bomb ---
+            - ':\(\)\s*\{\s*:\s*\|'
+          use_regex: true
+          match_mode: any
+          action: block
+          scan_input_only: false

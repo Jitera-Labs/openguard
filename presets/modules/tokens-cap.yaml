@@ -1,0 +1,18 @@
+# Caps max_tokens to prevent runaway generation cost and context bleed attacks.
+#
+# Applies when max_tokens is unset (null) or exceeds the cap.
+# Default cap: 4000 tokens. Adjust the cap value in your guards.yaml as needed.
+#
+# Threat: unbounded generation can be used to exhaust context windows in
+#         multi-agent pipelines, causing guard inspection to lose early context.
+guards:
+  - match:
+      _or:
+        - max_tokens:
+            _is_null: true
+        - max_tokens:
+            _gt: 4000
+    apply:
+      - type: max_tokens
+        config:
+          max_tokens: 4000

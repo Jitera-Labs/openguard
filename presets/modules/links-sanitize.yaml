@@ -1,0 +1,29 @@
+# Strips markdown links pointing to external URLs from all messages and output stream.
+#
+# Prevents covert data exfiltration via rendered markdown links — a primary vector
+# in Slack AI, GitHub Copilot Chat, and document-processing pipelines where the
+# UI renders markdown and automatically fetches images or link previews.
+# Also covers HTML entity-encoded URLs and javascript:/data: scheme abuse.
+#
+# Action: sanitize → replaces matched link with [LINK REMOVED]
+# Scope:  input + output stream (scan_input_only: false)
+# Side effect: markdown links in user INPUT messages are also stripped.
+#              This is intentional — indirect injection can arrive in any role.
+# Ref:    PromptArmor / Slack AI exfiltration, Aug 2024
+guards:
+  - match: {}
+    apply:
+      - type: keyword_filter
+        config:
+          keywords:
+            # Standard http/https markdown links and images
+            - '!?\[[^\]]*\]\(https?://[^)]+\)'
+            # HTML decimal-entity encoded URL schemes (&#104;ttps:// → https://)
+            - '!?\[[^\]]*\]\(&#\d+;[^)]*\)'
+            # Non-http URI schemes exploitable in web rendering contexts
+            - '!?\[[^\]]*\]\((?:javascript|data|vbscript):[^)]*\)'
+          use_regex: true
+          match_mode: any
+          action: sanitize
+          replacement: '[LINK REMOVED]'
+          scan_input_only: false
