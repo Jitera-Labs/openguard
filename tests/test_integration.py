@@ -278,7 +278,7 @@ def test_chat_with_pii_filter(test_client, setup_mock_non_streaming):
     payload = {
         "model": "test-secure-model",
         "messages": [
-            {"role": "user", "content": "My email is test@example.com and phone is 555-123-4567"}
+            {"role": "user", "content": "My email is test@example.com and phone is 212-867-5309"}
         ],
         "stream": False,
     }
