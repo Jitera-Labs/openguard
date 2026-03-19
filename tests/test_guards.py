@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.chat import Chat
 from src.guard_engine import apply_guards
-from src.guard_types import content_filter, max_tokens, pii_filter
+from src.guard_types import content_filter, credential_filter, max_tokens, pii_filter
 from src.guards import GuardAction, GuardRule
 
 
@@ -105,8 +105,9 @@ def test_pii_filter_email():
 
 
 def test_pii_filter_phone():
-    """Test PII filter detects phone numbers."""
-    messages = [{"role": "user", "content": "Call me at 555-123-4567"}]
+    """Test PII filter detects phone numbers (libphonenumber VALID leniency)."""
+    # 212-867-5309 is a real US number format that passes libphonenumber VALID check
+    messages = [{"role": "user", "content": "Call me at 212-867-5309"}]
     chat = Chat.from_conversation(messages)
 
     config = {}
@@ -114,7 +115,7 @@ def test_pii_filter_phone():
 
     nodes = chat.plain()
     assert "<protected:phone>" in nodes[1].content
-    assert "555-123-4567" not in nodes[1].content
+    assert "212-867-5309" not in nodes[1].content
 
 
 def test_pii_filter_ssn():
@@ -131,8 +132,9 @@ def test_pii_filter_ssn():
 
 
 def test_pii_filter_creditcard():
-    """Test PII filter detects credit card numbers."""
-    messages = [{"role": "user", "content": "My card is 1234 5678 9012 3456"}]
+    """Test PII filter detects credit card numbers (Luhn-validated)."""
+    # 4111 1111 1111 1111 is the canonical Visa test number — passes Luhn
+    messages = [{"role": "user", "content": "My card is 4111 1111 1111 1111"}]
     chat = Chat.from_conversation(messages)
 
     config = {}
@@ -140,7 +142,191 @@ def test_pii_filter_creditcard():
 
     nodes = chat.plain()
     assert "<protected:creditcard>" in nodes[1].content
-    assert "1234" not in nodes[1].content
+    assert "4111" not in nodes[1].content
+
+
+def test_pii_filter_creditcard_luhn_rejects_invalid():
+    """Non-Luhn sequences must NOT be flagged as credit cards."""
+    messages = [{"role": "user", "content": "The version is 1234 5678 9012 3456"}]
+    chat = Chat.from_conversation(messages)
+
+    pii_filter.apply(chat, MockLLM(), {})
+
+    nodes = chat.plain()
+    # No PII found → no system message injected
+    assert nodes[0].role != "system" or "PII has been filtered" not in nodes[0].content
+
+
+def test_credential_filter_blocks_by_default():
+    """Credentials trigger a block (403) when action is the default 'block'."""
+    from src.guards import GuardBlockedError
+
+    messages = [{"role": "user", "content": "Use key AKIAIOSFODNN7EXAMPLE for access"}]
+    chat = Chat.from_conversation(messages)
+
+    with pytest.raises(GuardBlockedError, match="aws_key"):
+        credential_filter.apply(chat, MockLLM(), {})
+
+
+def test_credential_filter_aws_key_redact():
+    """With action=redact, AWS IAM key is replaced not blocked."""
+    messages = [{"role": "user", "content": "Use key AKIAIOSFODNN7EXAMPLE for access"}]
+    chat = Chat.from_conversation(messages)
+
+    credential_filter.apply(chat, MockLLM(), {"action": "redact"})
+
+    nodes = chat.plain()
+    assert "<protected:aws_key>" in nodes[0].content
+
+
+def test_credential_filter_jwt_redact():
+    """With action=redact, JWT is replaced not blocked."""
+    # canonical HS256 example from jwt.io
+    token = (
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+        ".eyJzdWIiOiIxMjM0NTY3ODkwIn0"
+        ".SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    )
+    messages = [{"role": "user", "content": f"My token is {token}"}]
+    chat = Chat.from_conversation(messages)
+
+    credential_filter.apply(chat, MockLLM(), {"action": "redact"})
+
+    nodes = chat.plain()
+    assert "<protected:jwt>" in nodes[0].content
+    assert token not in nodes[0].content
+
+
+def test_credential_filter_github_token_redact():
+    """With action=redact, GitHub token is replaced not blocked."""
+    # detect-secrets requires exactly (ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36}
+    token = "ghp_ABcDefGhIjKlMnOpQrStUvWxYz1234567890"
+    messages = [{"role": "user", "content": f"{token} here"}]
+    chat = Chat.from_conversation(messages)
+
+    credential_filter.apply(chat, MockLLM(), {"action": "redact"})
+
+    nodes = chat.plain()
+    assert "<protected:github_token>" in nodes[0].content
+    assert token not in nodes[0].content
+
+
+def test_pii_filter_dob_with_context():
+    """Date of birth is detected when a context keyword is present."""
+    messages = [{"role": "user", "content": "I was born on 04/15/1990 in New York"}]
+    chat = Chat.from_conversation(messages)
+
+    pii_filter.apply(chat, MockLLM(), {"sensitivity": "balanced"})
+
+    nodes = chat.plain()
+    assert "<protected:dob>" in nodes[1].content
+
+
+def test_pii_filter_dob_without_context_balanced():
+    """Date without context keyword is NOT flagged in balanced mode."""
+    messages = [{"role": "user", "content": "The deadline is 12/31/2025"}]
+    chat = Chat.from_conversation(messages)
+
+    logs = pii_filter.apply(chat, MockLLM(), {"sensitivity": "balanced"})
+
+    assert not any("dob" in log for log in logs)
+
+
+def test_pii_filter_ipv4_with_context():
+    """IPv4 addresses are detected when a context keyword is present."""
+    messages = [{"role": "user", "content": "The client ip address is 192.168.1.100"}]
+    chat = Chat.from_conversation(messages)
+
+    pii_filter.apply(chat, MockLLM(), {"sensitivity": "balanced"})
+
+    nodes = chat.plain()
+    assert "<protected:ipv4>" in nodes[1].content
+
+
+def test_pii_filter_obfuscated_email():
+    """Space-separated obfuscated email is detected and redacted."""
+    messages = [{"role": "user", "content": "Email me at j o h n @ e x a m p l e . c o m today"}]
+    chat = Chat.from_conversation(messages)
+
+    pii_filter.apply(chat, MockLLM(), {})
+
+    nodes = chat.plain()
+    assert "<protected:email>" in nodes[1].content
+
+
+def test_pii_filter_action_mask():
+    """'mask' action replaces PII with ****."""
+    messages = [{"role": "user", "content": "Contact me at john.doe@example.com"}]
+    chat = Chat.from_conversation(messages)
+
+    pii_filter.apply(chat, MockLLM(), {"action": "mask"})
+
+    nodes = chat.plain()
+    assert "****" in nodes[1].content
+    assert "john.doe@example.com" not in nodes[1].content
+
+
+def test_pii_filter_action_hash_referential_integrity():
+    """'hash' action produces the same token for the same value across messages."""
+    same_email = "john.doe@example.com"
+    messages = [
+        {"role": "user", "content": f"Email: {same_email}"},
+        {"role": "assistant", "content": f"I'll reach {same_email} now."},
+    ]
+    chat = Chat.from_conversation(messages)
+
+    pii_filter.apply(chat, MockLLM(), {"action": "hash"})
+
+    nodes = chat.plain()
+    # Both should have the same hash token
+    import re
+
+    tokens = re.findall(r"<protected:email:[0-9a-f]{8}>", nodes[1].content + nodes[2].content)
+    assert len(tokens) == 2
+    assert tokens[0] == tokens[1]
+
+
+def test_pii_filter_allowlist():
+    """Values in the allowlist are left untouched."""
+    messages = [{"role": "user", "content": "Reply to noreply@company.com or john@example.com"}]
+    chat = Chat.from_conversation(messages)
+
+    pii_filter.apply(chat, MockLLM(), {"allowlist": ["noreply@company.com"]})
+
+    nodes = chat.plain()
+    assert "noreply@company.com" in nodes[1].content
+    assert "<protected:email>" in nodes[1].content  # john@example.com still redacted
+
+
+def test_pii_filter_custom_pattern():
+    """Custom regex patterns are detected and redacted."""
+    messages = [{"role": "user", "content": "My employee ID is EMP-042317"}]
+    chat = Chat.from_conversation(messages)
+
+    config = {"custom_patterns": [{"name": "employee_id", "pattern": r"\bEMP-\d{6}\b"}]}
+    pii_filter.apply(chat, MockLLM(), config)
+
+    nodes = chat.plain()
+    assert "<protected:employee_id>" in nodes[1].content
+    assert "EMP-042317" not in nodes[1].content
+
+
+def test_pii_filter_pii_types_whitelist():
+    """When pii_types is set, only those detectors run."""
+    messages = [
+        {
+            "role": "user",
+            "content": "Email john@example.com or call 555-123-4567",
+        }
+    ]
+    chat = Chat.from_conversation(messages)
+
+    pii_filter.apply(chat, MockLLM(), {"pii_types": ["email"]})
+
+    nodes = chat.plain()
+    assert "<protected:email>" in nodes[1].content
+    # Phone should be untouched — not in pii_types
+    assert "555-123-4567" in nodes[1].content
 
 
 def test_pii_filter_multimodal():
