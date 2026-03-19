@@ -6,6 +6,9 @@ import { docsHeaderNavLinks, githubCtaAriaLabel, githubUrl } from './src/config/
 
 export default defineConfig({
 	site: 'https://openguard.sh',
+	markdown: {
+		smartypants: false,
+	},
 	vite: { cacheDir: '/tmp/vite-cache-openguard' },
 	integrations: [
 		sitemap(),

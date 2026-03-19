@@ -34,7 +34,7 @@ Generic input filtering is useful. System design that holds when the model gets 
 
 April and May 2025 changed how builders had to think about tool calling. Invariant Labs disclosed MCP tool-poisoning attacks that hid malicious instructions inside tool descriptions, visible to the model but not fully visible to the user. Their examples showed data theft, local file reads, and cross-server shadowing where one malicious tool changed how the agent used another, trusted tool.[^11] The attack surface goes past the chat window. Tool descriptions, labels, manifests, and connector metadata all influence how the model plans its actions.
 
-The MCP specification now says this directly. Both the March 26 and June 18, 2025 versions warn that tool behavior descriptions should be treated as untrusted unless they come from a trusted server.[^12] A tool manifest is not passive documentation. If the model reads it while deciding what to do, it belongs in the same threat model as your code and your security policy.
+The MCP specification now says this directly. Versions 2025-03-26, 2025-06-18, and 2025-11-25 (the current version as of this post) all warn that tool behavior descriptions should be treated as untrusted unless they come from a trusted server.[^12] A tool manifest is not passive documentation. If the model reads it while deciding what to do, it belongs in the same threat model as your code and your security policy.
 
 Invariant's GitHub MCP exploit showed what this looks like end-to-end. A malicious public issue fed attacker-controlled instructions to the agent, which pulled data from a private repository and leaked it into a public pull request.[^13] No compromised MCP server was needed. The exploit used public content, broad repository access, and legitimate write tools. Confirmation dialogs did not help because, in practice, users turn on broad approval modes like Always Allow and stop reading every tool request.[^14]
 
@@ -84,52 +84,52 @@ The harder prediction is whether the context-window problem gets a real answer. 
 
 Agent security will converge with application security over the next year or so. The tools, the job titles, and the compliance frameworks will merge. The teams that treat prompt injection as a model-safety curiosity will keep getting surprised. The teams that treat it as an infrastructure problem, with trust boundaries, scoped credentials, and auditable tool chains, will ship agents that survive contact with hostile content. The gap between those two positions will widen as agents get more capable and the blast radius of a successful injection grows with them.
 
-[^1]: OpenAI, Operator system card, January 23, 2025. Agent Security Bench, ICLR 2025 poster published January 22, 2025.
+[^1]: OpenAI, [Operator system card](https://openai.com/index/operator-system-card), January 23, 2025. Zhang et al., [Agent Security Bench (ASB): Formalizing and Benchmarking Attacks and Defenses in LLM-based Agents](https://arxiv.org/abs/2410.02644), arXiv:2410.02644, accepted at ICLR 2025.
 
-[^2]: OpenAI, Operator system card. The same source also reports 46 benign-screen flags out of 13,704 and 92% confirmation recall across 607 risky tasks.
+[^2]: OpenAI, [Operator system card](https://openai.com/index/operator-system-card). The same source also reports 46 benign-screen flags out of 13,704 and 92% confirmation recall across 607 risky tasks (retrieved March 19, 2026).
 
-[^3]: OpenAI, Deep Research system card, February 25, 2025.
+[^3]: OpenAI, [Deep Research system card](https://openai.com/index/deep-research-system-card), February 25, 2025.
 
-[^4]: OpenAI, New tools for building agents, March 11, 2025.
+[^4]: OpenAI, [New tools for building agents](https://openai.com/index/new-tools-for-building-agents), March 11, 2025.
 
-[^5]: OpenAI, Operator system card API update, March 11, 2025.
+[^5]: OpenAI, [Operator system card](https://openai.com/index/operator-system-card), API Availability section added March 11, 2025.
 
-[^6]: Anthropic, Mitigating the risk of prompt injections in browser use, November 24, 2025.
+[^6]: Anthropic, [Mitigating the risk of prompt injections in browser use](https://www.anthropic.com/research/prompt-injection-defenses), November 24, 2025.
 
-[^7]: Microsoft MSRC, How Microsoft defends against indirect prompt injection attacks, July 29, 2025.
+[^7]: Microsoft MSRC, [How Microsoft defends against indirect prompt injection attacks](https://www.microsoft.com/en-us/msrc/blog/2025/07/how-microsoft-defends-against-indirect-prompt-injection-attacks), July 29, 2025.
 
-[^8]: OpenAI, Designing AI agents to resist prompt injection, March 11, 2026.
+[^8]: OpenAI, [Designing AI agents to resist prompt injection](https://openai.com/index/designing-agents-to-resist-prompt-injection/), March 11, 2026.
 
-[^9]: Invariant Labs, GitHub MCP exploited: Accessing private repositories via MCP, May 26, 2025.
+[^9]: Invariant Labs, [GitHub MCP exploited: Accessing private repositories via MCP](https://invariantlabs.ai/blog/mcp-github-vulnerability.html), May 26, 2025.
 
-[^10]: Microsoft MSRC, How Microsoft defends against indirect prompt injection attacks.
+[^10]: Microsoft MSRC, [How Microsoft defends against indirect prompt injection attacks](https://www.microsoft.com/en-us/msrc/blog/2025/07/how-microsoft-defends-against-indirect-prompt-injection-attacks) (retrieved March 19, 2026).
 
-[^11]: Invariant Labs, MCP Security Notification: Tool Poisoning Attacks, April 1, 2025.
+[^11]: Invariant Labs, [MCP Security Notification: Tool Poisoning Attacks](https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks), April 1, 2025.
 
-[^12]: Model Context Protocol specification, March 26, 2025 and June 18, 2025.
+[^12]: Model Context Protocol specification, [version 2025-03-26](https://modelcontextprotocol.io/specification/2025-03-26/), [version 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/), and [version 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/) (latest as of this post). The quoted "Tool Safety" language appears identically in all three versions.
 
-[^13]: Invariant Labs, GitHub MCP exploited: Accessing private repositories via MCP.
+[^13]: Invariant Labs, [GitHub MCP exploited: Accessing private repositories via MCP](https://invariantlabs.ai/blog/mcp-github-vulnerability.html) (retrieved March 19, 2026).
 
-[^14]: Invariant Labs notes that many users already opt for broad approval policies in agent tooling, which weakens the value of per-call confirmations.
+[^14]: Invariant Labs, [GitHub MCP exploited: Accessing private repositories via MCP](https://invariantlabs.ai/blog/mcp-github-vulnerability.html), May 26, 2025. The article states that "many users already opt for an 'Always Allow' confirmation policy when using agents, and stop monitoring individual actions."
 
-[^15]: Sunil et al., Memory Poisoning Attack and Defense on Memory Based LLM-Agents, arXiv:2601.05504, January 2026.
+[^15]: Sunil et al., [Memory Poisoning Attack and Defense on Memory Based LLM-Agents](https://arxiv.org/abs/2601.05504), arXiv:2601.05504, January 9, 2026.
 
-[^16]: The same paper cites earlier MINJA results above 95% injection success and 70% attack success under idealized conditions while showing weaker attacks under more realistic memory states.
+[^16]: Sunil et al., [Memory Poisoning Attack and Defense on Memory Based LLM-Agents](https://arxiv.org/abs/2601.05504), arXiv:2601.05504. Cites earlier MINJA results above 95% injection success and 70% attack success under idealized conditions while showing weaker attacks under more realistic memory states, January 9, 2026.
 
-[^17]: Sunil et al., Memory Poisoning Attack and Defense on Memory Based LLM-Agents.
+[^17]: Sunil et al., [Memory Poisoning Attack and Defense on Memory Based LLM-Agents](https://arxiv.org/abs/2601.05504) (retrieved March 19, 2026).
 
-[^18]: Google, Announcing the Agent2Agent Protocol, April 9, 2025.
+[^18]: Google, [Announcing the Agent2Agent Protocol](https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/), April 9, 2025.
 
-[^19]: Google's A2A description highlights agent cards, task objects, messages, and artifacts as first-class protocol objects.
+[^19]: Google's [A2A announcement](https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/) (April 9, 2025) highlights agent cards, task objects, messages, and artifacts as first-class protocol objects.
 
-[^20]: Google Cloud, Announcing a complete developer toolkit for scaling A2A agents on Google Cloud, August 1, 2025.
+[^20]: Google Cloud, [Announcing a complete developer toolkit for scaling A2A agents on Google Cloud](https://cloud.google.com/blog/products/ai-machine-learning/agent2agent-protocol-is-getting-an-upgrade), August 1, 2025.
 
-[^21]: Google Workspace Admin Help, Indirect prompt injections and Google's layered defense strategy for Gemini.
+[^21]: Google Workspace, [Indirect prompt injections and Google's layered defense strategy for Gemini](https://knowledge.workspace.google.com/admin/security/indirect-prompt-injections-and-googles-layered-defense-strategy-for-gemini) (retrieved March 19, 2026).
 
-[^22]: OpenAI, Understanding prompt injections: a frontier security challenge, November 7, 2025, and Continuously hardening ChatGPT Atlas against prompt injection attacks, December 22, 2025.
+[^22]: OpenAI, [Understanding prompt injections: a frontier security challenge](https://openai.com/index/prompt-injections/), November 7, 2025, and [Continuously hardening ChatGPT Atlas against prompt injection attacks](https://openai.com/index/hardening-atlas-against-prompt-injection/), December 22, 2025.
 
-[^23]: Anthropic, Mitigating the risk of prompt injections in browser use.
+[^23]: Anthropic, [Mitigating the risk of prompt injections in browser use](https://www.anthropic.com/research/prompt-injection-defenses) (retrieved March 19, 2026).
 
-[^24]: Invariant Labs proposes one-repo-per-session style controls to prevent cross-repository toxic flows in MCP-driven coding workflows.
+[^24]: Invariant Labs, [GitHub MCP exploited: Accessing private repositories via MCP](https://invariantlabs.ai/blog/mcp-github-vulnerability.html), May 26, 2025, proposes one-repo-per-session style controls to prevent cross-repository toxic flows in MCP-driven coding workflows.
 
-[^25]: OpenAI, Keeping your data safe when an AI agent clicks a link, January 28, 2026.
+[^25]: OpenAI, [Keeping your data safe when an AI agent clicks a link](https://openai.com/index/ai-agent-link-safety/), January 28, 2026.

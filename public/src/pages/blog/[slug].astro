@@ -75,12 +75,14 @@ const jsonLd = JSON.stringify({
         font-size: 2.25rem;
         font-weight: 500;
         -webkit-font-smoothing: none;
+        color: #fff;
         text-shadow:
             -2px 0 rgba(255, 0, 0, 0.5),
             2px 0 rgba(0, 100, 255, 0.5),
             0 0 8px rgba(255, 255, 255, 0.15);
         margin-bottom: 1rem;
         line-height: 1.2;
+        animation: aberr-h1 8s steps(1) infinite, color-h1 6s steps(1) infinite;
     }
 
     .post-meta {
@@ -105,13 +107,46 @@ const jsonLd = JSON.stringify({
         color: #fff;
     }
 
-    :global(.blog-article h2),
+    :global(.blog-article h2) {
+        font-family: 'Geist Pixel Square', monospace;
+        -webkit-font-smoothing: none;
+        color: #fff;
+        text-shadow:
+            -2px 0 rgba(255, 0, 0, 0.4),
+            2px 0 rgba(0, 100, 255, 0.4),
+            0 0 6px rgba(255, 255, 255, 0.1);
+        margin: 2.5rem 0 1rem;
+        line-height: 1.25;
+        animation: aberr-h2 7s steps(1) infinite, color-h2 5s steps(1) infinite;
+    }
+
+    :global(.blog-article h2:nth-of-type(even)) {
+        animation-delay: -2.5s, -1.8s;
+    }
+
+    :global(.blog-article h2:nth-of-type(3n)) {
+        animation-delay: -4s, -3.2s;
+    }
+
     :global(.blog-article h3) {
         font-family: 'Geist Pixel Square', monospace;
         -webkit-font-smoothing: none;
-        text-shadow: -2px 0 rgba(255, 0, 0, 0.35), 2px 0 rgba(0, 100, 255, 0.35);
+        color: #fff;
+        text-shadow:
+            -1px 0 rgba(255, 0, 0, 0.3),
+            1px 0 rgba(0, 100, 255, 0.3),
+            0 0 5px rgba(255, 255, 255, 0.08);
         margin: 2.5rem 0 1rem;
         line-height: 1.25;
+        animation: aberr-h3 6s steps(1) infinite, color-h3 5.5s steps(1) infinite;
+    }
+
+    :global(.blog-article h3:nth-of-type(even)) {
+        animation-delay: -3s, -2.2s;
+    }
+
+    :global(.blog-article h3:nth-of-type(3n)) {
+        animation-delay: -5s, -3.8s;
     }
 
     :global(.blog-article ul),
@@ -131,14 +166,308 @@ const jsonLd = JSON.stringify({
 
     :global(.blog-article code) {
         font-family: 'Geist Mono', monospace;
-        background: #1a1a1a;
-        padding: 0.1em 0.35em;
-        border-radius: 3px;
+        background: #111;
+        padding: 0.15em 0.4em;
         font-size: 0.875em;
+        border: 1px solid #2a2a2a;
+        color: #e0e0e0;
+        text-shadow: 0 0 6px rgba(255, 255, 255, 0.1);
+    }
+
+    :global(.blog-article pre) {
+        margin: 0 0 1.5rem;
+        overflow-x: auto;
+        border: 1px solid #222;
+        background: #0d0d0d;
+        box-shadow:
+            0 0 15px rgba(0, 0, 0, 0.4),
+            inset 0 0 30px rgba(0, 0, 0, 0.3);
     }
 
     :global(.blog-article pre code) {
         background: transparent;
-        padding: 0;
+        padding: 1rem 1.25rem;
+        display: block;
+        border: none;
+        text-shadow: none;
+    }
+
+    /* Blockquote — glowing left border with subtle CRT feel */
+    :global(.blog-article blockquote) {
+        border-left: 2px solid #444;
+        padding: 1rem 1.5rem;
+        margin: 0 0 1.5rem;
+        background: rgba(255, 255, 255, 0.015);
+        color: #999;
+        position: relative;
+        box-shadow:
+            inset 3px 0 12px -4px rgba(255, 255, 255, 0.04);
+    }
+
+    :global(.blog-article blockquote p) {
+        margin-bottom: 0;
+        color: #999;
+    }
+
+    :global(.blog-article blockquote p + p) {
+        margin-top: 0.75rem;
+    }
+
+    :global(.blog-article strong) {
+        color: #f0f0f0;
+        font-weight: 600;
+        text-shadow:
+            -2px 0 rgba(255, 0, 0, 0.25),
+            2px 0 rgba(0, 100, 255, 0.25);
+    }
+
+    :global(.blog-article em) {
+        color: #d0d0d0;
+        text-shadow:
+            -2px 0 rgba(255, 0, 0, 0.25),
+            2px 0 rgba(0, 100, 255, 0.25);
+    }
+
+    :global(.blog-article hr) {
+        border: none;
+        border-top: 3px dashed rgba(255, 255, 255, 0.15);
+        box-shadow: 0 0 1rem rgba(255, 255, 255, 0.15);
+        margin: 2.5rem 0;
+    }
+
+    /* Images */
+    :global(.blog-article img) {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #222;
+        margin: 1.5rem 0;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Tables */
+    :global(.blog-article table) {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0 0 1.5rem;
+        font-size: 0.9em;
+    }
+
+    :global(.blog-article th) {
+        font-family: 'Geist Pixel Square', monospace;
+        -webkit-font-smoothing: none;
+        font-size: 0.75em;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #aaa;
+        border-bottom: 1px solid #333;
+        padding: 0.75rem 1rem;
+        text-align: left;
+    }
+
+    :global(.blog-article td) {
+        border-bottom: 1px solid #1a1a1a;
+        padding: 0.6rem 1rem;
+        color: #c8c8c8;
+    }
+
+    :global(.blog-article tr:hover td) {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* h1: stepped shimmer — snaps between states */
+    @keyframes aberr-h1 {
+        0%, 10% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.5),
+                2px 0 rgba(0, 100, 255, 0.5),
+                0 0 15px rgba(255, 255, 255, 0.3);
+        }
+        11%, 14% {
+            text-shadow:
+                -3px 0 rgba(255, 0, 0, 0.6),
+                1px 0 rgba(0, 100, 255, 0.35),
+                0 0 20px rgba(255, 255, 255, 0.4);
+        }
+        15%, 38% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.45),
+                2px 0 rgba(0, 100, 255, 0.5),
+                0 0 15px rgba(255, 255, 255, 0.3);
+        }
+        39%, 41% {
+            text-shadow:
+                -1px 0 rgba(255, 0, 0, 0.35),
+                3px 0 rgba(0, 100, 255, 0.6),
+                0 0 22px rgba(255, 255, 255, 0.45);
+        }
+        42%, 65% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.5),
+                2px 0 rgba(0, 100, 255, 0.5),
+                0 0 15px rgba(255, 255, 255, 0.3);
+        }
+        66%, 68% {
+            text-shadow:
+                -2.5px 0 rgba(255, 0, 0, 0.55),
+                1.5px 0 rgba(0, 100, 255, 0.4),
+                0 0 18px rgba(255, 255, 255, 0.35);
+        }
+        69%, 88% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.5),
+                2px 0 rgba(0, 100, 255, 0.5),
+                0 0 15px rgba(255, 255, 255, 0.3);
+        }
+        89%, 91% {
+            text-shadow:
+                -1.5px 0 rgba(255, 0, 0, 0.4),
+                2.5px 0 rgba(0, 100, 255, 0.55),
+                0 0 20px rgba(255, 255, 255, 0.4);
+        }
+        92%, 100% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.5),
+                2px 0 rgba(0, 100, 255, 0.5),
+                0 0 15px rgba(255, 255, 255, 0.3);
+        }
+    }
+
+    /* h2: different flicker rhythm */
+    @keyframes aberr-h2 {
+        0%, 12% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.4),
+                2px 0 rgba(0, 100, 255, 0.4),
+                0 0 12px rgba(255, 255, 255, 0.25);
+        }
+        13%, 15% {
+            text-shadow:
+                -3px 0 rgba(255, 0, 0, 0.55),
+                1px 0 rgba(0, 100, 255, 0.3),
+                0 0 18px rgba(255, 255, 255, 0.35);
+        }
+        16%, 42% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.4),
+                2px 0 rgba(0, 100, 255, 0.4),
+                0 0 12px rgba(255, 255, 255, 0.25);
+        }
+        43%, 45% {
+            text-shadow:
+                -1px 0 rgba(255, 0, 0, 0.3),
+                3px 0 rgba(0, 100, 255, 0.55),
+                0 0 20px rgba(255, 255, 255, 0.4);
+        }
+        46%, 70% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.4),
+                2px 0 rgba(0, 100, 255, 0.4),
+                0 0 12px rgba(255, 255, 255, 0.25);
+        }
+        71%, 73% {
+            text-shadow:
+                -2.5px 0 rgba(255, 0, 0, 0.5),
+                1.5px 0 rgba(0, 100, 255, 0.35),
+                0 0 16px rgba(255, 255, 255, 0.3);
+        }
+        74%, 100% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.4),
+                2px 0 rgba(0, 100, 255, 0.4),
+                0 0 12px rgba(255, 255, 255, 0.25);
+        }
+    }
+
+    /* h3: subtler flicker */
+    @keyframes aberr-h3 {
+        0%, 15% {
+            text-shadow:
+                -1px 0 rgba(255, 0, 0, 0.3),
+                1px 0 rgba(0, 100, 255, 0.3),
+                0 0 10px rgba(255, 255, 255, 0.2);
+        }
+        16%, 18% {
+            text-shadow:
+                -2px 0 rgba(255, 0, 0, 0.45),
+                0.5px 0 rgba(0, 100, 255, 0.2),
+                0 0 15px rgba(255, 255, 255, 0.3);
+        }
+        19%, 50% {
+            text-shadow:
+                -1px 0 rgba(255, 0, 0, 0.3),
+                1px 0 rgba(0, 100, 255, 0.3),
+                0 0 10px rgba(255, 255, 255, 0.2);
+        }
+        51%, 53% {
+            text-shadow:
+                -0.5px 0 rgba(255, 0, 0, 0.2),
+                2px 0 rgba(0, 100, 255, 0.45),
+                0 0 16px rgba(255, 255, 255, 0.35);
+        }
+        54%, 80% {
+            text-shadow:
+                -1px 0 rgba(255, 0, 0, 0.3),
+                1px 0 rgba(0, 100, 255, 0.3),
+                0 0 10px rgba(255, 255, 255, 0.2);
+        }
+        81%, 83% {
+            text-shadow:
+                -1.5px 0 rgba(255, 0, 0, 0.4),
+                0.5px 0 rgba(0, 100, 255, 0.25),
+                0 0 14px rgba(255, 255, 255, 0.3);
+        }
+        84%, 100% {
+            text-shadow:
+                -1px 0 rgba(255, 0, 0, 0.3),
+                1px 0 rgba(0, 100, 255, 0.3),
+                0 0 10px rgba(255, 255, 255, 0.2);
+        }
+    }
+
+    /* Color flicker — h1: 3s cycle */
+    @keyframes color-h1 {
+        0%, 8% { color: #fff; }
+        9%, 11% { color: #d8d8d8; }
+        12%, 35% { color: #fff; }
+        36%, 38% { color: #e5e5e5; }
+        39%, 62% { color: #fff; }
+        63%, 65% { color: #ddd; }
+        66%, 85% { color: #fff; }
+        86%, 88% { color: #e8e8e8; }
+        89%, 100% { color: #fff; }
+    }
+
+    /* Color flicker — h2: 2.5s cycle */
+    @keyframes color-h2 {
+        0%, 10% { color: #fff; }
+        11%, 13% { color: #d5d5d5; }
+        14%, 40% { color: #fff; }
+        41%, 43% { color: #e0e0e0; }
+        44%, 68% { color: #fff; }
+        69%, 71% { color: #ddd; }
+        72%, 90% { color: #fff; }
+        91%, 93% { color: #e5e5e5; }
+        94%, 100% { color: #fff; }
+    }
+
+    /* Color flicker — h3: 2.8s cycle */
+    @keyframes color-h3 {
+        0%, 12% { color: #fff; }
+        13%, 15% { color: #ddd; }
+        16%, 38% { color: #fff; }
+        39%, 41% { color: #e2e2e2; }
+        42%, 60% { color: #fff; }
+        61%, 63% { color: #d8d8d8; }
+        64%, 82% { color: #fff; }
+        83%, 85% { color: #e0e0e0; }
+        86%, 100% { color: #fff; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        h1,
+        :global(.blog-article h2),
+        :global(.blog-article h3) {
+            animation: none;
+        }
     }
 </style>
