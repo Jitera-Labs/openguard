@@ -149,10 +149,11 @@ def main() -> None:
         title = get_doc_title(module_name, meta)
         description = get_doc_description(module_name, meta)
         docs = meta.docs.strip() if meta.docs else ""
+        description_yaml = '"' + description.replace('"', '\\"') + '"'
 
         mdx_content = f"""---
 title: {title}
-description: {description}
+description: {description_yaml}
 ---
 
 {description}

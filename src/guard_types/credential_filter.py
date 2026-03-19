@@ -115,7 +115,7 @@ class Config(BaseModel):
         description=(
             "Action when credentials are detected. "
             "'block' rejects the request with a 403 (default — mirrors KeywordFilter). "
-            "'redact' replaces credentials with <protected:TYPE> and lets the request through. "
+            "'redact' replaces credentials with `[protected:TYPE]` and lets the request through. "
             "'log' only records the finding without modifying or blocking."
         ),
     )

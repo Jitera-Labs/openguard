@@ -394,9 +394,9 @@ class Config(BaseModel):
         default="redact",
         description=(
             "Replacement format for detected PII (not credentials). "
-            "'redact' → <protected:TYPE> (default). "
+            "'redact' → `[protected:TYPE]` (default). "
             "'mask' → ****. "
-            "'hash' → <protected:TYPE:HASH8> (referential integrity)."
+            "'hash' → `[protected:TYPE:HASH8]` (referential integrity)."
         ),
     )
     allowlist: List[str] = Field(
