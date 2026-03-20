@@ -107,6 +107,23 @@ const jsonLd = JSON.stringify({
         color: #fff;
     }
 
+    :global(.blog-article h1) {
+        font-family: 'Geist Pixel Square', monospace;
+        -webkit-font-smoothing: none;
+        color: #fff;
+        text-shadow:
+            -2px 0 rgba(255, 0, 0, 0.45),
+            2px 0 rgba(0, 100, 255, 0.45),
+            0 0 12px rgba(255, 255, 255, 0.2);
+        margin: 3rem 0 1.25rem;
+        line-height: 1.2;
+        animation: aberr-h1 8s steps(1) infinite, color-h1 6s steps(1) infinite;
+    }
+
+    :global(.blog-article h1:first-child) {
+        margin-top: 0;
+    }
+
     :global(.blog-article h2) {
         font-family: 'Geist Pixel Square', monospace;
         -webkit-font-smoothing: none;
@@ -465,6 +482,7 @@ const jsonLd = JSON.stringify({
 
     @media (prefers-reduced-motion: reduce) {
         h1,
+        :global(.blog-article h1),
         :global(.blog-article h2),
         :global(.blog-article h3) {
             animation: none;
