@@ -430,7 +430,7 @@ class LLM(AsyncEventEmitter):
                 await self.stream_final_completion()
             except httpx.HTTPStatusError as e:
                 # LOUDER FALLBACK LOGIC
-                from src.rewriter import restore_original_prompt, decrease_intensity
+                from src.rewriter import decrease_intensity, restore_original_prompt
 
                 if e.response.status_code == 400:
                     logger.warning("Primary model rejected request. Triggering smart fallback.")

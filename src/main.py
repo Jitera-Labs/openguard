@@ -4,7 +4,7 @@ Louder - Main FastAPI Application
 This module creates the FastAPI application that handles:
 - Health checks
 - Model listing
-- Chat completions with guard application
+- Chat completions with prompt amplification
 - Authentication and request middleware
 """
 
@@ -20,9 +20,9 @@ from src import config, llm, mapper
 from src import log as log_module
 from src import responses as responses_module
 from src.chat import Chat
-from src.rewriter import rewrite_prompt
 from src.middleware.request_id import RequestIDMiddleware
 from src.middleware.request_state import RequestStateMiddleware
+from src.rewriter import rewrite_prompt
 
 __version__ = _get_version("louder")
 
@@ -30,7 +30,7 @@ __version__ = _get_version("louder")
 logger = log_module.setup_logger(__name__)
 
 # Create FastAPI app
-app = FastAPI(title="Louder", description="guarding proxy for AI", version=__version__)
+app = FastAPI(title="Louder", description="prompt amplification proxy for AI", version=__version__)
 
 
 @app.on_event("startup")
@@ -81,8 +81,6 @@ def _anthropic_error(status_code: int, message: str, error_type: str = "invalid_
         status_code=status_code,
         content={"type": "error", "error": {"type": error_type, "message": message}},
     )
-
-
 
 
 def _requires_explicit_anthropic_tool_use(payload: dict | None):
@@ -292,7 +290,7 @@ async def _proxy_provider_passthrough(request: Request, provider: str, endpoint_
     return await _forward_provider_request(request, provider, endpoint_path, body_bytes, payload)
 
 
-async def _proxy_anthropic_messages_with_guards(request: Request):
+async def _proxy_anthropic_messages_with_amplification(request: Request):
     body_bytes = await request.body()
     payload = None
 
@@ -398,7 +396,7 @@ async def root():
     return {
         "name": "Louder",
         "version": __version__,
-        "description": "guarding proxy for AI",
+        "description": "prompt amplification proxy for AI",
         "endpoints": {"health": "/health", "models": "/v1/models", "chat": "/v1/chat/completions"},
     }
 
@@ -430,7 +428,7 @@ async def list_anthropic_models(request: Request, authorized: bool = Depends(ver
 @app.post("/v1/messages")
 async def anthropic_messages(request: Request, authorized: bool = Depends(verify_auth)):
     """Dedicated Anthropic messages endpoint with guard-aware passthrough semantics."""
-    return await _proxy_anthropic_messages_with_guards(request)
+    return await _proxy_anthropic_messages_with_amplification(request)
 
 
 @app.post("/v1/messages/count_tokens")
@@ -445,7 +443,7 @@ async def anthropic_count_tokens(request: Request, authorized: bool = Depends(ve
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request, authorized: bool = Depends(verify_auth)):
-    """Handle chat completion with guards applied"""
+    """Handle chat completion with prompt amplification applied"""
     try:
         # Parse request body
         payload = await request.json()
@@ -640,7 +638,6 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                     },
                 )
 
-    
     except httpx.HTTPStatusError as e:
         error_body = await e.response.aread()
         logger.error(f"Downstream error {e.response.status_code}: {error_body.decode('utf-8')}")
@@ -702,7 +699,6 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
         logger.error(f"Invalid request format: {e}")
         raise HTTPException(status_code=400, detail="Invalid request format")
     except Exception as e:
-        
         logger.error(f"Error in chat completion: {e}", exc_info=True)
         return JSONResponse(
             status_code=500,
@@ -719,7 +715,7 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
 @app.post("/v1/responses")
 @app.post("/responses")
 async def responses_endpoint(request: Request, authorized: bool = Depends(verify_auth)):
-    """OpenAI Responses API endpoint with guard application and translation fallback."""
+    """OpenAI Responses API endpoint with prompt amplification and translation fallback."""
     body_bytes = await request.body()
     if not body_bytes:
         raise HTTPException(status_code=400, detail="Request body is required")
@@ -762,14 +758,14 @@ async def responses_endpoint(request: Request, authorized: bool = Depends(verify
 
     await rewrite_prompt(provisional_llm.chat)
 
-    guarded_cc_payload = {
+    amplified_cc_payload = {
         "model": provisional_llm.model,
         "messages": provisional_llm.chat.serialize(),
         **provisional_llm.params,
     }
 
     try:
-        proxy_config = mapper.resolve_request_config(guarded_cc_payload)
+        proxy_config = mapper.resolve_request_config(amplified_cc_payload)
     except ValueError as e:
         logger.error(f"Failed to resolve backend for Responses API request: {e}")
         if "without a model specifier" in str(e):
@@ -779,36 +775,36 @@ async def responses_endpoint(request: Request, authorized: bool = Depends(verify
     llm_instance = llm.LLM(
         url=proxy_config["url"],
         headers=proxy_config["headers"],
-        model=guarded_cc_payload.get("model"),
+        model=amplified_cc_payload.get("model"),
         params=proxy_config["params"],
-        messages=guarded_cc_payload.get("messages"),
+        messages=amplified_cc_payload.get("messages"),
         raw_payload=payload,
     )
 
     if responses_module.upstream_supports_responses_api(proxy_config["url"]):
-        guarded_messages = llm_instance.chat.serialize()
-        if not isinstance(guarded_messages, list):
-            raise HTTPException(status_code=500, detail="Invalid guarded chat state")
+        amplified_messages = llm_instance.chat.serialize()
+        if not isinstance(amplified_messages, list):
+            raise HTTPException(status_code=500, detail="Invalid amplified chat state")
 
-        guarded_cc_payload_for_upstream: dict = {
+        amplified_cc_payload_for_upstream: dict = {
             "model": llm_instance.model,
-            "messages": guarded_messages,
+            "messages": amplified_messages,
             **llm_instance.params,
         }
-        guarded_responses_payload: dict = (
+        amplified_responses_payload: dict = (
             responses_module.apply_guarded_chat_completions_to_responses_request(
                 payload,
-                guarded_cc_payload_for_upstream,
+                amplified_cc_payload_for_upstream,
             )
         )
-        guarded_body_bytes = json.dumps(guarded_responses_payload).encode("utf-8")
+        amplified_body_bytes = json.dumps(amplified_responses_payload).encode("utf-8")
 
         return await _forward_provider_request(
             request,
             provider="openai",
             endpoint_path="/responses",
-            body_bytes=guarded_body_bytes,
-            payload=guarded_responses_payload,
+            body_bytes=amplified_body_bytes,
+            payload=amplified_responses_payload,
         )
 
     is_streaming = payload.get("stream", False)

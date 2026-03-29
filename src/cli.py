@@ -130,7 +130,7 @@ def main(
     ),
 ):
     """
-    Louder CLI - Guarding proxy for AI.
+    Louder CLI - Prompt amplification proxy for AI.
     """
     if ctx.invoked_subcommand is None:
         if config_paths:

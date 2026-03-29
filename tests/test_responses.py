@@ -1,7 +1,5 @@
-import json
 
 import pytest
-from fastapi.responses import JSONResponse
 
 from src.responses import translate_streaming_response
 

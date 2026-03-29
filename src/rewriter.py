@@ -1,6 +1,5 @@
-import json
 import httpx
-from typing import Optional
+
 from src import config
 from src.chat import Chat
 from src.log import setup_logger
