@@ -41,7 +41,6 @@ def _run_server():
     logger.info(f"Starting Louder on {host}:{port}")
     logger.info(f"Config file: {config.LOUDER_CONFIG.value}")
 
-
     uvicorn.run("src.main:app", host=host, port=port, log_level=log_level, reload=False)
 
 
@@ -56,10 +55,38 @@ def serve(
     config_paths: Optional[List[str]] = typer.Option(
         None, "--config", help="Guard config file path (can be repeated)."
     ),
+    upstream_url: Optional[str] = typer.Option(None, "--upstream-url", help="Upstream API URL."),
+    upstream_key: Optional[str] = typer.Option(None, "--upstream-key", help="Upstream API Key."),
+    rewrite_model: Optional[str] = typer.Option(
+        None, "--rewrite-model", help="Model used for rewriting prompts."
+    ),
+    rewrite_url: Optional[str] = typer.Option(
+        None, "--rewrite-url", help="URL for the rewriting model."
+    ),
+    rewrite_key: Optional[str] = typer.Option(
+        None, "--rewrite-key", help="API key for the rewriting model."
+    ),
+    intensity: Optional[int] = typer.Option(
+        None, "--intensity", help="Loudness intensity level (1-10)."
+    ),
 ):
     """Start the Louder server."""
     if config_paths:
         _apply_config_paths(config_paths)
+
+    if upstream_url:
+        config.LOUDER_OPENAI_URLS.__value__ = [upstream_url]  # type: ignore
+    if upstream_key:
+        config.LOUDER_OPENAI_KEYS.__value__ = [upstream_key]  # type: ignore
+    if rewrite_model:
+        config.LOUDER_REWRITE_MODEL.__value__ = rewrite_model
+    if rewrite_url:
+        config.LOUDER_REWRITE_URL.__value__ = rewrite_url
+    if rewrite_key:
+        config.LOUDER_REWRITE_KEY.__value__ = rewrite_key
+    if intensity is not None:
+        config.LOUDER_INTENSITY.__value__ = intensity
+
     _run_server()
 
 
@@ -87,6 +114,20 @@ def main(
     version: Optional[bool] = typer.Option(
         None, "--version", callback=_version_callback, is_eager=True, help="Show version."
     ),
+    upstream_url: Optional[str] = typer.Option(None, "--upstream-url", help="Upstream API URL."),
+    upstream_key: Optional[str] = typer.Option(None, "--upstream-key", help="Upstream API Key."),
+    rewrite_model: Optional[str] = typer.Option(
+        None, "--rewrite-model", help="Model used for rewriting prompts."
+    ),
+    rewrite_url: Optional[str] = typer.Option(
+        None, "--rewrite-url", help="URL for the rewriting model."
+    ),
+    rewrite_key: Optional[str] = typer.Option(
+        None, "--rewrite-key", help="API key for the rewriting model."
+    ),
+    intensity: Optional[int] = typer.Option(
+        None, "--intensity", help="Loudness intensity level (1-10)."
+    ),
 ):
     """
     Louder CLI - Guarding proxy for AI.
@@ -94,6 +135,20 @@ def main(
     if ctx.invoked_subcommand is None:
         if config_paths:
             _apply_config_paths(config_paths)
+
+        if upstream_url:
+            config.LOUDER_OPENAI_URLS.__value__ = [upstream_url]  # type: ignore
+        if upstream_key:
+            config.LOUDER_OPENAI_KEYS.__value__ = [upstream_key]  # type: ignore
+        if rewrite_model:
+            config.LOUDER_REWRITE_MODEL.__value__ = rewrite_model
+        if rewrite_url:
+            config.LOUDER_REWRITE_URL.__value__ = rewrite_url
+        if rewrite_key:
+            config.LOUDER_REWRITE_KEY.__value__ = rewrite_key
+        if intensity is not None:
+            config.LOUDER_INTENSITY.__value__ = intensity
+
         _run_server()
 
 

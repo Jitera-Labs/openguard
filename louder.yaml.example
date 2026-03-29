@@ -1,19 +1,23 @@
-# OpenGuard Configuration
+# Louder Configuration
 # =======================
-# This file defines the security guards applied to LLM traffic.
-# The default configuration below is empty, allowing all traffic to pass through.
+# This file configures the prompt rewriting logic and downstream models.
+# The default configuration below serves as an example.
 #
-# Copy this file to guards.yaml and uncomment the example below to get started.
-# See `presets/full.yaml` for the configuration used in integration tests.
+# Copy this file to louder.yaml to get started.
 
-guards: []
+# Downstream providers configuration
+providers:
+  - type: openai
+    key: "sk-proj-your-openai-key"
+    url: "https://api.openai.com/v1"
+  - type: anthropic
+    key: "sk-ant-your-anthropic-key"
+    url: "https://api.anthropic.com/v1"
 
-# Example configuration logic you can uncomment:
-# guards:
-#   - match:
-#       model:
-#         _ilike: "%gpt-4%"
-#     apply:
-#       - type: pii_filter
-#         config:
-#           enabled: true
+# Prompt rewriting configuration
+rewrite_model: "gpt-4o-mini"
+rewrite_url: "https://api.openai.com/v1"
+rewrite_key: "sk-proj-your-openai-key"
+intensity: 8
+auto_tune: false
+

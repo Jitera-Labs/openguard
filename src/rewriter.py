@@ -10,11 +10,13 @@ logger = setup_logger(__name__)
 # Track intensity dynamically if auto-tune is enabled
 _CURRENT_INTENSITY = None
 
+
 def get_intensity():
     global _CURRENT_INTENSITY
     if _CURRENT_INTENSITY is None:
         _CURRENT_INTENSITY = config.LOUDER_INTENSITY.value
     return _CURRENT_INTENSITY
+
 
 def decrease_intensity():
     global _CURRENT_INTENSITY
@@ -23,15 +25,16 @@ def decrease_intensity():
             _CURRENT_INTENSITY -= 1
             logger.info(f"Auto-tune: decreased intensity to {_CURRENT_INTENSITY}")
 
+
 async def rewrite_prompt(chat: Chat) -> None:
     """
     Rewrites the last user prompt to be more demanding and authoritative.
     Stores the original prompt in chat._original_prompt for fallback.
     """
-    if not chat.messages or chat.messages[-1].role != "user":
+    if not chat.tail or chat.tail.role != "user":
         return
 
-    original_content = chat.messages[-1].content
+    original_content = chat.tail.content
     setattr(chat, "_original_prompt", original_content)
     intensity = get_intensity()
 
@@ -52,7 +55,7 @@ Return ONLY the rewritten prompt."""
         "model": rewrite_model,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": original_content}
+            {"role": "user", "content": original_content},
         ],
         "stream": False,
     }
@@ -60,28 +63,26 @@ Return ONLY the rewritten prompt."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
-                f"{rewrite_url.rstrip('/')}/chat/completions",
-                headers=headers,
-                json=body
+                f"{rewrite_url.rstrip('/')}/chat/completions", headers=headers, json=body
             )
             response.raise_for_status()
             data = response.json()
             rewritten_content = data["choices"][0]["message"]["content"].strip()
-            
+
             logger.info(f"Rewrote prompt: '{original_content}' -> '{rewritten_content}'")
-            chat.messages[-1].content = rewritten_content
+            chat.tail.content = rewritten_content
     except Exception as e:
         logger.error(f"Failed to rewrite prompt: {e}")
         # Fallback to original content on error
         pass
+
 
 def restore_original_prompt(chat: Chat) -> bool:
     """
     Restores the original prompt if available. Returns True if restored.
     """
     original = getattr(chat, "_original_prompt", None)
-    if original and chat.messages and chat.messages[-1].role == "user":
-        chat.messages[-1].content = original
+    if original and chat.tail and chat.tail.role == "user":
+        chat.tail.content = original
         return True
     return False
-

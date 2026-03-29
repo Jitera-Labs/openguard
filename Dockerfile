@@ -7,7 +7,7 @@ COPY pyproject.toml README.md ./
 RUN uv pip install --system --no-cache -r pyproject.toml
 
 COPY src ./src
-COPY guards.yaml.example ./guards.yaml
+COPY louder.yaml.example ./louder.yaml
 COPY presets ./presets
 
 RUN uv pip install --system --no-cache --no-deps .

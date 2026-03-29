@@ -446,6 +446,7 @@ class LLM(AsyncEventEmitter):
             except httpx.HTTPStatusError as e:
                 # LOUDER FALLBACK LOGIC
                 from src.rewriter import restore_original_prompt, decrease_intensity
+
                 if e.response.status_code == 400:
                     logger.warning("Primary model rejected request. Triggering smart fallback.")
                     decrease_intensity()
@@ -455,7 +456,7 @@ class LLM(AsyncEventEmitter):
                             return
                         except Exception as fallback_err:
                             logger.error(f"Fallback also failed: {fallback_err}")
-                
+
                 logger.error(f"Upstream HTTP error: {e}")
                 try:
                     content = e.response.content.decode("utf-8")
@@ -838,12 +839,7 @@ class LLM(AsyncEventEmitter):
                 except Exception:
                     error_body = str(e)
                 logger.error(f"Downstream HTTP error {e.response.status_code}: {error_body}")
-                await self.emit_error(
-                    error_body or str(e),
-                    "upstream_error",
-                    e.response.status_code,
-                )
-                return
+                raise e
             except Exception as e:
                 logger.error(f"Unexpected error while streaming chat completion: {e}")
                 await self.emit_error(str(e), "internal_server_error", 500)
