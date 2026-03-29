@@ -41,7 +41,7 @@ def _run_server():
     port = config.OPENGUARD_PORT.value
     log_level = config.OPENGUARD_LOG_LEVEL.value.lower()
 
-    logger.info(f"Starting OpenGuard on {host}:{port}")
+    logger.info(f"Starting Louder on {host}:{port}")
     logger.info(f"Config file: {config.OPENGUARD_CONFIG.value}")
 
     # Load guards at startup
@@ -52,7 +52,7 @@ def _run_server():
 
 
 def install_opencode():
-    """Configure OpenCode to use the local OpenGuard instance."""
+    """Configure OpenCode to use the local Louder instance."""
     launch_setup_opencode()
     typer.echo("Run 'openguard serve' (or 'make dev') to start the proxy.")
 
@@ -63,7 +63,7 @@ def serve(
         None, "--config", help="Guard config file path (can be repeated)."
     ),
 ):
-    """Start the OpenGuard server."""
+    """Start the Louder server."""
     if config_paths:
         _apply_config_paths(config_paths)
     _run_server()
@@ -71,7 +71,7 @@ def serve(
 
 @app.command()
 def install(service: str):
-    """Install OpenGuard for a specific service."""
+    """Install Louder for a specific service."""
     if service.lower() == "opencode":
         install_opencode()
     else:
@@ -95,7 +95,7 @@ def main(
     ),
 ):
     """
-    OpenGuard CLI - Guarding proxy for AI.
+    Louder CLI - Guarding proxy for AI.
     """
     if ctx.invoked_subcommand is None:
         if config_paths:
@@ -105,13 +105,13 @@ def main(
 
 @app.command()
 def version():
-    """Show the OpenGuard version."""
+    """Show the Louder version."""
     typer.echo(_get_version())
 
 
 @app.command(
     name="launch",
-    help="Launch an integration/tool configured to use OpenGuard.",
+    help="Launch an integration/tool configured to use Louder.",
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 def launch(

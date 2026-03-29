@@ -1,5 +1,5 @@
 """
-OpenGuard - Main FastAPI Application
+Louder - Main FastAPI Application
 
 This module creates the FastAPI application that handles:
 - Health checks
@@ -31,7 +31,7 @@ __version__ = _get_version("openguard")
 logger = log_module.setup_logger(__name__)
 
 # Create FastAPI app
-app = FastAPI(title="OpenGuard", description="guarding proxy for AI", version=__version__)
+app = FastAPI(title="Louder", description="guarding proxy for AI", version=__version__)
 
 
 @app.on_event("startup")
@@ -408,7 +408,7 @@ def _select_models_provider(request: Request):
 async def root():
     """Root endpoint - API information"""
     return {
-        "name": "OpenGuard",
+        "name": "Louder",
         "version": __version__,
         "description": "guarding proxy for AI",
         "endpoints": {"health": "/health", "models": "/v1/models", "chat": "/v1/chat/completions"},

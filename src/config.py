@@ -221,7 +221,7 @@ class Config(Generic[T]):
             return self.type(value)  # type: ignore
 
 
-# ----------------- OpenGuard Configuration -----------------
+# ----------------- Louder Configuration -----------------
 # NOTE: Config instances below resolve their values at import time by reading
 # environment variables and the persistent config file. This means env vars set
 # after this module is first imported will NOT be reflected. In tests, set env
@@ -300,7 +300,7 @@ OPENGUARD_API_KEY = Config[str](
     name="OPENGUARD_API_KEY",
     type=str,
     default="",
-    description="API key required to access this OpenGuard proxy. Leave empty to disable auth.",
+    description="API key required to access this Louder proxy. Leave empty to disable auth.",
 )
 
 OPENGUARD_API_KEYS = Config[StrList](
@@ -314,21 +314,21 @@ OPENGUARD_PUBLIC_URL = Config[str](
     name="OPENGUARD_PUBLIC_URL",
     type=str,
     default="http://localhost:23294",
-    description="Public URL where this OpenGuard instance is accessible.",
+    description="Public URL where this Louder instance is accessible.",
 )
 
 OPENGUARD_PORT = Config[int](
     name="OPENGUARD_PORT",
     type=int,
     default="23294",
-    description="Port to run the OpenGuard server on.",
+    description="Port to run the Louder server on.",
 )
 
 OPENGUARD_HOST = Config[str](
     name="OPENGUARD_HOST",
     type=str,
     default="0.0.0.0",
-    description="Host to bind the OpenGuard server to.",
+    description="Host to bind the Louder server to.",
 )
 
 OPENGUARD_LOG_LEVEL = Config[str](
@@ -389,9 +389,9 @@ if __name__ == "__main__":
     _load_persistent_config()
 
     docs = """
-# OpenGuard Configuration
+# Louder Configuration
 
-OpenGuard is configured using environment variables or a configuration file at
+Louder is configured using environment variables or a configuration file at
 `~/.config/openguard/config.yaml`.
 
 ## Usage
