@@ -80,7 +80,7 @@ def setup_codex() -> None:
 
     The wrapper mounts ~/.codex as /codex-seed:ro (auth.json, config.toml, themes/).
     This function copies everything into the writable /root tmpfs, fixes permissions,
-    and optionally patches config.toml to add/override the openguard model provider
+    and optionally patches config.toml to add/override the louder model provider
     with the correct base_url pointing at the local OpenGuard proxy.
     """
     log_path = "/tmp/codex-setup.log"
@@ -118,18 +118,18 @@ def setup_codex() -> None:
                     os.chmod(p, 0o644)
         _log("fixed permissions on /root/.codex (owner-writable)")
 
-    # Patch config.toml to add/override the openguard model provider
+    # Patch config.toml to add/override the louder model provider
     config_path = dest / "config.toml"
-    base_url = f"http://{config.OPENGUARD_HOST.value}:{config.OPENGUARD_PORT.value}"
+    base_url = f"http://{config.LOUDER_HOST.value}:{config.LOUDER_PORT.value}"
     _patch_codex_config(config_path, base_url, _log)
 
     _log("done. inspect: cat /tmp/codex-setup.log")
 
 
 def _patch_codex_config(config_path: Path, base_url: str, _log: Any) -> None:
-    """Add or override [model_providers.openguard] in codex config.toml.
+    """Add or override [model_providers.louder] in codex config.toml.
 
-    Sets model_provider = "openguard" so codex routes through the local proxy.
+    Sets model_provider = "louder" so codex routes through the local proxy.
     Uses simple text manipulation since no TOML writer is available in stdlib.
     """
     import re
@@ -145,47 +145,47 @@ def _patch_codex_config(config_path: Path, base_url: str, _log: Any) -> None:
             _log(f"WARNING: could not parse config.toml: {e} — will append provider block")
 
     provider_block = (
-        "\n[model_providers.openguard]\n"
+        "\n[model_providers.louder]\n"
         'name = "OpenGuard Proxy"\n'
         f'base_url = "{base_url}"\n'
         'env_key = "OPENAI_API_KEY"\n'
     )
 
-    # Check if [model_providers.openguard] already exists
+    # Check if [model_providers.louder] already exists
     existing_providers = parsed.get("model_providers", {})
-    if "openguard" in existing_providers:
+    if "louder" in existing_providers:
         # Replace the existing section using regex
-        # Match [model_providers.openguard] through to the next section or EOF
-        pattern = r"\[model_providers\.openguard\][^\[]*"
+        # Match [model_providers.louder] through to the next section or EOF
+        pattern = r"\[model_providers\.louder\][^\[]*"
         content = re.sub(pattern, provider_block.lstrip() + "\n", content)
-        _log("replaced existing [model_providers.openguard] section")
+        _log("replaced existing [model_providers.louder] section")
     else:
         content = content.rstrip() + "\n" + provider_block
-        _log("appended [model_providers.openguard] section")
+        _log("appended [model_providers.louder] section")
 
-    # Set model_provider = "openguard" at top level
+    # Set model_provider = "louder" at top level
     if re.search(r"^model_provider\s*=", content, re.MULTILINE):
         content = re.sub(
             r"^model_provider\s*=\s*.*$",
-            'model_provider = "openguard"',
+            'model_provider = "louder"',
             content,
             count=1,
             flags=re.MULTILINE,
         )
-        _log('updated model_provider = "openguard"')
+        _log('updated model_provider = "louder"')
     else:
         # Insert after model line if present, otherwise prepend
         if re.search(r"^model\s*=", content, re.MULTILINE):
             content = re.sub(
                 r"^(model\s*=\s*.*?)$",
-                r'\1\nmodel_provider = "openguard"',
+                r'\1\nmodel_provider = "louder"',
                 content,
                 count=1,
                 flags=re.MULTILINE,
             )
         else:
-            content = 'model_provider = "openguard"\n' + content
-        _log('added model_provider = "openguard"')
+            content = 'model_provider = "louder"\n' + content
+        _log('added model_provider = "louder"')
 
     config_path.write_text(content)
     os.chmod(str(config_path), 0o644)
@@ -223,12 +223,12 @@ def _discover_models(
 ) -> Dict[str, Dict[str, str]]:
     """
     Discover models from the user's global OpenCode config
-    (~/.config/opencode/opencode.json), skipping the 'openguard' provider.
+    (~/.config/opencode/opencode.json), skipping the 'louder' provider.
     Returns an empty dict if no models are found.
     """
     discovered: Dict[str, Dict[str, str]] = {}
     for provider_name, provider_conf in (global_opencode_config or {}).get("provider", {}).items():
-        if provider_name == "openguard":
+        if provider_name == "louder":
             continue
         if not isinstance(provider_conf, dict):
             continue
@@ -348,7 +348,7 @@ def setup_opencode() -> None:
         global_providers_conf = global_opencode_config.get("provider", {})
 
         for provider_name, creds in auth_data.items():
-            if provider_name == "openguard":
+            if provider_name == "louder":
                 continue
 
             if creds.get("type") == "oauth":
@@ -389,7 +389,7 @@ def setup_opencode() -> None:
 
         if providers_list:
             # Write to OpenGuard config
-            og_config_dir = Path.home() / ".config" / "openguard"
+            og_config_dir = Path.home() / ".config" / "louder"
             og_config_dir.mkdir(parents=True, exist_ok=True)
             og_config_file = og_config_dir / "config.yaml"
 
@@ -419,12 +419,12 @@ def setup_opencode() -> None:
                 yaml.safe_dump(og_data, f)
             logger.info(f"Migrated credentials to {og_config_file}")
 
-        # Add openguard credential to auth.json if missing
-        if "openguard" not in auth_data:
-            auth_data["openguard"] = {"type": "api", "key": "sk-openguard-placeholder"}
+        # Add louder credential to auth.json if missing
+        if "louder" not in auth_data:
+            auth_data["louder"] = {"type": "api", "key": "sk-louder-placeholder"}
             with _secure_open(str(auth_path)) as f:
                 json.dump(auth_data, f, indent=2)
-            logger.info("Added 'openguard' credentials to auth.json")
+            logger.info("Added 'louder' credentials to auth.json")
 
     except Exception as e:
         logger.error(f"Failed during migration: {e}")
@@ -439,7 +439,7 @@ def setup_opencode() -> None:
             "Error: No models found in your OpenCode global config "
             f"({global_opencode_config_path}).\n"
             "Please configure at least one provider with models in OpenCode before running "
-            "'openguard launch opencode'.",
+            "'louder launch opencode'.",
             file=sys.stderr,
         )
         return
@@ -448,11 +448,11 @@ def setup_opencode() -> None:
     if "provider" not in config_data:
         config_data["provider"] = {}
 
-    config_data["provider"]["openguard"] = {
+    config_data["provider"]["louder"] = {
         "npm": "@ai-sdk/openai-compatible",
         "name": "OpenGuard",
         "options": {
-            "baseURL": f"http://{config.OPENGUARD_HOST.value}:{config.OPENGUARD_PORT.value}/v1"
+            "baseURL": f"http://{config.LOUDER_HOST.value}:{config.LOUDER_PORT.value}/v1"
         },
         "models": discovered_models,
     }
@@ -471,8 +471,8 @@ def setup_opencode() -> None:
     # Check if current model is in our discovered list
     current_model = config_data.get("model")
     if isinstance(current_model, str) and ":" in current_model:
-        if current_model.startswith("openguard:"):
-            # If already using openguard, keep it if it's still available
+        if current_model.startswith("louder:"):
+            # If already using louder, keep it if it's still available
             _, m_id = current_model.split(":", 1)
             if m_id in discovered_models:
                 selected_model = current_model
@@ -480,16 +480,16 @@ def setup_opencode() -> None:
             # If using another provider, see if we have the equiv model
             _, m_id = current_model.split(":", 1)
             if m_id in discovered_models:
-                selected_model = f"openguard:{m_id}"
+                selected_model = f"louder:{m_id}"
 
     if not selected_model:
         for m in preferred_models:
             if m in discovered_models:
-                selected_model = f"openguard:{m}"
+                selected_model = f"louder:{m}"
                 break
 
     if not selected_model and discovered_models:
-        selected_model = f"openguard:{next(iter(discovered_models.keys()))}"
+        selected_model = f"louder:{next(iter(discovered_models.keys()))}"
 
     if selected_model:
         config_data["model"] = selected_model

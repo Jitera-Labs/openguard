@@ -84,8 +84,8 @@ def _non_blank_backend_pairs(urls, keys):
 def get_provider_backends(provider: str):
     provider_normalized = provider.lower()
     if provider_normalized == "anthropic":
-        urls = _as_list(config.OPENGUARD_ANTHROPIC_URLS.value)
-        keys = _as_list(config.OPENGUARD_ANTHROPIC_KEYS.value)
+        urls = _as_list(config.LOUDER_ANTHROPIC_URLS.value)
+        keys = _as_list(config.LOUDER_ANTHROPIC_KEYS.value)
         backend_pairs = _non_blank_backend_pairs(urls, keys)
 
         if not backend_pairs:
@@ -96,8 +96,8 @@ def get_provider_backends(provider: str):
             backend_pairs = [("https://api.anthropic.com", "")]
     else:
         backend_pairs = _non_blank_backend_pairs(
-            _as_list(config.OPENGUARD_OPENAI_URLS.value),
-            _as_list(config.OPENGUARD_OPENAI_KEYS.value),
+            _as_list(config.LOUDER_OPENAI_URLS.value),
+            _as_list(config.LOUDER_OPENAI_KEYS.value),
         )
 
     backends = []
@@ -108,8 +108,8 @@ def get_provider_backends(provider: str):
 
 
 def get_internal_api_keys():
-    api_key = config.OPENGUARD_API_KEY.value
-    api_keys_list = _as_list(config.OPENGUARD_API_KEYS.value)
+    api_key = config.LOUDER_API_KEY.value
+    api_keys_list = _as_list(config.LOUDER_API_KEYS.value)
 
     keys = []
     if api_key:
@@ -258,8 +258,8 @@ def resolve_request_config(body: Dict) -> Dict:
         urls = [
             url
             for url, _ in _non_blank_backend_pairs(
-                _as_list(config.OPENGUARD_OPENAI_URLS.value),
-                _as_list(config.OPENGUARD_OPENAI_KEYS.value),
+                _as_list(config.LOUDER_OPENAI_URLS.value),
+                _as_list(config.LOUDER_OPENAI_KEYS.value),
             )
         ]
 
@@ -272,8 +272,8 @@ def resolve_request_config(body: Dict) -> Dict:
 
     # Find key for backend
     backend_pairs = _non_blank_backend_pairs(
-        _as_list(config.OPENGUARD_OPENAI_URLS.value),
-        _as_list(config.OPENGUARD_OPENAI_KEYS.value),
+        _as_list(config.LOUDER_OPENAI_URLS.value),
+        _as_list(config.LOUDER_OPENAI_KEYS.value),
     )
     urls = [url for url, _ in backend_pairs]
     keys = [key for _, key in backend_pairs]

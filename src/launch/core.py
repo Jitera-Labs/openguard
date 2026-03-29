@@ -9,15 +9,15 @@ import urllib.error
 import urllib.request
 from typing import List, Optional, Type
 
-from src.config import OPENGUARD_HOST, OPENGUARD_PORT
+from src.config import LOUDER_HOST, LOUDER_PORT
 
 from .strategies import CliArgStrategy, ConfigFileStrategy, EnvVarStrategy, Strategy
 from .types import LaunchStrategy
 
 
 def _dbg(msg: str) -> None:
-    """Timestamped debug print to stderr; controlled by OPENGUARD_DEBUG env var."""
-    if os.environ.get("OPENGUARD_DEBUG"):
+    """Timestamped debug print to stderr; controlled by LOUDER_DEBUG env var."""
+    if os.environ.get("LOUDER_DEBUG"):
         ts = time.strftime("%H:%M:%S")
         print(f"[launch {ts}] {msg}", file=sys.stderr, flush=True)
 
@@ -33,7 +33,7 @@ def get_strategy_implementation(strategy_type: LaunchStrategy) -> Type[Strategy]
         raise ValueError(f"Unknown strategy type: {strategy_type}")
 
 
-def fetch_openguard_models(host: str, port: int) -> List[str]:
+def fetch_louder_models(host: str, port: int) -> List[str]:
     """
     Fetch available models from the OpenGuard server.
     Returns a list of model IDs.
@@ -204,8 +204,8 @@ def launch_integration(name: str, args: List[str]) -> int:
             print(f"Error running setup for {name}: {e}", file=sys.stderr)
 
     # Ensure server is running
-    host = OPENGUARD_HOST.value
-    port = OPENGUARD_PORT.value
+    host = LOUDER_HOST.value
+    port = LOUDER_PORT.value
     _dbg(f"launch_integration: calling ensure_server_running({host!r}, {port!r})")
     server_process = ensure_server_running(host, port)
     _dbg(f"launch_integration: ensure_server_running returned proc={server_process is not None}")
@@ -215,7 +215,7 @@ def launch_integration(name: str, args: List[str]) -> int:
         try:
             # Wait a bit for server to be ready if we just started it?
             # ensure_server_running waits for port open, so it should be fine.
-            models = fetch_openguard_models(host, port)
+            models = fetch_louder_models(host, port)
             if models:
                 for s_config in integration.strategies:
                     if s_config.type == LaunchStrategy.FILE:
@@ -223,11 +223,11 @@ def launch_integration(name: str, args: List[str]) -> int:
                         # if we were running in a long-lived process
                         # But since it's a CLI tool, it's fine.
                         data = s_config.params.get("data", {})
-                        if "provider" in data and "openguard" in data["provider"]:
-                            openguard_config = data["provider"]["openguard"]
+                        if "provider" in data and "louder" in data["provider"]:
+                            louder_config = data["provider"]["louder"]
                             # Format: "gpt-4o": {"name": "GPT-4o (Guarded)"}
                             model_map = {m: {"name": f"{m} (Guarded)"} for m in models}
-                            openguard_config["models"] = model_map
+                            louder_config["models"] = model_map
         except Exception as e:
             print(
                 f"Warning: Failed to update opencode configuration with dynamic models: {e}",

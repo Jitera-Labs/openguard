@@ -5,9 +5,7 @@ import typer
 import uvicorn
 
 from src import config
-from src import guards as guards_module
 from src import log as log_module
-from src.guards import get_guards
 from src.launch.setup import setup_opencode as launch_setup_opencode
 
 # Setup logging
@@ -32,21 +30,17 @@ app = typer.Typer(no_args_is_help=False)
 
 def _apply_config_paths(paths: List[str]) -> None:
     """Override the resolved config value and reset the guards cache."""
-    config.OPENGUARD_CONFIG.__value__ = ",".join(paths)
-    guards_module._guards_cache = None
+    config.LOUDER_CONFIG.__value__ = ",".join(paths)
 
 
 def _run_server():
-    host = config.OPENGUARD_HOST.value
-    port = config.OPENGUARD_PORT.value
-    log_level = config.OPENGUARD_LOG_LEVEL.value.lower()
+    host = config.LOUDER_HOST.value
+    port = config.LOUDER_PORT.value
+    log_level = config.LOUDER_LOG_LEVEL.value.lower()
 
     logger.info(f"Starting Louder on {host}:{port}")
-    logger.info(f"Config file: {config.OPENGUARD_CONFIG.value}")
+    logger.info(f"Config file: {config.LOUDER_CONFIG.value}")
 
-    # Load guards at startup
-    guards = get_guards()
-    logger.info(f"Loaded {len(guards)} guard rules")
 
     uvicorn.run("src.main:app", host=host, port=port, log_level=log_level, reload=False)
 
@@ -54,7 +48,7 @@ def _run_server():
 def install_opencode():
     """Configure OpenCode to use the local Louder instance."""
     launch_setup_opencode()
-    typer.echo("Run 'openguard serve' (or 'make dev') to start the proxy.")
+    typer.echo("Run 'louder serve' (or 'make dev') to start the proxy.")
 
 
 @app.command()

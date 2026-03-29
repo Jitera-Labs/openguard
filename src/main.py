@@ -20,12 +20,11 @@ from src import config, llm, mapper
 from src import log as log_module
 from src import responses as responses_module
 from src.chat import Chat
-from src.guard_engine import apply_guards, log_audit
-from src.guards import GuardBlockedError, get_guards
+from src.rewriter import rewrite_prompt
 from src.middleware.request_id import RequestIDMiddleware
 from src.middleware.request_state import RequestStateMiddleware
 
-__version__ = _get_version("openguard")
+__version__ = _get_version("louder")
 
 # Setup logging
 logger = log_module.setup_logger(__name__)
@@ -45,7 +44,7 @@ async def _warm_model_cache():
 # Add middlewares in correct order
 app.add_middleware(RequestStateMiddleware)
 app.add_middleware(RequestIDMiddleware)
-_cors_origins = config.OPENGUARD_CORS_ORIGINS.value
+_cors_origins = config.LOUDER_CORS_ORIGINS.value
 _cors_allow_credentials = "*" not in _cors_origins
 app.add_middleware(
     CORSMiddleware,
@@ -58,8 +57,8 @@ app.add_middleware(
 
 async def verify_auth(request: Request):
     """Verify API key if configured"""
-    api_key = config.OPENGUARD_API_KEY.value
-    api_keys_list = config.OPENGUARD_API_KEYS.value
+    api_key = config.LOUDER_API_KEY.value
+    api_keys_list = config.LOUDER_API_KEYS.value
 
     # If no keys configured, allow all requests
     if not api_key and not api_keys_list:
@@ -84,8 +83,6 @@ def _anthropic_error(status_code: int, message: str, error_type: str = "invalid_
     )
 
 
-def _is_guard_blocked_error(error: Exception):
-    return isinstance(error, GuardBlockedError)
 
 
 def _requires_explicit_anthropic_tool_use(payload: dict | None):
@@ -340,16 +337,7 @@ async def _proxy_anthropic_messages_with_guards(request: Request):
     llm_instance.provider = "anthropic"
     llm_instance.raw_payload = payload
 
-    try:
-        guards = get_guards()
-        _, audit_logs = await apply_guards(chat, llm_instance, guards)
-        log_audit(audit_logs)
-    except GuardBlockedError as e:
-        return _anthropic_error(403, str(e), error_type="invalid_request_error")
-    except Exception as e:
-        if _is_guard_blocked_error(e):
-            return _anthropic_error(403, str(e), error_type="invalid_request_error")
-        raise
+    await rewrite_prompt(chat)
 
     forwarded_payload = chat.serialize("anthropic")
     if not isinstance(forwarded_payload, dict):
@@ -501,11 +489,7 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
             messages=payload.get("messages"),
         )
 
-        # Apply guards
-        guards = get_guards()
-        # Guards modify chat/llm in-place
-        _, audit_logs = await apply_guards(llm_instance.chat, llm_instance, guards)
-        log_audit(audit_logs)
+        await rewrite_prompt(llm_instance.chat)
 
         # Proxy request
         stream = payload.get("stream", False)
@@ -656,11 +640,7 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                     },
                 )
 
-    except GuardBlockedError as e:
-        return JSONResponse(
-            status_code=403,
-            content={"error": {"message": str(e), "type": "guard_block", "code": 403}},
-        )
+    
     except httpx.HTTPStatusError as e:
         error_body = await e.response.aread()
         logger.error(f"Downstream error {e.response.status_code}: {error_body.decode('utf-8')}")
@@ -722,11 +702,7 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
         logger.error(f"Invalid request format: {e}")
         raise HTTPException(status_code=400, detail="Invalid request format")
     except Exception as e:
-        if _is_guard_blocked_error(e):
-            return JSONResponse(
-                status_code=403,
-                content={"error": {"message": str(e), "type": "guard_block", "code": 403}},
-            )
+        
         logger.error(f"Error in chat completion: {e}", exc_info=True)
         return JSONResponse(
             status_code=500,
@@ -774,8 +750,8 @@ async def responses_endpoint(request: Request, authorized: bool = Depends(verify
         raise HTTPException(status_code=400, detail="Invalid request format")
 
     provisional_llm = llm.LLM(
-        url=mapper._as_list(config.OPENGUARD_OPENAI_URLS.value)[0]
-        if mapper._as_list(config.OPENGUARD_OPENAI_URLS.value)
+        url=mapper._as_list(config.LOUDER_OPENAI_URLS.value)[0]
+        if mapper._as_list(config.LOUDER_OPENAI_URLS.value)
         else "",
         headers={},
         model=cc_payload.get("model"),
@@ -784,15 +760,7 @@ async def responses_endpoint(request: Request, authorized: bool = Depends(verify
         raw_payload=payload,
     )
 
-    try:
-        guards = get_guards()
-        _, audit_logs = await apply_guards(provisional_llm.chat, provisional_llm, guards)
-        log_audit(audit_logs)
-    except GuardBlockedError as e:
-        return JSONResponse(
-            status_code=403,
-            content={"error": {"message": str(e), "type": "guard_block", "code": 403}},
-        )
+    await rewrite_prompt(provisional_llm.chat)
 
     guarded_cc_payload = {
         "model": provisional_llm.model,

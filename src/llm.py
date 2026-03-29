@@ -444,6 +444,18 @@ class LLM(AsyncEventEmitter):
                 logger.warning("Modules are currently disabled.")
                 await self.stream_final_completion()
             except httpx.HTTPStatusError as e:
+                # LOUDER FALLBACK LOGIC
+                from src.rewriter import restore_original_prompt, decrease_intensity
+                if e.response.status_code == 400:
+                    logger.warning("Primary model rejected request. Triggering smart fallback.")
+                    decrease_intensity()
+                    if restore_original_prompt(self.chat):
+                        try:
+                            await self.stream_final_completion()
+                            return
+                        except Exception as fallback_err:
+                            logger.error(f"Fallback also failed: {fallback_err}")
+                
                 logger.error(f"Upstream HTTP error: {e}")
                 try:
                     content = e.response.content.decode("utf-8")

@@ -12,7 +12,7 @@ PERSISTENT_CONFIG: Dict[str, Any] = {}
 
 def _load_persistent_config():
     global PERSISTENT_CONFIG
-    config_dir = Path.home() / ".config" / "openguard"
+    config_dir = Path.home() / ".config" / "louder"
     config_file = config_dir / "config.yaml"
     json_config_file = config_dir / "config.json"
 
@@ -138,8 +138,8 @@ class Config(Generic[T]):
             return self._resolve_single()
 
     def _resolve_single(self) -> T:
-        # 1. Check persistent config (mapping OPENGUARD_XYZ -> xyz)
-        config_key = self.name.replace("OPENGUARD_", "").lower()
+        # 1. Check persistent config (mapping LOUDER_XYZ -> xyz)
+        config_key = self.name.replace("LOUDER_", "").lower()
         if config_key in PERSISTENT_CONFIG:
             val = PERSISTENT_CONFIG[config_key]
             # For complex types like StrList, ConfigDict, handle direct assignment from YAML types
@@ -227,10 +227,10 @@ class Config(Generic[T]):
 # after this module is first imported will NOT be reflected. In tests, set env
 # vars before importing this module, or patch Config.value / Config.__value__.
 
-OPENGUARD_CONFIG = Config[str](
-    name="OPENGUARD_CONFIG",
+LOUDER_CONFIG = Config[str](
+    name="LOUDER_CONFIG",
     type=str,
-    default="./guards.yaml",
+    default="./louder.yaml",
     description="Comma-separated list of guard config file paths, merged in order.",
 )
 
@@ -239,12 +239,12 @@ def get_config_paths() -> List[str]:
     """Return the ordered list of config file paths from all config sources.
 
     Sources (in order):
-    1. OPENGUARD_CONFIG (comma-separated, or single path)
-    2. OPENGUARD_CONFIG_<NAME> env vars, sorted by NAME alphabetically
+    1. LOUDER_CONFIG (comma-separated, or single path)
+    2. LOUDER_CONFIG_<NAME> env vars, sorted by NAME alphabetically
     """
-    paths: List[str] = [p.strip() for p in OPENGUARD_CONFIG.value.split(",") if p.strip()]
+    paths: List[str] = [p.strip() for p in LOUDER_CONFIG.value.split(",") if p.strip()]
 
-    prefix = "OPENGUARD_CONFIG_"
+    prefix = "LOUDER_CONFIG_"
     extra_keys = sorted(key for key in os.environ if key.startswith(prefix))
     for key in extra_keys:
         value = os.environ[key].strip()
@@ -258,95 +258,95 @@ def get_config_paths() -> List[str]:
     return list(seen)
 
 
-OPENGUARD_OPENAI_URLS = Config[str](
-    name="OPENGUARD_OPENAI_URL_*",
+LOUDER_OPENAI_URLS = Config[str](
+    name="LOUDER_OPENAI_URL_*",
     type=str,
     default="http://localhost:11434/v1",
     description=(
         "Downstream OpenAI-compatible API URLs. "
-        "Use wildcard naming like OPENGUARD_OPENAI_URL_OLLAMA."
+        "Use wildcard naming like LOUDER_OPENAI_URL_OLLAMA."
     ),
 )
 
-OPENGUARD_OPENAI_KEYS = Config[str](
-    name="OPENGUARD_OPENAI_KEY_*",
+LOUDER_OPENAI_KEYS = Config[str](
+    name="LOUDER_OPENAI_KEY_*",
     type=str,
     default="",
     description=(
-        "API keys for downstream APIs. Use wildcard naming like OPENGUARD_OPENAI_KEY_OLLAMA."
+        "API keys for downstream APIs. Use wildcard naming like LOUDER_OPENAI_KEY_OLLAMA."
     ),
 )
 
-OPENGUARD_ANTHROPIC_URLS = Config[str](
-    name="OPENGUARD_ANTHROPIC_URL_*",
+LOUDER_ANTHROPIC_URLS = Config[str](
+    name="LOUDER_ANTHROPIC_URL_*",
     type=str,
     default="",
     description=(
-        "Downstream Anthropic Chat API URLs. Use wildcard naming like OPENGUARD_ANTHROPIC_URL_1."
+        "Downstream Anthropic Chat API URLs. Use wildcard naming like LOUDER_ANTHROPIC_URL_1."
     ),
 )
 
-OPENGUARD_ANTHROPIC_KEYS = Config[str](
-    name="OPENGUARD_ANTHROPIC_KEY_*",
+LOUDER_ANTHROPIC_KEYS = Config[str](
+    name="LOUDER_ANTHROPIC_KEY_*",
     type=str,
     default="",
     description=(
         "API keys for downstream Anthropic APIs. "
-        "Use wildcard naming like OPENGUARD_ANTHROPIC_KEY_1."
+        "Use wildcard naming like LOUDER_ANTHROPIC_KEY_1."
     ),
 )
 
-OPENGUARD_API_KEY = Config[str](
-    name="OPENGUARD_API_KEY",
+LOUDER_API_KEY = Config[str](
+    name="LOUDER_API_KEY",
     type=str,
     default="",
     description="API key required to access this Louder proxy. Leave empty to disable auth.",
 )
 
-OPENGUARD_API_KEYS = Config[StrList](
-    name="OPENGUARD_API_KEYS",
+LOUDER_API_KEYS = Config[StrList](
+    name="LOUDER_API_KEYS",
     type=StrList,
     default="",
     description="Additional API keys (semicolon-separated) for proxy access.",
 )
 
-OPENGUARD_PUBLIC_URL = Config[str](
-    name="OPENGUARD_PUBLIC_URL",
+LOUDER_PUBLIC_URL = Config[str](
+    name="LOUDER_PUBLIC_URL",
     type=str,
     default="http://localhost:23294",
     description="Public URL where this Louder instance is accessible.",
 )
 
-OPENGUARD_PORT = Config[int](
-    name="OPENGUARD_PORT",
+LOUDER_PORT = Config[int](
+    name="LOUDER_PORT",
     type=int,
     default="23294",
     description="Port to run the Louder server on.",
 )
 
-OPENGUARD_HOST = Config[str](
-    name="OPENGUARD_HOST",
+LOUDER_HOST = Config[str](
+    name="LOUDER_HOST",
     type=str,
     default="0.0.0.0",
     description="Host to bind the Louder server to.",
 )
 
-OPENGUARD_LOG_LEVEL = Config[str](
-    name="OPENGUARD_LOG_LEVEL",
+LOUDER_LOG_LEVEL = Config[str](
+    name="LOUDER_LOG_LEVEL",
     type=str,
     default="INFO",
     description="Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL).",
 )
 
-OPENGUARD_CORS_ORIGINS = Config[StrList](
-    name="OPENGUARD_CORS_ORIGINS",
+LOUDER_CORS_ORIGINS = Config[StrList](
+    name="LOUDER_CORS_ORIGINS",
     type=StrList,
     default="",
     description="Semicolon-separated list of allowed CORS origins.",
 )
 
 MODEL_FILTER = Config[ConfigDict](
-    name="OPENGUARD_MODEL_FILTER",
+    name="LOUDER_MODEL_FILTER",
     type=ConfigDict,
     default="",
     description="Filter to apply to downstream models list (Hasura-style filter).",
@@ -392,10 +392,10 @@ if __name__ == "__main__":
 # Louder Configuration
 
 Louder is configured using environment variables or a configuration file at
-`~/.config/openguard/config.yaml`.
+`~/.config/louder/config.yaml`.
 
 ## Usage
-Create `~/.config/openguard/config.yaml` with the following structure:
+Create `~/.config/louder/config.yaml` with the following structure:
 ```yaml
 port: 23294
 providers:
@@ -406,7 +406,7 @@ providers:
     key: sk-ant-...
     url: ...
 
-# Other options (match variable names without OPENGUARD_ prefix, lowercase)
+# Other options (match variable names without LOUDER_ prefix, lowercase)
 model_filter:
   ...
 ```
@@ -423,3 +423,38 @@ Following options are available:
             docs += f"\n{config.description}\n"
 
     print(docs)
+
+LOUDER_INTENSITY = Config[int](
+    name="LOUDER_INTENSITY",
+    type=int,
+    default="8",
+    description="Loudness intensity level (1-10).",
+)
+
+LOUDER_REWRITE_MODEL = Config[str](
+    name="LOUDER_REWRITE_MODEL",
+    type=str,
+    default="gpt-4o-mini",
+    description="Model used for rewriting prompts.",
+)
+
+LOUDER_REWRITE_URL = Config[str](
+    name="LOUDER_REWRITE_URL",
+    type=str,
+    default="https://api.openai.com/v1",
+    description="URL for the rewriting model.",
+)
+
+LOUDER_REWRITE_KEY = Config[str](
+    name="LOUDER_REWRITE_KEY",
+    type=str,
+    default="",
+    description="API key for the rewriting model.",
+)
+
+LOUDER_AUTO_TUNE = Config[bool](
+    name="LOUDER_AUTO_TUNE",
+    type=bool,
+    default="false",
+    description="Enable adaptive intensity auto-tuning.",
+)

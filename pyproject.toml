@@ -1,5 +1,5 @@
 [project]
-name = "openguard"
+name = "louder"
 version = "0.1.4"
 description = "guarding proxy for AI"
 readme = "README.md"
