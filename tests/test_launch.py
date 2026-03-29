@@ -8,7 +8,7 @@ import pytest
 # Add src to sys.path to ensure we can import the modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-from launch.core import ensure_server_running, fetch_openguard_models, launch_integration
+from launch.core import ensure_server_running, fetch_louder_models, launch_integration
 
 # Try to import INTEGRATIONS, but handle if it fails (as seen in launch code)
 try:
@@ -17,9 +17,9 @@ except ImportError:
     INTEGRATIONS = {}
 
 # Constants used in the tests
-OPENGUARD_URL = "http://127.0.0.1:23294"
-OPENGUARD_HOST = "127.0.0.1"
-OPENGUARD_PORT = 23294
+LOUDER_URL = "http://127.0.0.1:23294"
+LOUDER_HOST = "127.0.0.1"
+LOUDER_PORT = 23294
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def mock_launch_deps():
     """Mock dependencies used by launch_integration."""
     with (
         patch("launch.core.kill_server_on_port") as mock_kill,
-        patch("launch.core.fetch_openguard_models") as mock_fetch,
+        patch("launch.core.fetch_louder_models") as mock_fetch,
     ):
         # Mock setup_callback on opencode integration to avoid file side effects
         mock_setup = None
@@ -73,13 +73,13 @@ def test_ensure_server_already_running(mock_socket):
     # Setup socket to indicate port is open (connect_ex returns 0)
     mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 0
 
-    server_process = ensure_server_running(OPENGUARD_HOST, OPENGUARD_PORT)
+    server_process = ensure_server_running(LOUDER_HOST, LOUDER_PORT)
 
     # Should perform check and return None (no new process started)
     assert server_process is None
     # Verify connect_ex called with correct host/port
     connect_ex = mock_socket.return_value.__enter__.return_value.connect_ex
-    connect_ex.assert_called_with((OPENGUARD_HOST, OPENGUARD_PORT))
+    connect_ex.assert_called_with((LOUDER_HOST, LOUDER_PORT))
 
 
 def test_ensure_server_starts_successfully(mock_socket, mock_popen):
@@ -87,7 +87,7 @@ def test_ensure_server_starts_successfully(mock_socket, mock_popen):
     # Subsequent calls (wait for start) return 1 then 0 (success)
     mock_socket.return_value.__enter__.return_value.connect_ex.side_effect = [1, 1, 0]
 
-    server_process = ensure_server_running(OPENGUARD_HOST, OPENGUARD_PORT)
+    server_process = ensure_server_running(LOUDER_HOST, LOUDER_PORT)
 
     # Should start process and return it
     assert server_process is not None
@@ -105,7 +105,7 @@ def test_ensure_server_fails_to_start(mock_socket, mock_popen):
     process_mock.poll.return_value = 1  # Process exited
     process_mock.communicate.return_value = (b"", b"Error starting")
 
-    server_process = ensure_server_running(OPENGUARD_HOST, OPENGUARD_PORT)
+    server_process = ensure_server_running(LOUDER_HOST, LOUDER_PORT)
 
     # Should return None as it failed
     assert server_process is None
@@ -189,12 +189,12 @@ def test_launch_opencode_config_strategy(
             content = json.load(f)
 
         assert "provider" in content
-        assert "openguard" in content["provider"]
-        openguard_config = content["provider"]["openguard"]
-        assert openguard_config["npm"] == "@ai-sdk/openai-compatible"
-        assert openguard_config["options"]["baseURL"] == f"{OPENGUARD_URL}/v1"
-        assert openguard_config["options"]["apiKey"] == "sk-openguard-placeholder"
-        assert content["model"] == "openguard:gpt-4o"
+        assert "louder" in content["provider"]
+        louder_config = content["provider"]["louder"]
+        assert louder_config["npm"] == "@ai-sdk/openai-compatible"
+        assert louder_config["options"]["baseURL"] == f"{LOUDER_URL}/v1"
+        assert louder_config["options"]["apiKey"] == "sk-louder-placeholder"
+        assert content["model"] == "louder:gpt-4o"
 
 
 def test_launch_claude_env_strategy(mock_launch_deps, mock_subprocess_run, mock_socket):
@@ -221,8 +221,8 @@ def test_launch_claude_env_strategy(mock_launch_deps, mock_subprocess_run, mock_
 
     # Verify environment variables
     assert env is not None
-    assert env["ANTHROPIC_BASE_URL"] == OPENGUARD_URL
-    # Claude Code manages its own credentials; OpenGuard only redirects the base URL
+    assert env["ANTHROPIC_BASE_URL"] == LOUDER_URL
+    # Claude Code manages its own credentials; Louder only redirects the base URL
 
 
 def test_launch_codex_env_strategy(mock_launch_deps, mock_subprocess_run, mock_socket):
@@ -253,8 +253,8 @@ def test_launch_codex_env_strategy(mock_launch_deps, mock_subprocess_run, mock_s
     # Verify environment variables
     assert env is not None
     # OpenAI-compatible clients expect the /v1 suffix on the base URL
-    assert env["OPENAI_BASE_URL"] == f"{OPENGUARD_URL}/v1"
-    assert env["OPENAI_API_KEY"] == "sk-openguard-placeholder"
+    assert env["OPENAI_BASE_URL"] == f"{LOUDER_URL}/v1"
+    assert env["OPENAI_API_KEY"] == "sk-louder-placeholder"
 
 
 def test_launch_integration_not_found(mock_launch_deps, mock_subprocess_run):
@@ -285,9 +285,9 @@ def test_launch_with_extra_args(mock_launch_deps, mock_subprocess_run, mock_sock
     assert command[-2:] == extra_args
 
 
-def test_fetch_openguard_models_parsing():
+def test_fetch_louder_models_parsing():
     """
-    Unit test for fetch_openguard_models parsing logic.
+    Unit test for fetch_louder_models parsing logic.
     """
     import urllib.error
 
@@ -303,18 +303,18 @@ def test_fetch_openguard_models_parsing():
     mock_response.__enter__.return_value = mock_response
 
     with patch("urllib.request.urlopen", return_value=mock_response):
-        models = fetch_openguard_models("localhost", 1234)
+        models = fetch_louder_models("localhost", 1234)
         assert models == ["model-a", "model-b"]
 
     # 2. Invalid JSON
     mock_response.read.return_value = b"invalid json"
     with patch("urllib.request.urlopen", return_value=mock_response):
-        models = fetch_openguard_models("localhost", 1234)
+        models = fetch_louder_models("localhost", 1234)
         assert models == []
 
     # 3. HTTP Error
     with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("Network error")):
-        models = fetch_openguard_models("localhost", 1234)
+        models = fetch_louder_models("localhost", 1234)
         assert models == []
 
 
@@ -327,9 +327,9 @@ def test_launch_integration_opencode_updates_config(
     # Mock server running
     mock_socket.return_value.__enter__.return_value.connect_ex.return_value = 0
 
-    # Mock fetch_openguard_models
+    # Mock fetch_louder_models
     with patch(
-        "launch.core.fetch_openguard_models", return_value=["model-x", "model-y"]
+        "launch.core.fetch_louder_models", return_value=["model-x", "model-y"]
     ) as mock_fetch:
         # Mock ConfigFileStrategy.apply to capture the configuration passed to it
         # Note: referencing the class in launch.core namespace as that's where it is used
@@ -349,12 +349,12 @@ def test_launch_integration_opencode_updates_config(
             # Verify the structure
             assert "data" in params
             assert "provider" in params["data"]
-            assert "openguard" in params["data"]["provider"]
+            assert "louder" in params["data"]["provider"]
 
-            openguard_config = params["data"]["provider"]["openguard"]
-            assert "models" in openguard_config
+            louder_config = params["data"]["provider"]["louder"]
+            assert "models" in louder_config
 
-            models = openguard_config["models"]
+            models = louder_config["models"]
             assert "model-x" in models
             assert "model-y" in models
             assert models["model-x"]["name"] == "model-x (Guarded)"

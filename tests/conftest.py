@@ -1,5 +1,5 @@
 """
-Pytest fixtures and configuration for OpenGuard integration tests.
+Pytest fixtures and configuration for Louder integration tests.
 
 Provides test client, mock downstream APIs, and test guards configuration.
 """
@@ -67,19 +67,19 @@ guards:
 @pytest.fixture
 def test_env(guards_yaml, monkeypatch):
     """Set up test environment variables with isolation."""
-    # Clear conflicting OpenGuard vars using monkeypatch (auto-restored after test)
+    # Clear conflicting Louder vars using monkeypatch (auto-restored after test)
     for key in list(os.environ.keys()):
-        if key.startswith("OPENGUARD_"):
+        if key.startswith("LOUDER_"):
             monkeypatch.delenv(key, raising=False)
 
-    monkeypatch.setenv("OPENGUARD_CONFIG", guards_yaml)
-    monkeypatch.setenv("OPENGUARD_OPENAI_URL_TEST", "http://downstream.test")
-    monkeypatch.setenv("OPENGUARD_OPENAI_KEY_TEST", "")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_TEST", "http://anthropic.test")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_TEST", "anthropic-downstream-key")
-    monkeypatch.setenv("OPENGUARD_API_KEY", "")
-    monkeypatch.setenv("OPENGUARD_API_KEYS", "")
-    monkeypatch.setenv("OPENGUARD_LOG_LEVEL", "DEBUG")
+    monkeypatch.setenv("LOUDER_CONFIG", guards_yaml)
+    monkeypatch.setenv("LOUDER_OPENAI_URL_TEST", "http://downstream.test")
+    monkeypatch.setenv("LOUDER_OPENAI_KEY_TEST", "")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_URL_TEST", "http://anthropic.test")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_KEY_TEST", "anthropic-downstream-key")
+    monkeypatch.setenv("LOUDER_API_KEY", "")
+    monkeypatch.setenv("LOUDER_API_KEYS", "")
+    monkeypatch.setenv("LOUDER_LOG_LEVEL", "DEBUG")
 
     yield
 
@@ -107,7 +107,6 @@ def test_client(test_env, mock_httpx, tmp_path):
     with patch("src.config.Path.home") as mock_home:
         mock_home.return_value = tmp_path
         from src import config as config_module
-        from src import guards as guards_module
         from src import main as main_module
 
         config_module.PERSISTENT_CONFIG.clear()
@@ -115,8 +114,6 @@ def test_client(test_env, mock_httpx, tmp_path):
         from src import mapper as mapper_module
 
         importlib.reload(mapper_module)
-        guards_module._guards_cache = None
-        importlib.reload(guards_module)
         importlib.reload(main_module)
 
     return TestClient(main_module.app)
@@ -310,10 +307,8 @@ def setup_mock_streaming(mock_httpx):
 @pytest.fixture(autouse=True)
 def clear_cache():
     """Clear cached data between tests."""
-    from src import guards as guards_module
     from src import mapper as mapper_module
 
-    guards_module._guards_cache = None
 
     try:
         mapper_module.list_downstream.cache.clear()

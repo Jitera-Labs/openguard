@@ -35,7 +35,7 @@ def get_strategy_implementation(strategy_type: LaunchStrategy) -> Type[Strategy]
 
 def fetch_louder_models(host: str, port: int) -> List[str]:
     """
-    Fetch available models from the OpenGuard server.
+    Fetch available models from the Louder server.
     Returns a list of model IDs.
     """
     url = f"http://{host}:{port}/v1/models"
@@ -58,7 +58,7 @@ def fetch_louder_models(host: str, port: int) -> List[str]:
                         if isinstance(model, dict) and "id" in model
                     ]
     except Exception as e:
-        print(f"Warning: Failed to fetch models from OpenGuard: {e}", file=sys.stderr)
+        print(f"Warning: Failed to fetch models from Louder: {e}", file=sys.stderr)
 
     return []
 
@@ -78,7 +78,7 @@ def kill_server_on_port(host: str, port: int) -> None:
 
         if pids:
             print(
-                f"Stopping existing OpenGuard instance (PIDs: {', '.join(pids)})...",
+                f"Stopping existing Louder instance (PIDs: {', '.join(pids)})...",
                 file=sys.stderr,
             )
             try:
@@ -116,16 +116,16 @@ def kill_server_on_port(host: str, port: int) -> None:
 
 def ensure_server_running(host: str, port: int) -> Optional[subprocess.Popen]:
     """
-    Ensure the OpenGuard server is running on the given host and port.
+    Ensure the Louder server is running on the given host and port.
     Returns the process handle if a new server was started, or None if it was already running.
     """
     # Check if port is in use
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         if s.connect_ex((host, port)) == 0:
-            print(f"OpenGuard server already running at http://{host}:{port}", file=sys.stderr)
+            print(f"Louder server already running at http://{host}:{port}", file=sys.stderr)
             return None
 
-    print(f"Starting OpenGuard server at http://{host}:{port}...", file=sys.stderr)
+    print(f"Starting Louder server at http://{host}:{port}...", file=sys.stderr)
     _dbg(f"ensure_server_running: spawning uvicorn on {host}:{port}")
 
     # Start the server
@@ -274,7 +274,7 @@ def launch_integration(name: str, args: List[str]) -> int:
     finally:
         # Clean up server process if we started it
         if server_process:
-            print("Stopping OpenGuard server...", file=sys.stderr)
+            print("Stopping Louder server...", file=sys.stderr)
             server_process.terminate()
             try:
                 server_process.wait(timeout=5)

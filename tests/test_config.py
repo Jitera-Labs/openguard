@@ -10,42 +10,42 @@ class TestConfigValue:
 
     def test_str_default(self, monkeypatch):
         """Config resolves string default when env var absent."""
-        monkeypatch.delenv("OPENGUARD_TEST_STR_MISSING", raising=False)
+        monkeypatch.delenv("LOUDER_TEST_STR_MISSING", raising=False)
         from src.config import Config
 
-        c = Config("OPENGUARD_TEST_STR_MISSING", str, "default-value")
+        c = Config("LOUDER_TEST_STR_MISSING", str, "default-value")
         assert c.value == "default-value"
 
     def test_env_var_overrides_default(self, monkeypatch):
         """Config reads value from environment variable."""
-        monkeypatch.setenv("OPENGUARD_TEST_STR", "from-env")
+        monkeypatch.setenv("LOUDER_TEST_STR", "from-env")
         from src.config import Config
 
-        c = Config("OPENGUARD_TEST_STR", str, "default")
+        c = Config("LOUDER_TEST_STR", str, "default")
         assert c.value == "from-env"
 
     def test_int_conversion(self, monkeypatch):
         """Config converts string env var to int."""
-        monkeypatch.setenv("OPENGUARD_TEST_INT", "42")
+        monkeypatch.setenv("LOUDER_TEST_INT", "42")
         from src.config import Config
 
-        c = Config("OPENGUARD_TEST_INT", int, "0")
+        c = Config("LOUDER_TEST_INT", int, "0")
         assert c.value == 42
 
     def test_bool_conversion_true(self, monkeypatch):
         """Config converts 'true' string to bool True."""
-        monkeypatch.setenv("OPENGUARD_TEST_BOOL", "true")
+        monkeypatch.setenv("LOUDER_TEST_BOOL", "true")
         from src.config import Config
 
-        c = Config("OPENGUARD_TEST_BOOL", bool, "false")
+        c = Config("LOUDER_TEST_BOOL", bool, "false")
         assert c.value is True
 
     def test_bool_conversion_false(self, monkeypatch):
         """Config converts 'false' string to bool False."""
-        monkeypatch.setenv("OPENGUARD_TEST_BOOL2", "false")
+        monkeypatch.setenv("LOUDER_TEST_BOOL2", "false")
         from src.config import Config
 
-        c = Config("OPENGUARD_TEST_BOOL2", bool, "false")
+        c = Config("LOUDER_TEST_BOOL2", bool, "false")
         assert c.value is False
 
     def test_bool_conversion_variants(self, monkeypatch):
@@ -53,16 +53,16 @@ class TestConfigValue:
         from src.config import Config
 
         for truthy in ("1", "yes", "on", "true", "True", "TRUE"):
-            monkeypatch.setenv("OPENGUARD_TEST_BOOL_VAR", truthy)
-            c = Config("OPENGUARD_TEST_BOOL_VAR", bool, "false")
+            monkeypatch.setenv("LOUDER_TEST_BOOL_VAR", truthy)
+            c = Config("LOUDER_TEST_BOOL_VAR", bool, "false")
             assert c.value is True, f"Expected True for {truthy!r}"
 
     def test_float_conversion(self, monkeypatch):
         """Config converts string env var to float."""
-        monkeypatch.setenv("OPENGUARD_TEST_FLOAT", "3.14")
+        monkeypatch.setenv("LOUDER_TEST_FLOAT", "3.14")
         from src.config import Config
 
-        c = Config("OPENGUARD_TEST_FLOAT", float, "0.0")
+        c = Config("LOUDER_TEST_FLOAT", float, "0.0")
         assert c.value == pytest.approx(3.14)
 
 
@@ -117,11 +117,11 @@ class TestConfigDict:
 class TestWildcardConfig:
     def test_wildcard_collects_matching_env_vars(self, monkeypatch):
         """Wildcard config collects all matching env vars."""
-        monkeypatch.setenv("OPENGUARD_OPENAI_URL_ONE", "http://one.test")
-        monkeypatch.setenv("OPENGUARD_OPENAI_URL_TWO", "http://two.test")
+        monkeypatch.setenv("LOUDER_OPENAI_URL_ONE", "http://one.test")
+        monkeypatch.setenv("LOUDER_OPENAI_URL_TWO", "http://two.test")
         from src.config import Config
 
-        c = Config("OPENGUARD_OPENAI_URL_*", str, "")
+        c = Config("LOUDER_OPENAI_URL_*", str, "")
         urls = c.value
         assert "http://one.test" in urls
         assert "http://two.test" in urls
@@ -131,7 +131,7 @@ class TestWildcardConfig:
         import src.config as config_module
 
         # Use a prefix guaranteed not to exist in any real environment
-        prefix = "OPENGUARD_ZZZTESTONLY_UNIQUE_"
+        prefix = "LOUDER_ZZZTESTONLY_UNIQUE_"
         for key in list(os.environ.keys()):
             if key.startswith(prefix):
                 monkeypatch.delenv(key, raising=False)
@@ -150,7 +150,7 @@ def _make_config(value: str):
     from src.config import Config
 
     c = Config.__new__(Config)
-    c.name = "OPENGUARD_CONFIG"
+    c.name = "LOUDER_CONFIG"
     c.type = str
     c.default = value
     c.description = None
@@ -159,9 +159,9 @@ def _make_config(value: str):
 
 
 def _clear_config_extras(monkeypatch):
-    """Remove all OPENGUARD_CONFIG_* env vars so tests start clean."""
+    """Remove all LOUDER_CONFIG_* env vars so tests start clean."""
     for key in list(os.environ.keys()):
-        if key.startswith("OPENGUARD_CONFIG_"):
+        if key.startswith("LOUDER_CONFIG_"):
             monkeypatch.delenv(key, raising=False)
 
 
@@ -173,7 +173,7 @@ class TestGetConfigPaths:
         import src.config as config
 
         _clear_config_extras(monkeypatch)
-        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("./guards.yaml"))
+        monkeypatch.setattr(config, "LOUDER_CONFIG", _make_config("./guards.yaml"))
         assert config.get_config_paths() == ["./guards.yaml"]
 
     def test_comma_separated(self, monkeypatch):
@@ -181,7 +181,7 @@ class TestGetConfigPaths:
         import src.config as config
 
         _clear_config_extras(monkeypatch)
-        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml,b.yaml"))
+        monkeypatch.setattr(config, "LOUDER_CONFIG", _make_config("a.yaml,b.yaml"))
         assert config.get_config_paths() == ["a.yaml", "b.yaml"]
 
     def test_comma_with_whitespace(self, monkeypatch):
@@ -189,26 +189,26 @@ class TestGetConfigPaths:
         import src.config as config
 
         _clear_config_extras(monkeypatch)
-        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config(" a.yaml , b.yaml "))
+        monkeypatch.setattr(config, "LOUDER_CONFIG", _make_config(" a.yaml , b.yaml "))
         assert config.get_config_paths() == ["a.yaml", "b.yaml"]
 
     def test_named_extras(self, monkeypatch):
-        """OPENGUARD_CONFIG_* env vars are appended after the base paths."""
+        """LOUDER_CONFIG_* env vars are appended after the base paths."""
         import src.config as config
 
         _clear_config_extras(monkeypatch)
-        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml"))
-        monkeypatch.setenv("OPENGUARD_CONFIG_EXTRA", "b.yaml")
+        monkeypatch.setattr(config, "LOUDER_CONFIG", _make_config("a.yaml"))
+        monkeypatch.setenv("LOUDER_CONFIG_EXTRA", "b.yaml")
         assert config.get_config_paths() == ["a.yaml", "b.yaml"]
 
     def test_named_extras_sorted(self, monkeypatch):
-        """OPENGUARD_CONFIG_* extras are merged in alphabetical key order."""
+        """LOUDER_CONFIG_* extras are merged in alphabetical key order."""
         import src.config as config
 
         _clear_config_extras(monkeypatch)
-        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml"))
-        monkeypatch.setenv("OPENGUARD_CONFIG_Z", "z.yaml")
-        monkeypatch.setenv("OPENGUARD_CONFIG_A", "aa.yaml")
+        monkeypatch.setattr(config, "LOUDER_CONFIG", _make_config("a.yaml"))
+        monkeypatch.setenv("LOUDER_CONFIG_Z", "z.yaml")
+        monkeypatch.setenv("LOUDER_CONFIG_A", "aa.yaml")
         assert config.get_config_paths() == ["a.yaml", "aa.yaml", "z.yaml"]
 
     def test_deduplication(self, monkeypatch):
@@ -216,8 +216,8 @@ class TestGetConfigPaths:
         import src.config as config
 
         _clear_config_extras(monkeypatch)
-        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml"))
-        monkeypatch.setenv("OPENGUARD_CONFIG_DUP", "a.yaml")
+        monkeypatch.setattr(config, "LOUDER_CONFIG", _make_config("a.yaml"))
+        monkeypatch.setenv("LOUDER_CONFIG_DUP", "a.yaml")
         assert config.get_config_paths() == ["a.yaml"]
 
     def test_empty_segment_stripped(self, monkeypatch):
@@ -225,5 +225,5 @@ class TestGetConfigPaths:
         import src.config as config
 
         _clear_config_extras(monkeypatch)
-        monkeypatch.setattr(config, "OPENGUARD_CONFIG", _make_config("a.yaml,,b.yaml"))
+        monkeypatch.setattr(config, "LOUDER_CONFIG", _make_config("a.yaml,,b.yaml"))
         assert config.get_config_paths() == ["a.yaml", "b.yaml"]

@@ -9,7 +9,7 @@ GET {{host}}/health
 GET {{host}}/
 
 ?? status == 200
-?? js response.parsedBody.name == OpenGuard
+?? js response.parsedBody.name == Louder
 ?? js response.parsedBody.endpoints.health == /health
 ?? js response.parsedBody.endpoints.models == /v1/models
 ?? js response.parsedBody.endpoints.chat == /v1/chat/completions

@@ -1,5 +1,5 @@
 """
-Integration tests for OpenGuard - end-to-end testing of the complete system.
+Integration tests for Louder - end-to-end testing of the complete system.
 
 Tests cover:
 - API endpoints (health, root, models)
@@ -27,8 +27,8 @@ def test_root(test_client):
     assert response.status_code == 200
 
     data = response.json()
-    assert data["name"] == "OpenGuard"
-    assert data["version"] == _get_version("openguard")
+    assert data["name"] == "Louder"
+    assert data["version"] == _get_version("louder")
     assert "endpoints" in data
     assert data["endpoints"]["health"] == "/health"
     assert data["endpoints"]["models"] == "/v1/models"
@@ -82,44 +82,7 @@ def test_anthropic_messages_passthrough(test_client, setup_mock_downstream):
     assert json.loads(forwarded["content"].decode("utf-8"))["metadata"]["custom"] == "value"
 
 
-def test_anthropic_messages_guard_mutation_preserves_unknown_fields(
-    test_client, setup_mock_downstream
-):
-    """Anthropic /v1/messages applies guards while preserving unknown fields."""
-    payload = {
-        "model": "claude-test-model",
-        "max_tokens": 256,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Contains badword",
-                        "extra_block": {"keep": True},
-                    }
-                ],
-                "unknown_message_field": {"keep": "yes"},
-            }
-        ],
-        "metadata": {"custom": "value"},
-        "top_unknown": {"nested": [1, 2, 3]},
-    }
 
-    response = test_client.post("/v1/messages", json=payload)
-
-    assert response.status_code == 200
-    forwarded = setup_mock_downstream["request"][-1]
-    forwarded_payload = json.loads(forwarded["content"].decode("utf-8"))
-
-    text = forwarded_payload["messages"][0]["content"][0]["text"]
-    assert "badword" not in text.lower()
-    assert "[FILTERED]" in text
-
-    assert forwarded_payload["metadata"] == {"custom": "value"}
-    assert forwarded_payload["top_unknown"] == {"nested": [1, 2, 3]}
-    assert forwarded_payload["messages"][0]["unknown_message_field"] == {"keep": "yes"}
-    assert forwarded_payload["messages"][0]["content"][0]["extra_block"] == {"keep": True}
 
 
 def test_anthropic_messages_explicit_tool_choice_without_tool_use_returns_error(
@@ -172,42 +135,7 @@ def test_anthropic_messages_explicit_tool_choice_without_tool_use_returns_error(
     assert forwarded_payload["tool_choice"]["type"] == "tool"
 
 
-def test_anthropic_messages_guard_block_returns_anthropic_error_envelope(
-    test_client, setup_mock_downstream, monkeypatch
-):
-    """Blocked Anthropic requests return provider-compatible error envelope."""
-    from src import main as main_module
-    from src.guards import GuardAction, GuardRule
 
-    monkeypatch.setattr(
-        main_module,
-        "get_guards",
-        lambda: [
-            GuardRule(
-                match={"model": {"_ilike": "%claude-block%"}},
-                apply=[
-                    GuardAction(
-                        type="keyword_filter",
-                        config={"keywords": ["forbidden"], "action": "block"},
-                    )
-                ],
-            )
-        ],
-    )
-
-    payload = {
-        "model": "claude-block-model",
-        "messages": [{"role": "user", "content": "This contains forbidden text"}],
-    }
-
-    response = test_client.post("/v1/messages", json=payload)
-
-    assert response.status_code == 403
-    body = response.json()
-    assert body["type"] == "error"
-    assert body["error"]["type"] == "invalid_request_error"
-    assert "Request blocked" in body["error"]["message"]
-    assert setup_mock_downstream["request"] == []
 
 
 def test_anthropic_count_tokens_passthrough(test_client, setup_mock_downstream):
@@ -226,114 +154,19 @@ def test_anthropic_count_tokens_passthrough(test_client, setup_mock_downstream):
     assert forwarded["url"] == "http://anthropic.test/v1/messages/count_tokens"
 
 
-def test_chat_no_guard_unmatched_model(test_client, setup_mock_non_streaming):
-    """Test chat completion with model that doesn't match any guards"""
-    payload = {
-        "model": "unmatched-model",
-        "messages": [{"role": "user", "content": "Hello, how are you?"}],
-        "stream": False,
-    }
-
-    response = test_client.post("/v1/chat/completions", json=payload)
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["object"] == "chat.completion"
-    assert len(data["choices"]) > 0
-    assert "message" in data["choices"][0]
-
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    assert forwarded["model"] == "unmatched-model"
-    assert forwarded["messages"][0]["content"] == "Hello, how are you?"
 
 
-def test_chat_with_content_filter(test_client, setup_mock_non_streaming):
-    """Test chat completion with content filter guard applied"""
-    payload = {
-        "model": "test-model",
-        "messages": [
-            {"role": "user", "content": "This message contains badword and offensive content"}
-        ],
-        "stream": False,
-    }
-
-    response = test_client.post("/v1/chat/completions", json=payload)
-
-    assert response.status_code == 200
-    data = response.json()
-
-    # Verify response structure
-    assert data["object"] == "chat.completion"
-    assert len(data["choices"]) > 0
-
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    content = forwarded["messages"][0]["content"]
-    assert "badword" not in content.lower()
-    assert "offensive" not in content.lower()
-    assert "[FILTERED]" in content
 
 
-def test_chat_with_pii_filter(test_client, setup_mock_non_streaming):
-    """Test chat completion with PII filter guard applied"""
-    payload = {
-        "model": "test-secure-model",
-        "messages": [
-            {"role": "user", "content": "My email is test@example.com and phone is 212-867-5309"}
-        ],
-        "stream": False,
-    }
-
-    response = test_client.post("/v1/chat/completions", json=payload)
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["object"] == "chat.completion"
-
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    assert forwarded["messages"][0]["role"] == "system"
-    assert "PII has been filtered" in forwarded["messages"][0]["content"]
-    user_content = forwarded["messages"][1]["content"]
-    assert "<protected:email>" in user_content
-    assert "<protected:phone>" in user_content
 
 
-def test_chat_with_max_tokens(test_client, setup_mock_non_streaming):
-    """Test chat completion with max_tokens guard applied"""
-    payload = {
-        "model": "test-limited-model",
-        "messages": [{"role": "user", "content": "Tell me a long story"}],
-        "max_tokens": 1000,  # Should be reduced to 100
-        "stream": False,
-    }
-
-    response = test_client.post("/v1/chat/completions", json=payload)
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["object"] == "chat.completion"
-
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    assert forwarded["max_tokens"] == 100
 
 
-def test_chat_with_multiple_guards(test_client, setup_mock_non_streaming):
-    """Test chat completion with multiple guards applied"""
-    payload = {
-        "model": "test-protected-model",
-        "messages": [{"role": "user", "content": "This is spam content"}],
-        "max_tokens": 1000,
-        "stream": False,
-    }
 
-    response = test_client.post("/v1/chat/completions", json=payload)
 
-    assert response.status_code == 200
-    data = response.json()
-    assert data["object"] == "chat.completion"
 
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    assert forwarded["max_tokens"] == 500
-    assert "[FILTERED]" in forwarded["messages"][0]["content"]
+
+
 
 
 def test_streaming_chat_completion(test_client, setup_mock_streaming):
@@ -419,7 +252,7 @@ def test_authentication_enabled(test_client, setup_mock_non_streaming, monkeypat
     from src import config
 
     # Mock the value directly
-    monkeypatch.setattr(config.OPENGUARD_API_KEY, "__value__", "test-key-123")
+    monkeypatch.setattr(config.LOUDER_API_KEY, "__value__", "test-key-123")
 
     payload = {
         "model": "test-model",
@@ -448,7 +281,7 @@ def test_anthropic_messages_accepts_front_door_x_api_key(
     """Test Anthropic-compatible endpoint accepts x-api-key for proxy auth."""
     from src import config
 
-    monkeypatch.setattr(config.OPENGUARD_API_KEY, "__value__", "test-key-123")
+    monkeypatch.setattr(config.LOUDER_API_KEY, "__value__", "test-key-123")
 
     payload = {
         "model": "claude-3-5-sonnet-20241022",
@@ -476,7 +309,7 @@ def test_invalid_model(test_client, setup_mock_downstream, monkeypatch):
 
     # Force multiple URLs to disable fallback logic
     monkeypatch.setattr(
-        config.OPENGUARD_OPENAI_URLS,
+        config.LOUDER_OPENAI_URLS,
         "__value__",
         ["http://downstream.test", "http://secondary.test"],
     )
@@ -513,105 +346,19 @@ def test_invalid_json(test_client):
     assert "Invalid JSON" in response.json()["detail"]
 
 
-def test_content_filter_multiple_words(test_client, setup_mock_non_streaming):
-    """Test content filter replaces multiple blocked words"""
-    payload = {
-        "model": "test-model",
-        "messages": [{"role": "user", "content": "Please remove badword and offensive terms"}],
-        "stream": False,
-    }
-
-    response = test_client.post("/v1/chat/completions", json=payload)
-    assert response.status_code == 200
-
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    content = forwarded["messages"][0]["content"]
-    assert "badword" not in content.lower()
-    assert "offensive" not in content.lower()
-    assert content.count("[FILTERED]") == 2
 
 
-def test_pii_filter_multiple_types(test_client, setup_mock_non_streaming):
-    """Test PII filter detects multiple PII types"""
-    payload = {
-        "model": "test-secure-model",
-        "messages": [
-            {
-                "role": "user",
-                "content": "Contact me at john@example.com or 555-123-4567. SSN: 123-45-6789",
-            }
-        ],
-        "stream": False,
-    }
-
-    response = test_client.post("/v1/chat/completions", json=payload)
-    assert response.status_code == 200
-
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    # System message injected when PII found
-    assert forwarded["messages"][0]["role"] == "system"
-    assert "PII has been filtered" in forwarded["messages"][0]["content"]
-    user_content = forwarded["messages"][1]["content"]
-    assert "<protected:email>" in user_content
-    assert "<protected:ssn>" in user_content
 
 
-def test_multimodal_content_with_filter(test_client, setup_mock_non_streaming):
-    """Test guards work with multimodal content (array of content parts)"""
-    payload = {
-        "model": "test-model",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "This has badword in it"},
-                    {"type": "text", "text": "And more offensive content"},
-                ],
-            }
-        ],
-        "stream": False,
-    }
-
-    response = test_client.post("/v1/chat/completions", json=payload)
-    assert response.status_code == 200
-
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    parts = forwarded["messages"][0]["content"]
-    assert parts[0]["text"] == "This has [FILTERED] in it"
-    assert parts[1]["text"] == "And more [FILTERED] content"
 
 
-def test_max_tokens_enforces_when_absent(test_client, setup_mock_non_streaming):
-    """Test max_tokens guard adds limit when not present"""
-    payload = {
-        "model": "test-limited-model",
-        "messages": [{"role": "user", "content": "Tell me a story"}],
-        "stream": False,
-        # No max_tokens field
-    }
-
-    response = test_client.post("/v1/chat/completions", json=payload)
-    assert response.status_code == 200
-
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    assert forwarded["max_tokens"] == 100
 
 
-def test_guard_with_case_insensitive_matching(test_client, setup_mock_non_streaming):
-    """Test guards match models case-insensitively"""
-    payload = {
-        "model": "TEST-MODEL",  # Uppercase
-        "messages": [{"role": "user", "content": "This has BADWORD"}],
-        "stream": False,
-    }
 
-    response = test_client.post("/v1/chat/completions", json=payload)
-    assert response.status_code == 200
 
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    content = forwarded["messages"][0]["content"]
-    assert "BADWORD" not in content
-    assert "[FILTERED]" in content
+
+
+
 
 
 def test_downstream_timeout_handling(test_client, setup_mock_downstream):
@@ -649,7 +396,7 @@ def test_models_endpoint_requires_auth_when_enabled(
     test_client, setup_mock_downstream, monkeypatch
 ):
     """Test that /v1/models endpoint requires authentication when enabled"""
-    monkeypatch.setenv("OPENGUARD_API_KEY", "test-key-123")
+    monkeypatch.setenv("LOUDER_API_KEY", "test-key-123")
 
     # Reload config
     import importlib
@@ -674,7 +421,7 @@ def test_models_endpoint_accepts_front_door_x_api_key(
     """Test that /v1/models accepts x-api-key when authentication is enabled."""
     from src import config
 
-    monkeypatch.setattr(config.OPENGUARD_API_KEY, "__value__", "test-key-123")
+    monkeypatch.setattr(config.LOUDER_API_KEY, "__value__", "test-key-123")
 
     response = test_client.get("/v1/models", headers={"x-api-key": "test-key-123"})
 
@@ -686,26 +433,3 @@ def test_models_endpoint_accepts_front_door_x_api_key(
     assert "x-api-key" not in {key.lower() for key in forwarded["headers"]}
 
 
-def test_multiple_messages_with_guards(test_client, setup_mock_non_streaming):
-    """Test guards applied across multiple messages in conversation"""
-    payload = {
-        "model": "test-model",
-        "messages": [
-            {"role": "system", "content": "You are helpful"},
-            {"role": "user", "content": "First badword message"},
-            {"role": "assistant", "content": "OK"},
-            {"role": "user", "content": "Second offensive message"},
-        ],
-        "stream": False,
-    }
-
-    response = test_client.post("/v1/chat/completions", json=payload)
-    assert response.status_code == 200
-
-    forwarded = setup_mock_non_streaming["stream"][0]["json"]
-    messages = forwarded["messages"]
-    # All messages should have filtered content
-    assert "badword" not in messages[1]["content"].lower()
-    assert "[FILTERED]" in messages[1]["content"]
-    assert "offensive" not in messages[3]["content"].lower()
-    assert "[FILTERED]" in messages[3]["content"]

@@ -2,38 +2,38 @@ HOST_UID := $(shell id -u)
 HOST_GID := $(shell id -g)
 
 build:
-	docker compose build openguard
+	docker compose build louder
 
 fix-docker-ownership:
 	docker compose run --rm --user root \
 		-e HOST_UID=$(HOST_UID) \
 		-e HOST_GID=$(HOST_GID) \
-		openguard sh -lc 'chown -R "$$HOST_UID:$$HOST_GID" /app /app/.venv'
+		louder sh -lc 'chown -R "$$HOST_UID:$$HOST_GID" /app /app/.venv'
 
 dev:
 	docker compose up
 
 dev-test:
-	OPENGUARD_CONFIG=/app/presets/full.yaml docker compose up
+	LOUDER_CONFIG=/app/presets/full.yaml docker compose up
 
 dev-ui:
 	docker compose up ui
 
 dev-test-ollama:
 	@harbor ollama --version || true
-	OPENGUARD_CONFIG=/app/presets/full.yaml \
-	OPENGUARD_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
-	OPENGUARD_OPENAI_KEY_1="sk-ollama" \
-	OPENGUARD_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
-	OPENGUARD_ANTHROPIC_KEY_1="sk-ollama" \
+	LOUDER_CONFIG=/app/presets/full.yaml \
+	LOUDER_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
+	LOUDER_OPENAI_KEY_1="sk-ollama" \
+	LOUDER_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
+	LOUDER_ANTHROPIC_KEY_1="sk-ollama" \
 	docker compose up
 
 dev-ollama:
 	@harbor ollama --version || true
-	OPENGUARD_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
-	OPENGUARD_OPENAI_KEY_1="sk-ollama" \
-	OPENGUARD_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
-	OPENGUARD_ANTHROPIC_KEY_1="sk-ollama" \
+	LOUDER_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
+	LOUDER_OPENAI_KEY_1="sk-ollama" \
+	LOUDER_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
+	LOUDER_ANTHROPIC_KEY_1="sk-ollama" \
 	docker compose up
 
 start:
@@ -41,10 +41,10 @@ start:
 
 start-ollama:
 	@harbor ollama --version || true
-	OPENGUARD_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
-	OPENGUARD_OPENAI_KEY_1="sk-ollama" \
-	OPENGUARD_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
-	OPENGUARD_ANTHROPIC_KEY_1="sk-ollama" \
+	LOUDER_OPENAI_URL_1="$$(harbor url -a ollama)/v1" \
+	LOUDER_OPENAI_KEY_1="sk-ollama" \
+	LOUDER_ANTHROPIC_URL_1="$$(harbor url -a ollama)" \
+	LOUDER_ANTHROPIC_KEY_1="sk-ollama" \
 	docker compose up -d
 
 stop:
@@ -56,16 +56,16 @@ restart:
 logs:
 	docker compose logs -f
 
-install-global-openguard:
+install-global-louder:
 	@mkdir -p "$(HOME)/.local/bin"
-	@sed "s|__OPENGUARD_REPO_ROOT__|$(CURDIR)|g" scripts/openguard-wrapper.sh > "$(HOME)/.local/bin/openguard"
-	@chmod +x "$(HOME)/.local/bin/openguard"
-	@echo "Installed $(HOME)/.local/bin/openguard"
+	@sed "s|__LOUDER_REPO_ROOT__|$(CURDIR)|g" scripts/louder-wrapper.sh > "$(HOME)/.local/bin/louder"
+	@chmod +x "$(HOME)/.local/bin/louder"
+	@echo "Installed $(HOME)/.local/bin/louder"
 	@echo "Ensure $(HOME)/.local/bin is in PATH"
 
-uninstall-global-openguard:
-	@rm -f "$(HOME)/.local/bin/openguard"
-	@echo "Removed $(HOME)/.local/bin/openguard"
+uninstall-global-louder:
+	@rm -f "$(HOME)/.local/bin/louder"
+	@echo "Removed $(HOME)/.local/bin/louder"
 
 check-release:
 	@echo "==> Checking for uncommitted changes..."
@@ -102,7 +102,7 @@ docs-dev:
 	cd public && bun run dev
 
 cf-deploy: docs-build
-	wrangler pages deploy public/dist --project-name openguard --branch main --commit-dirty=true
+	wrangler pages deploy public/dist --project-name louder --branch main --commit-dirty=true
 
 cf-whoami:
 	wrangler whoami

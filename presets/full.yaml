@@ -1,4 +1,4 @@
-# OpenGuard Full Preset — exercises all guard types (used by integration tests)
+# Louder Full Preset — exercises all guard types (used by integration tests)
 guards:
   # Secrets detection runs FIRST — must see original messages before any PII redaction
   # (pii_filter would otherwise redact Slack token segments and GitHub PATs before we can block them)

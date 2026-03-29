@@ -15,7 +15,7 @@ def test_discover_models_from_global_config():
         "provider": {
             "openai": {"models": {"gpt-4o": {"name": "GPT-4o"}, "o1": {"name": "o1"}}},
             "anthropic": {"models": {"claude-3-5-sonnet-20241022": {"name": "Claude 3.5"}}},
-            "openguard": {"models": {"should-be-skipped": {}}},
+            "louder": {"models": {"should-be-skipped": {}}},
         }
     }
     models = _discover_models(global_cfg)
@@ -75,7 +75,7 @@ def test_setup_opencode_flow(
     opencode_path = mock_cwd / "opencode.json"
     opencode_path.exists.return_value = True
 
-    og_config_dir = mock_home / ".config" / "openguard"
+    og_config_dir = mock_home / ".config" / "louder"
 
     # Ensure intermediate dirs are created (mock only so no real effect)
     og_config_dir.mkdir.return_value = None
@@ -91,7 +91,7 @@ def test_setup_opencode_flow(
     # opencode.json has just a model
     opencode_data = {"model": "openai:gpt-4"}
 
-    # config.yaml (OpenGuard) might carry existing data or fail (return None/empty)
+    # config.yaml (Louder) might carry existing data or fail (return None/empty)
     # We will simulate empty or existing to verify append
 
     # Three json.load calls: auth.json, project opencode.json, global opencode.json
@@ -120,7 +120,7 @@ def test_setup_opencode_flow(
     # src should be auth_path (the mock object)
     # assert call_args[0][0] == auth_path
 
-    # 2. Verify OpenGuard config migration
+    # 2. Verify Louder config migration
     # We expect yaml.safe_dump to be called with the new provider config
     assert mock_yaml_dump.called
     dumped_data = mock_yaml_dump.call_args[0][0]
@@ -132,7 +132,7 @@ def test_setup_opencode_flow(
     assert providers[0]["key"] == "sk-test-key"
 
     # 3. Verify auth.json update
-    # We expect json.dump to be called to add "openguard" to auth.json
+    # We expect json.dump to be called to add "louder" to auth.json
     # We can inspect calls to json.dump.
     # One call is updating auth.json, one is updating opencode.json
 
@@ -141,23 +141,23 @@ def test_setup_opencode_flow(
 
     for call in mock_json_dump.call_args_list:
         data, _ = call[0]
-        if "openguard" in data and "key" in data["openguard"]:
+        if "louder" in data and "key" in data["louder"]:
             auth_dump_call = data
-        if "provider" in data and "openguard" in data["provider"]:
+        if "provider" in data and "louder" in data["provider"]:
             opencode_dump_call = data
 
-    assert auth_dump_call is not None, "auth.json was not updated with openguard credentials"
-    assert auth_dump_call["openguard"]["type"] == "api"
+    assert auth_dump_call is not None, "auth.json was not updated with louder credentials"
+    assert auth_dump_call["louder"]["type"] == "api"
 
-    assert opencode_dump_call is not None, "opencode.json was not updated with openguard provider"
+    assert opencode_dump_call is not None, "opencode.json was not updated with louder provider"
     # Verify models in opencode.json
-    og_provider = opencode_dump_call["provider"]["openguard"]
+    og_provider = opencode_dump_call["provider"]["louder"]
     assert "models" in og_provider
     assert "gpt-4o" in og_provider["models"]
 
     # 4. Verify opencode.json model selection
-    # It should have switched "model" to "openguard:..."
-    assert opencode_dump_call["model"].startswith("openguard:")
+    # It should have switched "model" to "louder:..."
+    assert opencode_dump_call["model"].startswith("louder:")
 
 
 @patch("launch.setup._seed_opencode_dirs")

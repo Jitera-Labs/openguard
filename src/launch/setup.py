@@ -76,12 +76,12 @@ def setup_claude() -> None:
 
 
 def setup_codex() -> None:
-    """Seed /root/.codex from read-only host mount and patch config.toml for OpenGuard.
+    """Seed /root/.codex from read-only host mount and patch config.toml for Louder.
 
     The wrapper mounts ~/.codex as /codex-seed:ro (auth.json, config.toml, themes/).
     This function copies everything into the writable /root tmpfs, fixes permissions,
     and optionally patches config.toml to add/override the louder model provider
-    with the correct base_url pointing at the local OpenGuard proxy.
+    with the correct base_url pointing at the local Louder proxy.
     """
     log_path = "/tmp/codex-setup.log"
 
@@ -146,7 +146,7 @@ def _patch_codex_config(config_path: Path, base_url: str, _log: Any) -> None:
 
     provider_block = (
         "\n[model_providers.louder]\n"
-        'name = "OpenGuard Proxy"\n'
+        'name = "Louder Proxy"\n'
         f'base_url = "{base_url}"\n'
         'env_key = "OPENAI_API_KEY"\n'
     )
@@ -275,9 +275,9 @@ def _seed_opencode_dirs() -> None:
 
 
 def setup_opencode() -> None:
-    """Configure OpenCode to use the local OpenGuard instance."""
-    logger.info("Installing OpenGuard configuration for OpenCode...")
-    print("Installing OpenGuard configuration for OpenCode...", file=sys.stderr)
+    """Configure OpenCode to use the local Louder instance."""
+    logger.info("Installing Louder configuration for OpenCode...")
+    print("Installing Louder configuration for OpenCode...", file=sys.stderr)
 
     # 0. Copy read-only seed mounts into writable tmpfs
     _seed_opencode_dirs()
@@ -339,7 +339,7 @@ def setup_opencode() -> None:
         except Exception as e:
             logger.warning(f"Could not read global OpenCode config: {e}")
 
-    # 3. Migrate credentials to OpenGuard config
+    # 3. Migrate credentials to Louder config
     try:
         providers_list: List[Dict[str, Any]] = []
 
@@ -388,7 +388,7 @@ def setup_opencode() -> None:
                 providers_list.append({"type": ptype, "key": provider_key, "url": provider_url})
 
         if providers_list:
-            # Write to OpenGuard config
+            # Write to Louder config
             og_config_dir = Path.home() / ".config" / "louder"
             og_config_dir.mkdir(parents=True, exist_ok=True)
             og_config_file = og_config_dir / "config.yaml"
@@ -450,7 +450,7 @@ def setup_opencode() -> None:
 
     config_data["provider"]["louder"] = {
         "npm": "@ai-sdk/openai-compatible",
-        "name": "OpenGuard",
+        "name": "Louder",
         "options": {
             "baseURL": f"http://{config.LOUDER_HOST.value}:{config.LOUDER_PORT.value}/v1"
         },
@@ -498,10 +498,10 @@ def setup_opencode() -> None:
     try:
         with _secure_open(str(config_path)) as f:
             json.dump(config_data, f, indent=2)
-        logger.info(f"Updated {config_path} with OpenGuard provider")
+        logger.info(f"Updated {config_path} with Louder provider")
     except Exception as e:
         logger.error(f"Failed to update opencode.json: {e}")
         print(f"Error updating opencode.json: {e}", file=sys.stderr)
         return
 
-    print("✅ OpenGuard installed for OpenCode successfully!", file=sys.stderr)
+    print("✅ Louder installed for OpenCode successfully!", file=sys.stderr)

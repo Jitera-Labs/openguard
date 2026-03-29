@@ -33,8 +33,8 @@ async def test_resolve_request_config_unknown_model(monkeypatch):
     from src import config
 
     # Ensure multiple URLs are configured so fallback logic doesn't trigger
-    monkeypatch.setenv("OPENGUARD_OPENAI_URL_PRIMARY", "http://url1")
-    monkeypatch.setenv("OPENGUARD_OPENAI_URL_SECONDARY", "http://url2")
+    monkeypatch.setenv("LOUDER_OPENAI_URL_PRIMARY", "http://url1")
+    monkeypatch.setenv("LOUDER_OPENAI_URL_SECONDARY", "http://url2")
 
     # Reload config to pick up new env vars
     importlib.reload(config)
@@ -146,16 +146,16 @@ if __name__ == "__main__":
 
 
 def test_resolve_provider_route_internal_mode_precedence(monkeypatch):
-    """Internal OpenGuard key takes precedence and uses model routing first."""
+    """Internal Louder key takes precedence and uses model routing first."""
     import importlib
 
     from src import config
 
-    monkeypatch.setenv("OPENGUARD_API_KEY", "internal-key")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_A", "http://anthropic-a.test")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_A", "anth-key-a")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_B", "http://anthropic-b.test")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_B", "anth-key-b")
+    monkeypatch.setenv("LOUDER_API_KEY", "internal-key")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_URL_A", "http://anthropic-a.test")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_KEY_A", "anth-key-a")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_URL_B", "http://anthropic-b.test")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_KEY_B", "anth-key-b")
 
     importlib.reload(config)
     importlib.reload(mapper)
@@ -180,11 +180,11 @@ def test_resolve_provider_route_direct_key_precedence(monkeypatch):
 
     from src import config
 
-    monkeypatch.setenv("OPENGUARD_API_KEY", "")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_A", "http://anthropic-a.test")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_A", "anth-key-a")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_B", "http://anthropic-b.test")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_B", "anth-key-b")
+    monkeypatch.setenv("LOUDER_API_KEY", "")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_URL_A", "http://anthropic-a.test")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_KEY_A", "anth-key-a")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_URL_B", "http://anthropic-b.test")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_KEY_B", "anth-key-b")
 
     importlib.reload(config)
     importlib.reload(mapper)
@@ -206,9 +206,9 @@ def test_resolve_provider_route_endpoint_fallback(monkeypatch):
 
     from src import config
 
-    monkeypatch.setenv("OPENGUARD_API_KEY", "internal-only")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_URL_A", "http://anthropic-a.test")
-    monkeypatch.setenv("OPENGUARD_ANTHROPIC_KEY_A", "anth-key-a")
+    monkeypatch.setenv("LOUDER_API_KEY", "internal-only")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_URL_A", "http://anthropic-a.test")
+    monkeypatch.setenv("LOUDER_ANTHROPIC_KEY_A", "anth-key-a")
 
     importlib.reload(config)
     importlib.reload(mapper)

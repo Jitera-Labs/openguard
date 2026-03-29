@@ -30,18 +30,18 @@ Always look up current versions/docs of tools, libraries, and frameworks before 
 
 ## Development Workflow
 
-### Global Docker-backed OpenGuard command
+### Global Docker-backed Louder command
 
 ```bash
-make install-global-openguard
+make install-global-louder
 ```
 
-Installs `~/.local/bin/openguard` from `scripts/openguard-wrapper.sh`. Runs OpenGuard inside Docker (image: `openguard-dev`), mounts CWD to `/workspace` (override: `OPENGUARD_MOUNT_DIR`), exposes port `23294` (override: `OPENGUARD_PORT`), defaults to `serve`. Use `--build` to rebuild.
+Installs `~/.local/bin/louder` from `scripts/louder-wrapper.sh`. Runs Louder inside Docker (image: `louder-dev`), mounts CWD to `/workspace` (override: `LOUDER_MOUNT_DIR`), exposes port `23294` (override: `LOUDER_PORT`), defaults to `serve`. Use `--build` to rebuild.
 
 ```bash
-openguard
-OPENGUARD_CONFIG=./presets/full.yaml openguard
-OPENGUARD_MOUNT_DIR=/path/to/project openguard
+louder
+LOUDER_CONFIG=./presets/full.yaml louder
+LOUDER_MOUNT_DIR=/path/to/project louder
 ```
 
 ### Default Mode

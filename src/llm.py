@@ -25,21 +25,13 @@ BOOST_PARAM_PREFIX = "@boost_"
 
 
 class StreamRedactor:
-    def __init__(self, patterns, blocks=None, window_size=40):
+    def __init__(self, patterns, window_size=40):
         self.patterns = patterns
-        self.blocks = blocks or []
         self.window_size = window_size
         self.buffer = ""
 
     def push(self, text: str) -> str:
-        from src.guards import GuardBlockedError
-
         self.buffer += text
-        for pattern, kw in self.blocks:
-            if pattern.search(self.buffer):
-                raise GuardBlockedError(
-                    f"Request blocked: found keyword '{kw}' in streaming response"
-                )
         for pattern, repl in self.patterns:
             self.buffer = pattern.sub(repl, self.buffer)
         if len(self.buffer) > self.window_size:
@@ -50,13 +42,6 @@ class StreamRedactor:
         return ""
 
     def flush(self) -> str:
-        from src.guards import GuardBlockedError
-
-        for pattern, kw in self.blocks:
-            if pattern.search(self.buffer):
-                raise GuardBlockedError(
-                    f"Request blocked: found keyword '{kw}' in streaming response"
-                )
         for pattern, repl in self.patterns:
             self.buffer = pattern.sub(repl, self.buffer)
         emit_str = self.buffer
@@ -709,11 +694,9 @@ class LLM(AsyncEventEmitter):
 
                                 if content:
                                     if not hasattr(self, "_stream_redactor") and (
-                                        self.stream_patterns or self.stream_blocks
+                                        self.stream_patterns
                                     ):
-                                        self._stream_redactor = StreamRedactor(
-                                            self.stream_patterns, self.stream_blocks
-                                        )
+                                        self._stream_redactor = StreamRedactor(self.stream_patterns)
 
                                     if hasattr(self, "_stream_redactor"):
                                         emitted = self._stream_redactor.push(content)

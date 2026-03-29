@@ -5,7 +5,7 @@ from src.config import LOUDER_PORT
 from .setup import setup_claude, setup_codex, setup_opencode
 from .types import Integration, LaunchStrategy, StrategyConfig
 
-# Standard OpenGuard port from configuration
+# Standard Louder port from configuration
 LOUDER_URL = f"http://127.0.0.1:{LOUDER_PORT.value}"
 
 INTEGRATIONS: Dict[str, Integration] = {
@@ -22,7 +22,7 @@ INTEGRATIONS: Dict[str, Integration] = {
                         "provider": {
                             "louder": {
                                 "npm": "@ai-sdk/openai-compatible",
-                                "name": "OpenGuard",
+                                "name": "Louder",
                                 "options": {
                                     "baseURL": f"{LOUDER_URL}/v1",
                                     "apiKey": "sk-louder-placeholder",
@@ -48,7 +48,7 @@ INTEGRATIONS: Dict[str, Integration] = {
                     "env_vars": {
                         # Only redirect the base URL.  Claude Code manages its own
                         # credentials (OAuth token or ANTHROPIC_API_KEY from the user's
-                        # shell) and attaches them to every request.  OpenGuard forwards
+                        # shell) and attaches them to every request.  Louder forwards
                         # those headers verbatim to api.anthropic.com.
                         "ANTHROPIC_BASE_URL": LOUDER_URL,
                     }

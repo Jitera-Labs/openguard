@@ -2,10 +2,10 @@
 
 set -euo pipefail
 
-IMAGE="${OPENGUARD_DOCKER_IMAGE:-openguard-dev}"
-REPO_ROOT="__OPENGUARD_REPO_ROOT__"
-WORKSPACE_DIR="${OPENGUARD_MOUNT_DIR:-$PWD}"
-PORT="${OPENGUARD_PORT:-23294}"
+IMAGE="${LOUDER_DOCKER_IMAGE:-louder-dev}"
+REPO_ROOT="__LOUDER_REPO_ROOT__"
+WORKSPACE_DIR="${LOUDER_MOUNT_DIR:-$PWD}"
+PORT="${LOUDER_PORT:-23294}"
 FORCE_BUILD=0
 
 if [[ "${1:-}" == "--build" ]]; then
@@ -15,21 +15,21 @@ fi
 
 if [[ "${1:-}" == "--help-wrapper" ]]; then
   cat <<'EOF'
-Docker-backed OpenGuard wrapper
+Docker-backed Louder wrapper
 
 Usage:
-  openguard [--build] [CLI args...]
+  louder [--build] [CLI args...]
 
 Examples:
-  openguard
-  openguard serve
-  openguard launch opencode
+  louder
+  louder serve
+  louder launch opencode
 
 Environment:
-  OPENGUARD_MOUNT_DIR    Host directory mounted into container as /workspace (default: current PWD)
-  OPENGUARD_PORT         Host and container port to expose (default: 23294)
-  OPENGUARD_CONFIG       Config file path (default: /app/presets/agentic.yaml)
-  OPENGUARD_DOCKER_IMAGE Docker image name (default: openguard-dev)
+  LOUDER_MOUNT_DIR    Host directory mounted into container as /workspace (default: current PWD)
+  LOUDER_PORT         Host and container port to expose (default: 23294)
+  LOUDER_CONFIG       Config file path (default: /app/presets/agentic.yaml)
+  LOUDER_DOCKER_IMAGE Docker image name (default: louder-dev)
 EOF
   exit 0
 fi
@@ -66,7 +66,7 @@ if [[ "${1:-}" == "launch" ]]; then
   # so container root cannot write to files owned by host UID 1000.
 
   if [[ "${2:-}" == "claude" ]]; then
-    SEED_DIR=$(mktemp -d /tmp/.openguard-claude-XXXXXX)
+    SEED_DIR=$(mktemp -d /tmp/.louder-claude-XXXXXX)
     mkdir -p "$SEED_DIR/claude"
     cp -r "$HOME/.claude/." "$SEED_DIR/claude/" 2>/dev/null || true
     chmod -R a+rX "$SEED_DIR/claude" 2>/dev/null || true
@@ -80,7 +80,7 @@ if [[ "${1:-}" == "launch" ]]; then
     fi
 
   elif [[ "${2:-}" == "opencode" ]]; then
-    SEED_DIR=$(mktemp -d /tmp/.openguard-opencode-XXXXXX)
+    SEED_DIR=$(mktemp -d /tmp/.louder-opencode-XXXXXX)
 
     # Seed ~/.config/opencode
     mkdir -p "$SEED_DIR/config"
@@ -102,7 +102,7 @@ if [[ "${1:-}" == "launch" ]]; then
     echo "[wrapper] Seeded ~/.local/share/opencode/auth.json -> $SEED_DIR/share/ (read-only mount)" >&2
 
   elif [[ "${2:-}" == "codex" ]]; then
-    SEED_DIR=$(mktemp -d /tmp/.openguard-codex-XXXXXX)
+    SEED_DIR=$(mktemp -d /tmp/.louder-codex-XXXXXX)
     mkdir -p "$SEED_DIR/codex"
 
     # Seed ~/.codex (auth.json, config.toml, themes/ if present)
@@ -127,10 +127,10 @@ if [[ -t 0 && -t 1 ]]; then
   TTY_FLAGS=(-it)
 fi
 
-CONTAINER_NAME="openguard-${USER:-user}-$$"
+CONTAINER_NAME="louder-${USER:-user}-$$"
 echo "[wrapper] TTY_FLAGS=${TTY_FLAGS[*]+"${TTY_FLAGS[*]}"}" >&2
 echo "[wrapper] Container name: $CONTAINER_NAME" >&2
-echo "[wrapper] Launching: docker run ... $IMAGE openguard $*" >&2
+echo "[wrapper] Launching: docker run ... $IMAGE louder $*" >&2
 
 docker run --rm ${TTY_FLAGS[@]+"${TTY_FLAGS[@]}"} \
   --name "$CONTAINER_NAME" \
@@ -142,19 +142,19 @@ docker run --rm ${TTY_FLAGS[@]+"${TTY_FLAGS[@]}"} \
   ${SECURITY_CAPS[@]+"${SECURITY_CAPS[@]}"} \
   --security-opt no-new-privileges:true \
   --pids-limit 256 \
-  -e OPENGUARD_HOST="0.0.0.0" \
-  -e OPENGUARD_PORT="$PORT" \
-  -e OPENGUARD_CONFIG="${OPENGUARD_CONFIG:-/app/presets/agentic.yaml}" \
-  ${OPENGUARD_DEBUG:+-e OPENGUARD_DEBUG="$OPENGUARD_DEBUG"} \
-  ${OPENGUARD_OPENAI_URL_1:+-e OPENGUARD_OPENAI_URL_1="$OPENGUARD_OPENAI_URL_1"} \
-  ${OPENGUARD_OPENAI_KEY_1:+-e OPENGUARD_OPENAI_KEY_1="$OPENGUARD_OPENAI_KEY_1"} \
-  ${OPENGUARD_ANTHROPIC_URL_1:+-e OPENGUARD_ANTHROPIC_URL_1="$OPENGUARD_ANTHROPIC_URL_1"} \
-  ${OPENGUARD_ANTHROPIC_KEY_1:+-e OPENGUARD_ANTHROPIC_KEY_1="$OPENGUARD_ANTHROPIC_KEY_1"} \
+  -e LOUDER_HOST="0.0.0.0" \
+  -e LOUDER_PORT="$PORT" \
+  -e LOUDER_CONFIG="${LOUDER_CONFIG:-/app/presets/agentic.yaml}" \
+  ${LOUDER_DEBUG:+-e LOUDER_DEBUG="$LOUDER_DEBUG"} \
+  ${LOUDER_OPENAI_URL_1:+-e LOUDER_OPENAI_URL_1="$LOUDER_OPENAI_URL_1"} \
+  ${LOUDER_OPENAI_KEY_1:+-e LOUDER_OPENAI_KEY_1="$LOUDER_OPENAI_KEY_1"} \
+  ${LOUDER_ANTHROPIC_URL_1:+-e LOUDER_ANTHROPIC_URL_1="$LOUDER_ANTHROPIC_URL_1"} \
+  ${LOUDER_ANTHROPIC_KEY_1:+-e LOUDER_ANTHROPIC_KEY_1="$LOUDER_ANTHROPIC_KEY_1"} \
   ${LAUNCH_MOUNTS[@]+"${LAUNCH_MOUNTS[@]}"} \
   -v "${WORKSPACE_DIR}:/workspace" \
   -v "${REPO_ROOT}:/app" \
   -w /workspace \
-  "$IMAGE" openguard "$@"
+  "$IMAGE" louder "$@"
 EXIT_CODE=$?
 echo "[wrapper] docker run exited with code $EXIT_CODE" >&2
 exit $EXIT_CODE

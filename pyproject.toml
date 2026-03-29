@@ -6,7 +6,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "OpenGuard Contributors" },
+    { name = "Louder Contributors" },
 ]
 keywords = ["llm", "proxy", "guardrails", "openai", "anthropic", "fastapi"]
 classifiers = [
@@ -37,9 +37,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Jitera-Labs/openguard"
-Repository = "https://github.com/Jitera-Labs/openguard"
-Issues = "https://github.com/Jitera-Labs/openguard/issues"
+Homepage = "https://github.com/Jitera-Labs/louder"
+Repository = "https://github.com/Jitera-Labs/louder"
+Issues = "https://github.com/Jitera-Labs/louder/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -53,7 +53,7 @@ dev = [
 ]
 
 [project.scripts]
-openguard = "src.cli:app"
+louder = "src.cli:app"
 
 [build-system]
 requires = ["hatchling"]
